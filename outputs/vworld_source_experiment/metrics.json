@@ -1,0 +1,313 @@
+{
+  "experiment": "vworld_live_farm_and_manure_source_features",
+  "coordinate_storage": "none; VWorld responses used in process memory only",
+  "source_snapshot_warning": "2024 source inventory applied to 2020-2025 events",
+  "geocoding": {
+    "unique_addresses": 1491,
+    "matched_addresses": 1279,
+    "farms_matched": 1094,
+    "farms_total": 1267,
+    "manure_matched": 198,
+    "manure_total": 241
+  },
+  "train_events": 81,
+  "test_events": 36,
+  "selected_configuration": "source_weather",
+  "selected_model": "xgb_d3",
+  "selected_features": [
+    "initial_count",
+    "initial_intensity",
+    "min_distance",
+    "neighbor_count",
+    "radius3_count",
+    "prior",
+    "hour_sin",
+    "hour_cos",
+    "centroid_distance",
+    "nearest_intensity",
+    "weighted_intensity",
+    "observed_grid_count",
+    "observed_report_count",
+    "first15_count",
+    "growth",
+    "weather_wind_speed",
+    "weather_wind_reliability",
+    "downwind_alignment",
+    "downwind_distance",
+    "crosswind_distance",
+    "wind_advection",
+    "is_downwind",
+    "weather_humidity",
+    "weather_rainfall_15m",
+    "weather_rainfall_60m",
+    "weather_temperature",
+    "weather_calm",
+    "humid_calm",
+    "rain_wind_interaction",
+    "farm_nearest_km",
+    "farm_count_1km",
+    "farm_count_3km",
+    "farm_count_5km",
+    "farm_size_decay",
+    "animal_count_decay",
+    "pig_count_decay",
+    "cattle_count_decay",
+    "poultry_count_decay",
+    "manure_nearest_km",
+    "manure_count_3km",
+    "manure_volume_decay",
+    "source_downwind_score",
+    "pig_downwind_score",
+    "manure_downwind_score"
+  ],
+  "inner_validation": {
+    "base": {
+      "selected_model": "xgb_d4",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.3056058765994109,
+          "topk_recall": 0.26827731092436974
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.3240447977171217,
+          "topk_recall": 0.32775443510737623
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.3302502588180735,
+          "topk_recall": 0.31108776844070957
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.30583399779027215,
+          "topk_recall": 0.2913865546218487
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.3232662894404825,
+          "topk_recall": 0.32072829131652664
+        },
+        "xgb_d2": {
+          "pr_auc": 0.329340069176944,
+          "topk_recall": 0.3522642390289449
+        },
+        "xgb_d3": {
+          "pr_auc": 0.34202209834338637,
+          "topk_recall": 0.30128384687208215
+        },
+        "xgb_d4": {
+          "pr_auc": 0.3576106360729729,
+          "topk_recall": 0.3318394024276377
+        }
+      }
+    },
+    "source": {
+      "selected_model": "xgb_d4",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.2724659375277447,
+          "topk_recall": 0.2574229691876751
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.2919577615902185,
+          "topk_recall": 0.23781512605042016
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.28985850217375025,
+          "topk_recall": 0.2953314659197012
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.3038950868273819,
+          "topk_recall": 0.3228524743230625
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.29725349090781894,
+          "topk_recall": 0.3165732959850607
+        },
+        "xgb_d2": {
+          "pr_auc": 0.3177851585296256,
+          "topk_recall": 0.3424603174603174
+        },
+        "xgb_d3": {
+          "pr_auc": 0.3393270062690265,
+          "topk_recall": 0.35798319327731093
+        },
+        "xgb_d4": {
+          "pr_auc": 0.35925087875529194,
+          "topk_recall": 0.39670868347338933
+        }
+      }
+    },
+    "weather": {
+      "selected_model": "xgb_d3",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.29616059979530174,
+          "topk_recall": 0.2588001867413632
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.3052157443314071,
+          "topk_recall": 0.27546685340802984
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.30422110342941455,
+          "topk_recall": 0.31664332399626516
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.3006070618259393,
+          "topk_recall": 0.2764472455648926
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.28034660423403035,
+          "topk_recall": 0.27236227824463116
+        },
+        "xgb_d2": {
+          "pr_auc": 0.32501164550410844,
+          "topk_recall": 0.33510737628384685
+        },
+        "xgb_d3": {
+          "pr_auc": 0.3362047444677766,
+          "topk_recall": 0.36125116713352007
+        },
+        "xgb_d4": {
+          "pr_auc": 0.3134576093519661,
+          "topk_recall": 0.31353874883286653
+        }
+      }
+    },
+    "source_weather": {
+      "selected_model": "xgb_d3",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.2713812610958286,
+          "topk_recall": 0.24442110177404294
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.2926181733427261,
+          "topk_recall": 0.3146825396825397
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.2961597268043515,
+          "topk_recall": 0.2725256769374416
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.30455501890727193,
+          "topk_recall": 0.28298319327731086
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.2864455751335289,
+          "topk_recall": 0.33641456582633056
+        },
+        "xgb_d2": {
+          "pr_auc": 0.32940903264333576,
+          "topk_recall": 0.3351073762838469
+        },
+        "xgb_d3": {
+          "pr_auc": 0.364368265752518,
+          "topk_recall": 0.3200746965452848
+        },
+        "xgb_d4": {
+          "pr_auc": 0.36182496955496124,
+          "topk_recall": 0.3599439775910364
+        }
+      }
+    }
+  },
+  "base_reference": {
+    "selected_model_metrics": {
+      "pr_auc": 0.25815620554111435,
+      "precision": 0.23303834808259588,
+      "recall": 0.5851851851851851,
+      "roc_auc": 0.8883057773124519
+    },
+    "model_topk_recall": 0.28334535834535834,
+    "baseline_metrics": {
+      "pr_auc": 0.13816378570215965,
+      "precision": 0.23809523809523808,
+      "recall": 0.037037037037037035,
+      "roc_auc": 0.7493274585932616
+    },
+    "baseline_topk_recall": 0.24463447607387,
+    "feature_importance": {
+      "initial_count": 0.010741694145676352,
+      "initial_intensity": 0.0343752038385798,
+      "min_distance": 0.09978849905718445,
+      "neighbor_count": 0.02909100439791078,
+      "radius3_count": 0.03200699857820853,
+      "prior": 0.5434888723071958,
+      "hour_sin": 0.033967643447450575,
+      "hour_cos": 0.03457658309193783,
+      "centroid_distance": 0.03398049175876186,
+      "nearest_intensity": 0.032893979187701296,
+      "weighted_intensity": 0.028794619242739097,
+      "observed_grid_count": 0.04187744409273837,
+      "observed_report_count": 0.03778202557902271,
+      "first15_count": 0.004106674941107523,
+      "growth": 0.002528266333785165
+    }
+  },
+  "source_test": {
+    "selected_model_metrics": {
+      "pr_auc": 0.23486182773348252,
+      "precision": 0.196,
+      "recall": 0.725925925925926,
+      "roc_auc": 0.8830286902528754
+    },
+    "model_topk_recall": 0.28220298220298223,
+    "baseline_metrics": {
+      "pr_auc": 0.13816378570215965,
+      "precision": 0.23809523809523808,
+      "recall": 0.037037037037037035,
+      "roc_auc": 0.7493274585932616
+    },
+    "baseline_topk_recall": 0.24463447607387,
+    "feature_importance": {
+      "initial_count": 0.052155230194330215,
+      "initial_intensity": 0.01680450327694416,
+      "min_distance": 0.09046192467212677,
+      "neighbor_count": 0.018864288926124573,
+      "radius3_count": 0.019770970568060875,
+      "prior": 0.18461883068084717,
+      "hour_sin": 0.014973543584346771,
+      "hour_cos": 0.019030539318919182,
+      "centroid_distance": 0.015602434985339642,
+      "nearest_intensity": 0.02070775255560875,
+      "weighted_intensity": 0.012430017814040184,
+      "observed_grid_count": 0.024134477600455284,
+      "observed_report_count": 0.024472776800394058,
+      "first15_count": 0.009807612746953964,
+      "growth": 0.006848241668194532,
+      "weather_wind_speed": 0.017919639125466347,
+      "weather_wind_reliability": 0.014617858454585075,
+      "downwind_alignment": 0.014620118774473667,
+      "downwind_distance": 0.013724270276725292,
+      "crosswind_distance": 0.014582181349396706,
+      "wind_advection": 0.015216546133160591,
+      "is_downwind": 0.0,
+      "weather_humidity": 0.017179284244775772,
+      "weather_rainfall_15m": 0.011386926285922527,
+      "weather_rainfall_60m": 0.020087484270334244,
+      "weather_temperature": 0.016406504437327385,
+      "weather_calm": 0.011957193724811077,
+      "humid_calm": 0.01095212996006012,
+      "rain_wind_interaction": 0.016444126144051552,
+      "farm_nearest_km": 0.0231328085064888,
+      "farm_count_1km": 0.008867117576301098,
+      "farm_count_3km": 0.013204158283770084,
+      "farm_count_5km": 0.017171217128634453,
+      "farm_size_decay": 0.011083213612437248,
+      "animal_count_decay": 0.012581146322190762,
+      "pig_count_decay": 0.015947250649333,
+      "cattle_count_decay": 0.01310027576982975,
+      "poultry_count_decay": 0.061590444296598434,
+      "manure_nearest_km": 0.01502289529889822,
+      "manure_count_3km": 0.01582281105220318,
+      "manure_volume_decay": 0.018477337434887886,
+      "source_downwind_score": 0.01711684837937355,
+      "pig_downwind_score": 0.015556753613054752,
+      "manure_downwind_score": 0.015548408962786198
+    }
+  },
+  "delta_vs_base_reference": {
+    "pr_auc": -0.023294377807631828,
+    "roc_auc": -0.005277087059576413,
+    "topk_recall": -0.0011423761423761114
+  }
+}

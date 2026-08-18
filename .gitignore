@@ -7,3 +7,10 @@ venv/
 Thumbs.db
 .idea/
 .vscode/
+data/kma_weather_cache/
+data/kakao_geocode_cache/
+outputs/farm_geocoding/
+outputs/vworld_source_run.*
+demo/server.*
+outputs/grid_compare.*
+outputs/severity_expansion.*

@@ -1,0 +1,137 @@
+{
+  "protocol": "common events, chronological 70/30 split, 30-minute input and forecast",
+  "common_events": 112,
+  "train_events": 78,
+  "test_events": 34,
+  "grids": {
+    "1000": {
+      "selected_model": "rank_d2",
+      "inner_validation": {
+        "extra_leaf4": {
+          "pr_auc": 0.3959418222826628,
+          "topk_recall": 0.45058170995670993,
+          "roc_auc": 0.8551447427628618
+        },
+        "xgb_d2": {
+          "pr_auc": 0.36181645864754075,
+          "topk_recall": 0.3945809398934399,
+          "roc_auc": 0.857338383080846
+        },
+        "xgb_d3": {
+          "pr_auc": 0.3745687756060908,
+          "topk_recall": 0.4148555611055611,
+          "roc_auc": 0.8577133643317834
+        },
+        "rank_d2": {
+          "pr_auc": 0.5986294273799853,
+          "topk_recall": 0.5336309523809524,
+          "roc_auc": 0.9245162741862908
+        },
+        "rank_d3": {
+          "pr_auc": 0.5841591358112757,
+          "topk_recall": 0.544047619047619,
+          "roc_auc": 0.9226413679316035
+        }
+      },
+      "test": {
+        "pr_auc": 0.47411533343981305,
+        "topk_recall": 0.43326118326118324,
+        "roc_auc": 0.9035213196579116,
+        "recall_at_3": 0.4475468975468975,
+        "event_hit_rate_at_3": 0.8484848484848485,
+        "mean_inspected_cells": 3.0,
+        "positive_rate": 0.09716981132075472,
+        "pr_auc_lift_over_prevalence": 4.879245179089338,
+        "mean_candidates_per_event": 31.176470588235293,
+        "mean_positive_cells_per_event": 3.0294117647058822,
+        "top3_inspection_area_km2": 3.0
+      }
+    },
+    "1500": {
+      "selected_model": "rank_d2",
+      "inner_validation": {
+        "extra_leaf4": {
+          "pr_auc": 0.5441736434108527,
+          "topk_recall": 0.6047619047619047,
+          "roc_auc": 0.8460606060606061
+        },
+        "xgb_d2": {
+          "pr_auc": 0.47810030820958255,
+          "topk_recall": 0.5364583333333333,
+          "roc_auc": 0.8087878787878787
+        },
+        "xgb_d3": {
+          "pr_auc": 0.46743008536944364,
+          "topk_recall": 0.5273809523809524,
+          "roc_auc": 0.7948484848484847
+        },
+        "rank_d2": {
+          "pr_auc": 0.705098772661188,
+          "topk_recall": 0.6770833333333333,
+          "roc_auc": 0.9095757575757576
+        },
+        "rank_d3": {
+          "pr_auc": 0.6277218832905724,
+          "topk_recall": 0.6979166666666666,
+          "roc_auc": 0.8947878787878788
+        }
+      },
+      "test": {
+        "pr_auc": 0.6034250832408355,
+        "topk_recall": 0.6057291666666667,
+        "roc_auc": 0.8849575212393803,
+        "recall_at_3": 0.6729166666666666,
+        "event_hit_rate_at_3": 0.9375,
+        "mean_inspected_cells": 3.0,
+        "positive_rate": 0.2013888888888889,
+        "pr_auc_lift_over_prevalence": 2.9963176547131143,
+        "mean_candidates_per_event": 12.705882352941176,
+        "mean_positive_cells_per_event": 2.5588235294117645,
+        "top3_inspection_area_km2": 6.75
+      }
+    },
+    "2000": {
+      "selected_model": "rank_d2",
+      "inner_validation": {
+        "extra_leaf4": {
+          "pr_auc": 0.6337414965986394,
+          "topk_recall": 0.6713541666666667,
+          "roc_auc": 0.8812328767123287
+        },
+        "xgb_d2": {
+          "pr_auc": 0.5700185528756958,
+          "topk_recall": 0.6314980158730159,
+          "roc_auc": 0.8538356164383561
+        },
+        "xgb_d3": {
+          "pr_auc": 0.571656314699793,
+          "topk_recall": 0.6220833333333333,
+          "roc_auc": 0.8409589041095888
+        },
+        "rank_d2": {
+          "pr_auc": 0.7390837445793876,
+          "topk_recall": 0.76875,
+          "roc_auc": 0.9267123287671233
+        },
+        "rank_d3": {
+          "pr_auc": 0.7335098720755315,
+          "topk_recall": 0.7166666666666666,
+          "roc_auc": 0.918082191780822
+        }
+      },
+      "test": {
+        "pr_auc": 0.6081023806538863,
+        "topk_recall": 0.5656565656565657,
+        "roc_auc": 0.8927118017018127,
+        "recall_at_3": 0.652020202020202,
+        "event_hit_rate_at_3": 0.8787878787878788,
+        "mean_inspected_cells": 3.0,
+        "positive_rate": 0.2109181141439206,
+        "pr_auc_lift_over_prevalence": 2.8831206988648965,
+        "mean_candidates_per_event": 11.852941176470589,
+        "mean_positive_cells_per_event": 2.5,
+        "top3_inspection_area_km2": 12.0
+      }
+    }
+  }
+}

@@ -21,26 +21,26 @@
         "topk_recall": 0.24537037037037035
       },
       "extra_leaf4": {
-        "pr_auc": 0.2905299747672157,
+        "pr_auc": 0.2905299747672158,
         "topk_recall": 0.24537037037037035
       },
       "rf_leaf2": {
-        "pr_auc": 0.20094311627540432,
-        "topk_recall": 0.20370370370370366
+        "pr_auc": 0.21098101856319576,
+        "topk_recall": 0.2222222222222222
       },
       "rf_leaf4": {
-        "pr_auc": 0.24532832771163726,
-        "topk_recall": 0.21296296296296294
+        "pr_auc": 0.23151315410240414,
+        "topk_recall": 0.2222222222222222
       }
     },
     "hidden_grid_candidate_coverage_train": 0.9124579124579124,
     "hidden_grid_candidate_coverage_test": 0.9065420560747663,
     "positive_rate_test": 0.030744849445324882,
     "selected_model_metrics": {
-      "pr_auc": 0.22611602451543633,
+      "pr_auc": 0.22611776593810118,
       "precision": 0.23595505617977527,
       "recall": 0.4329896907216495,
-      "roc_auc": 0.8857989522159218
+      "roc_auc": 0.885805694713208
     },
     "distance_baseline": {
       "pr_auc": 0.08264537380154148,
@@ -89,12 +89,12 @@
         "topk_recall": 0.31108776844070957
       },
       "rf_leaf2": {
-        "pr_auc": 0.3098261052822179,
-        "topk_recall": 0.27432306255835665
+        "pr_auc": 0.30583399779027215,
+        "topk_recall": 0.2913865546218487
       },
       "rf_leaf4": {
-        "pr_auc": 0.3114723896958343,
-        "topk_recall": 0.2991596638655462
+        "pr_auc": 0.3232662894404825,
+        "topk_recall": 0.32072829131652664
       }
     },
     "hybrid_model_weight_selected_on_validation": 0.8500000000000001,
@@ -144,7 +144,7 @@
     "sensor_count": 13,
     "overlap_complaints": 25,
     "best_absolute_correlation_lag_minutes": 60,
-    "correlation_at_best_lag": 0.2993768215813622,
+    "correlation_at_best_lag": 0.2993768215813624,
     "limitation": "센서 자료가 하루뿐이고 센서 좌표가 없어 시간 일치도 사례검증만 수행함"
   },
   "wanju_farms": 884

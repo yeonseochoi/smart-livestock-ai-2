@@ -1,0 +1,143 @@
+{
+  "experiment": "advanced_prior_and_learning_to_rank",
+  "selection_policy": "inner temporal validation only; final future test used once",
+  "train_events": 81,
+  "test_events": 36,
+  "validation_results": {
+    "advanced": {
+      "extra_leaf2": {
+        "pr_auc": 0.09449355283432001,
+        "topk_recall": 0.15270730885074063,
+        "roc_auc": 0.5477215953139805
+      },
+      "extra_leaf4": {
+        "pr_auc": 0.14680737086536738,
+        "topk_recall": 0.2561376819332746,
+        "roc_auc": 0.6386639676113361
+      },
+      "rf_leaf2": {
+        "pr_auc": 0.11376125212878112,
+        "topk_recall": 0.1826847453880185,
+        "roc_auc": 0.566640106813679
+      },
+      "rf_leaf4": {
+        "pr_auc": 0.10082312870002433,
+        "topk_recall": 0.1855155838275563,
+        "roc_auc": 0.5823175984150228
+      },
+      "xgb_d2": {
+        "pr_auc": 0.1800551480710565,
+        "topk_recall": 0.19255742190087324,
+        "roc_auc": 0.8216577655267464
+      },
+      "xgb_d3": {
+        "pr_auc": 0.1888807094452205,
+        "topk_recall": 0.20294630689355656,
+        "roc_auc": 0.8170600396244293
+      },
+      "xgb_d4": {
+        "pr_auc": 0.18771482754533603,
+        "topk_recall": 0.2106147264884289,
+        "roc_auc": 0.7972585924713584
+      },
+      "rank_d2": {
+        "pr_auc": 0.2919597973469916,
+        "topk_recall": 0.2793183940242764,
+        "roc_auc": 0.8874795417348609
+      },
+      "rank_d3": {
+        "pr_auc": 0.3145434749998953,
+        "topk_recall": 0.3250700280112045,
+        "roc_auc": 0.8868442587647515
+      },
+      "rank_d4": {
+        "pr_auc": 0.3004435662749809,
+        "topk_recall": 0.30873015873015874,
+        "roc_auc": 0.8867796537169437
+      }
+    },
+    "advanced_weather": {
+      "extra_leaf2": {
+        "pr_auc": 0.08211181845213959,
+        "topk_recall": 0.11760445126644994,
+        "roc_auc": 0.530030579722629
+      },
+      "extra_leaf4": {
+        "pr_auc": 0.10504491310756725,
+        "topk_recall": 0.1773846633216693,
+        "roc_auc": 0.5839542596261521
+      },
+      "rf_leaf2": {
+        "pr_auc": 0.09248854030299168,
+        "topk_recall": 0.14034022990970035,
+        "roc_auc": 0.5473124300111981
+      },
+      "rf_leaf4": {
+        "pr_auc": 0.08645832836418972,
+        "topk_recall": 0.1574854010798819,
+        "roc_auc": 0.562989921612542
+      },
+      "xgb_d2": {
+        "pr_auc": 0.17321442147838778,
+        "topk_recall": 0.1958555052567983,
+        "roc_auc": 0.8093182013954692
+      },
+      "xgb_d3": {
+        "pr_auc": 0.1790486361109446,
+        "topk_recall": 0.2081379920389208,
+        "roc_auc": 0.7993690240330777
+      },
+      "xgb_d4": {
+        "pr_auc": 0.1673573269305463,
+        "topk_recall": 0.20432620405758264,
+        "roc_auc": 0.7693061417865448
+      },
+      "rank_d2": {
+        "pr_auc": 0.2899344154453892,
+        "topk_recall": 0.29647525676937436,
+        "roc_auc": 0.887479541734861
+      },
+      "rank_d3": {
+        "pr_auc": 0.3084148037740081,
+        "topk_recall": 0.2891223155929038,
+        "roc_auc": 0.8887931777069514
+      },
+      "rank_d4": {
+        "pr_auc": 0.2900340258474823,
+        "topk_recall": 0.2891223155929038,
+        "roc_auc": 0.888911620294599
+      }
+    }
+  },
+  "selected": {
+    "pr_selected": [
+      "advanced",
+      "rank_d3"
+    ],
+    "topk_selected": [
+      "advanced",
+      "rank_d3"
+    ]
+  },
+  "test_results": {
+    "pr_selected": {
+      "feature_set": "advanced",
+      "model": "rank_d3",
+      "pr_auc": 0.25550643498473935,
+      "topk_recall": 0.2687349687349687,
+      "roc_auc": 0.8804432229638355
+    },
+    "topk_selected": {
+      "feature_set": "advanced",
+      "model": "rank_d3",
+      "pr_auc": 0.25550643498473935,
+      "topk_recall": 0.2687349687349687,
+      "roc_auc": 0.8804432229638355
+    }
+  },
+  "current_model": {
+    "pr_auc": 0.25815620554111435,
+    "roc_auc": 0.8883057773124519,
+    "topk_recall": 0.28334535834535834
+  }
+}
