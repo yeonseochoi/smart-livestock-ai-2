@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>익산 악취 대응 AI</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="demo-data.js"></script>
+  <style>
+    :root{--ink:#182126;--muted:#68757c;--line:#dce2e5;--paper:#f4f6f5;--white:#fff;--red:#dd3e36;--amber:#e9a11b;--green:#15866f;--blue:#2374ab;--navy:#172e3d}
+    *{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Inter,"Pretendard Variable",Pretendard,"Noto Sans KR",sans-serif;color:var(--ink);letter-spacing:0;background:var(--paper)}
+    button,select,input{font:inherit}.app{height:100%;display:grid;grid-template-rows:58px 1fr;overflow:hidden}.topbar{display:flex;align-items:center;gap:18px;padding:0 20px;background:var(--navy);color:white;border-bottom:1px solid #0d222f;z-index:1001}
+    .brand{font-size:17px;font-weight:750;white-space:nowrap}.brand span{color:#62d2b4}.divider{width:1px;height:22px;background:#ffffff2b}.status{display:flex;align-items:center;gap:8px;font-size:12px;color:#d5e0e6}.pulse{width:8px;height:8px;border-radius:50%;background:#49c59f;box-shadow:0 0 0 4px #49c59f20}
+    .top-actions{margin-left:auto;display:flex;align-items:center;gap:8px}.icon-btn{width:34px;height:34px;border:1px solid #ffffff2b;background:#ffffff0d;color:white;display:grid;place-items:center;cursor:pointer;border-radius:4px}.icon-btn:hover{background:#ffffff1c}.icon-btn svg{width:17px}
+    .workspace{min-height:0;display:grid;grid-template-columns:340px 1fr}.sidebar{overflow:auto;background:var(--white);border-right:1px solid var(--line);z-index:900}.section{padding:18px 20px;border-bottom:1px solid var(--line)}.eyebrow{font-size:11px;font-weight:750;color:var(--muted);text-transform:uppercase;margin-bottom:8px}.event-head{display:flex;align-items:start;justify-content:space-between;gap:12px}.event-id{font-size:23px;font-weight:780}.event-time{font-size:12px;color:var(--muted);margin-top:4px}
+    .event-nav{display:flex;gap:4px}.nav-btn{width:30px;height:30px;border:1px solid var(--line);background:white;border-radius:4px;display:grid;place-items:center;cursor:pointer}.nav-btn:disabled{opacity:.35}.nav-btn svg{width:15px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-top:16px}.metric{background:white;padding:10px 8px}.metric strong{display:block;font-size:18px}.metric span{display:block;font-size:10px;color:var(--muted);margin-top:3px}
+    .mode-control{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:4px;overflow:hidden}.mode-control button{border:0;padding:9px;background:white;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer}.mode-control button.active{background:var(--navy);color:white}.risk-row{display:flex;gap:12px;align-items:center;margin-top:15px}.risk-score{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;border:6px solid var(--amber);font-size:17px;font-weight:800}.risk-copy strong{display:block;font-size:14px}.risk-copy span{font-size:11px;color:var(--muted);line-height:1.5}
+    .weather-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.weather-item{display:flex;gap:9px;align-items:center}.weather-item svg{width:18px;color:var(--blue)}.weather-item strong{font-size:13px;display:block}.weather-item span{font-size:10px;color:var(--muted)}.priority-list{display:grid;gap:7px}.priority{display:grid;grid-template-columns:25px 1fr auto;gap:9px;align-items:center;padding:9px;border-left:3px solid var(--amber);background:#f7f8f8}.priority:first-child{border-left-color:var(--red)}.priority b{font-size:12px}.priority small{display:block;color:var(--muted);font-size:10px;margin-top:2px}.priority-score{font-size:12px;font-weight:800}
+    .switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px}.switch{position:relative;width:38px;height:21px}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;inset:0;background:#bcc6ca;border-radius:11px;cursor:pointer}.slider:before{content:"";position:absolute;width:15px;height:15px;left:3px;top:3px;background:white;border-radius:50%;transition:.18s}.switch input:checked+.slider{background:var(--green)}.switch input:checked+.slider:before{transform:translateX(17px)}
+    .map-wrap{position:relative;min-width:0}.map{height:100%;width:100%;background:#dfe5e2}.map-toolbar{position:absolute;z-index:700;top:14px;left:14px;display:flex;gap:6px}.map-chip{border:1px solid #cad3d6;background:#fffffff2;padding:8px 10px;border-radius:4px;font-size:11px;font-weight:700;box-shadow:0 2px 10px #18212614}.legend{position:absolute;z-index:700;right:14px;bottom:18px;background:#fffffff2;border:1px solid #cad3d6;padding:12px 14px;box-shadow:0 2px 12px #18212618;font-size:10px}.legend-title{font-weight:800;font-size:11px;margin-bottom:8px}.legend-row{display:flex;align-items:center;gap:7px;margin-top:6px}.swatch{width:14px;height:10px}.swatch.report{width:9px;height:9px;border-radius:50%;background:var(--navy)}
+    .leaflet-control-zoom a{border-radius:0!important}.leaflet-popup-content-wrapper{border-radius:4px}.leaflet-popup-content{margin:11px 13px;font-size:12px}.empty{padding:30px;color:var(--muted)}
+    @media(max-width:760px){.workspace{grid-template-columns:1fr;grid-template-rows:44% 56%}.sidebar{order:2;border-right:0;border-top:1px solid var(--line)}.map-wrap{order:1}.topbar{padding:0 12px}.brand{font-size:14px}.divider,.status{display:none}.section{padding:14px 16px}.map-toolbar{top:8px;left:8px}.legend{right:8px;bottom:8px}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">익산 <span>악취 대응 AI</span></div><div class="divider"></div>
+      <div class="status"><i class="pulse"></i><span>과거 Event 재현 모드</span></div>
+      <div class="top-actions"><button class="icon-btn" title="지도 초기화" id="reset"><i data-lucide="locate-fixed"></i></button><button class="icon-btn" title="정보" id="info"><i data-lucide="info"></i></button></div>
+    </header>
+    <div class="workspace">
+      <aside class="sidebar">
+        <section class="section">
+          <div class="eyebrow">Selected Event</div>
+          <div class="event-head"><div><div class="event-id" id="eventId">-</div><div class="event-time" id="eventTime">-</div></div><div class="event-nav"><button class="nav-btn" id="prev" title="이전 Event"><i data-lucide="chevron-left"></i></button><button class="nav-btn" id="next" title="다음 Event"><i data-lucide="chevron-right"></i></button></div></div>
+          <div class="metrics"><div class="metric"><strong id="initialCount">0</strong><span>초기 30분 신고</span></div><div class="metric"><strong id="candidateCount">0</strong><span>우선 점검 권역</span></div><div class="metric"><strong id="futureCount">0</strong><span>이후 신고</span></div></div>
+        </section>
+        <section class="section">
+          <div class="eyebrow">Forecast Resolution</div>
+          <div class="mode-control"><button class="active" data-mode="broad">1km 광역 경보</button><button data-mode="detail">500m 상세 후보</button></div>
+          <div class="risk-row"><div class="risk-score" id="riskScore">--</div><div class="risk-copy"><strong id="riskLabel">분석 중</strong><span id="riskCopy">향후 30분 신고 가능 권역을 계산합니다.</span></div></div>
+        </section>
+        <section class="section"><div class="eyebrow">Weather Context</div><div class="weather-grid"><div class="weather-item"><i data-lucide="wind"></i><div><strong id="wind">-</strong><span>풍속 · 풍하류</span></div></div><div class="weather-item"><i data-lucide="droplets"></i><div><strong id="humidity">-</strong><span>상대습도</span></div></div><div class="weather-item"><i data-lucide="cloud-rain"></i><div><strong id="rain">-</strong><span>최근 1시간 강수</span></div></div><div class="weather-item"><i data-lucide="scan-search"></i><div><strong>30분</strong><span>예측 구간</span></div></div></div></section>
+        <section class="section"><div class="eyebrow">Dispatch Priority</div><div class="priority-list" id="priorityList"></div></section>
+        <section class="section"><div class="switch-row"><span>검증용 실제 이후 신고 표시</span><label class="switch"><input type="checkbox" id="actualToggle"><span class="slider"></span></label></div></section>
+      </aside>
+      <section class="map-wrap">
+        <div class="map" id="map"></div>
+        <div class="map-toolbar"><div class="map-chip" id="modeChip">1km 광역 경보</div><div class="map-chip">향후 30분</div></div>
+        <div class="legend"><div class="legend-title">지도 범례</div><div class="legend-row"><i class="swatch report"></i>초기 신고</div><div class="legend-row"><i class="swatch" style="background:#dd3e36"></i>매우 높음</div><div class="legend-row"><i class="swatch" style="background:#e9a11b"></i>높음</div><div class="legend-row"><i class="swatch" style="background:#f2d56b"></i>관찰</div><div class="legend-row" id="actualLegend" hidden><i class="swatch" style="border:2px solid #15866f;background:transparent"></i>실제 이후 신고</div></div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const data=window.DEMO_DATA||{events:[]}; let index=Math.max(0,data.events.length-1), mode='broad', showActual=false; const layers=[];
+    const map=L.map('map',{zoomControl:true,attributionControl:true}).setView([35.95,126.98],12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(map);
+    const $=id=>document.getElementById(id); const color=s=>s>.78?'#dd3e36':s>.52?'#e9a11b':'#f2d56b';
+    function clear(){while(layers.length)map.removeLayer(layers.pop())}
+    function add(layer){layer.addTo(map);layers.push(layer)}
+    function draw(){if(!data.events.length)return;clear();const e=data.events[index], grids=e[mode],size=mode==='broad'?1000:500,bounds=[];
+      e.reports.forEach((r,i)=>{const m=L.circleMarker([r[0],r[1]],{radius:5,color:'#fff',weight:2,fillColor:'#172e3d',fillOpacity:1}).bindPopup(`<b>초기 신고 ${i+1}</b><br>악취강도 ${r[2]}`);add(m);bounds.push([r[0],r[1]])});
+      grids.forEach((g,i)=>{const lat=g.center[0],lon=g.center[1],dy=size/110540/2,dx=size/(111320*Math.cos(lat*Math.PI/180))/2;const actual=showActual&&g.actual;const rect=L.rectangle([[lat-dy,lon-dx],[lat+dy,lon+dx]],{color:actual?'#15866f':color(g.score),weight:actual?3:1,fillColor:color(g.score),fillOpacity:.18+.5*g.score}).bindPopup(`<b>우선순위 ${i+1}</b><br>상대 위험도 ${Math.round(g.score*100)}${mode==='detail'?`<br>초기 신고 최단거리 ${g.distance}km`:''}${actual?'<br><b style="color:#15866f">실제 이후 신고 확인</b>':''}`);add(rect);bounds.push([lat,lon])});
+      if(bounds.length)map.fitBounds(bounds,{padding:[35,35],maxZoom:14});renderPanel(e,grids)}
+    function renderPanel(e,grids){$('eventId').textContent=e.id;$('eventTime').textContent=e.hour+' 기준';$('initialCount').textContent=e.initialCount;$('futureCount').textContent=e.futureCount;$('candidateCount').textContent=Math.min(5,grids.length);const top=grids[0]?.score||0;$('riskScore').textContent=Math.round(top*100);$('riskLabel').textContent=top>.78?'즉시 점검 권고':top>.52?'우선 관찰 필요':'일반 관찰';$('riskCopy').textContent=mode==='broad'?'1km 권역 선별 후 현장 확인이 필요합니다.':'광역 경보 내부의 상세 후보입니다.';const w=e.weather;$('wind').textContent=`${w.windSpeed??'-'} m/s · ${w.windDirection??'-'}°`;$('humidity').textContent=`${w.humidity??'-'} %`;$('rain').textContent=`${w.rainfall??'-'} mm`;$('priorityList').innerHTML=grids.slice(0,5).map((g,i)=>`<div class="priority"><b>${i+1}</b><div><b>${mode==='broad'?'1km 권역':'500m 격자'} ${i+1}</b><small>${i===0?'최우선 현장 확인':i<3?'순차 점검':'상황 관찰'}</small></div><span class="priority-score">${Math.round(g.score*100)}</span></div>`).join('');$('prev').disabled=index===0;$('next').disabled=index===data.events.length-1}
+    document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));$('modeChip').textContent=mode==='broad'?'1km 광역 경보':'500m 상세 후보';draw()});
+    $('prev').onclick=()=>{if(index>0){index--;draw()}};$('next').onclick=()=>{if(index<data.events.length-1){index++;draw()}};$('actualToggle').onchange=e=>{showActual=e.target.checked;$('actualLegend').hidden=!showActual;draw()};$('reset').onclick=draw;$('info').onclick=()=>alert('과거 테스트 Event를 재현하는 공모전 데모입니다. 지도 위험도는 Event 내부 상대 순위이며 실제 확률이 아닙니다.');
+    lucide.createIcons();draw();
+  </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "events": 129,
+  "asos_wind_coverage": 1.0,
+  "asos_humidity_coverage": 1.0,
+  "aws_wind_coverage": 1.0,
+  "aws_humidity_coverage": 1.0,
+  "aws_average_station_count": 3.0
+}

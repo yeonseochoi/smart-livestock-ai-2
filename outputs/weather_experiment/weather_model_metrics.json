@@ -1,0 +1,716 @@
+{
+  "experiment": "weather_feature_ablation_for_early_prediction",
+  "selection_rule": "feature configuration and model selected on inner validation PR-AUC, then Top-K recall",
+  "train_events": 81,
+  "test_events": 36,
+  "train_rows": 7275,
+  "test_rows": 2682,
+  "selected_configuration": "weather_prior_s12_k15",
+  "selected_model": "xgb_d4",
+  "selected_parameters": {
+    "sectors": 12,
+    "smoothing": 15.0
+  },
+  "inner_validation": {
+    "base": {
+      "selected_model": "xgb_d4",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.3056058765994109,
+          "topk_recall": 0.26827731092436974
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.3240447977171217,
+          "topk_recall": 0.32775443510737623
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.3302502588180735,
+          "topk_recall": 0.31108776844070957
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.30583399779027215,
+          "topk_recall": 0.2913865546218487
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.3232662894404825,
+          "topk_recall": 0.32072829131652664
+        },
+        "xgb_d2": {
+          "pr_auc": 0.329340069176944,
+          "topk_recall": 0.3522642390289449
+        },
+        "xgb_d3": {
+          "pr_auc": 0.34202209834338637,
+          "topk_recall": 0.30128384687208215
+        },
+        "xgb_d4": {
+          "pr_auc": 0.3576106360729729,
+          "topk_recall": 0.3318394024276377
+        }
+      },
+      "selected": {
+        "pr_auc": 0.3576106360729729,
+        "topk_recall": 0.3318394024276377
+      }
+    },
+    "weather_direction": {
+      "selected_model": "xgb_d3",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.2982196688313105,
+          "topk_recall": 0.2767740429505135
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.3051555612702103,
+          "topk_recall": 0.30814659197012134
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.31756501572932755,
+          "topk_recall": 0.3048786181139122
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.3117410155055832,
+          "topk_recall": 0.3205648926237161
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.29678783011035526,
+          "topk_recall": 0.29115312791783377
+        },
+        "xgb_d2": {
+          "pr_auc": 0.3496613775635093,
+          "topk_recall": 0.3056956115779645
+        },
+        "xgb_d3": {
+          "pr_auc": 0.3539323002478376,
+          "topk_recall": 0.32530345471521943
+        },
+        "xgb_d4": {
+          "pr_auc": 0.35140911108302403,
+          "topk_recall": 0.3513538748832867
+        }
+      },
+      "selected": {
+        "pr_auc": 0.3539323002478376,
+        "topk_recall": 0.32530345471521943
+      }
+    },
+    "weather_full": {
+      "selected_model": "xgb_d3",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.29616059979530174,
+          "topk_recall": 0.2588001867413632
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.3052157443314071,
+          "topk_recall": 0.27546685340802984
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.30422110342941455,
+          "topk_recall": 0.31664332399626516
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.3006070618259393,
+          "topk_recall": 0.2764472455648926
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.28034660423403035,
+          "topk_recall": 0.27236227824463116
+        },
+        "xgb_d2": {
+          "pr_auc": 0.32501164550410844,
+          "topk_recall": 0.33510737628384685
+        },
+        "xgb_d3": {
+          "pr_auc": 0.3362047444677766,
+          "topk_recall": 0.36125116713352007
+        },
+        "xgb_d4": {
+          "pr_auc": 0.3134576093519661,
+          "topk_recall": 0.31353874883286653
+        }
+      },
+      "selected": {
+        "pr_auc": 0.3362047444677766,
+        "topk_recall": 0.36125116713352007
+      }
+    },
+    "weather_prior_s4_k3": {
+      "selected_model": "rf_leaf4",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.2605481740946132,
+          "topk_recall": 0.29822595704948646
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.2722971970386802,
+          "topk_recall": 0.2936041083099906
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.27888116766667953,
+          "topk_recall": 0.2759570494864612
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.2822384884924754,
+          "topk_recall": 0.2871381886087768
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.3265831635125487,
+          "topk_recall": 0.3170401493930906
+        },
+        "xgb_d2": {
+          "pr_auc": 0.2954748659869339,
+          "topk_recall": 0.28363678804855275
+        },
+        "xgb_d3": {
+          "pr_auc": 0.2921811469972723,
+          "topk_recall": 0.29007936507936505
+        },
+        "xgb_d4": {
+          "pr_auc": 0.2994098805894414,
+          "topk_recall": 0.3194911297852474
+        }
+      },
+      "selected": {
+        "pr_auc": 0.3265831635125487,
+        "topk_recall": 0.3170401493930906
+      }
+    },
+    "weather_prior_s4_k8": {
+      "selected_model": "xgb_d3",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.2690457410222522,
+          "topk_recall": 0.2787581699346405
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.2702408923648734,
+          "topk_recall": 0.2941643323996265
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.29342395331230753,
+          "topk_recall": 0.2877217553688142
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.29768551250081676,
+          "topk_recall": 0.29743230625583567
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.32581017578582233,
+          "topk_recall": 0.3415499533146592
+        },
+        "xgb_d2": {
+          "pr_auc": 0.3092985424895653,
+          "topk_recall": 0.30968720821661994
+        },
+        "xgb_d3": {
+          "pr_auc": 0.33317701662614774,
+          "topk_recall": 0.3312558356676003
+        },
+        "xgb_d4": {
+          "pr_auc": 0.31804635695311884,
+          "topk_recall": 0.3059290382819794
+        }
+      },
+      "selected": {
+        "pr_auc": 0.33317701662614774,
+        "topk_recall": 0.3312558356676003
+      }
+    },
+    "weather_prior_s4_k15": {
+      "selected_model": "rf_leaf4",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.29469912173769114,
+          "topk_recall": 0.3288982259570495
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.2899364852635094,
+          "topk_recall": 0.3176937441643324
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.2974171316138513,
+          "topk_recall": 0.2941643323996265
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.2993453931280585,
+          "topk_recall": 0.296125116713352
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.3328038979787531,
+          "topk_recall": 0.3047852474323062
+        },
+        "xgb_d2": {
+          "pr_auc": 0.31812173721483605,
+          "topk_recall": 0.3351073762838469
+        },
+        "xgb_d3": {
+          "pr_auc": 0.3200812459217347,
+          "topk_recall": 0.29253034547152196
+        },
+        "xgb_d4": {
+          "pr_auc": 0.312969443201513,
+          "topk_recall": 0.3415499533146592
+        }
+      },
+      "selected": {
+        "pr_auc": 0.3328038979787531,
+        "topk_recall": 0.3047852474323062
+      }
+    },
+    "weather_prior_s8_k3": {
+      "selected_model": "xgb_d4",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.2706517244601035,
+          "topk_recall": 0.27537348272642387
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.28188906831016025,
+          "topk_recall": 0.27733426704014935
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.2908933350213543,
+          "topk_recall": 0.25249766573295984
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.2869585205063532,
+          "topk_recall": 0.24792250233426708
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.31147799045078417,
+          "topk_recall": 0.3194911297852474
+        },
+        "xgb_d2": {
+          "pr_auc": 0.31416344546482244,
+          "topk_recall": 0.32308590102707746
+        },
+        "xgb_d3": {
+          "pr_auc": 0.3115248286326686,
+          "topk_recall": 0.2819094304388422
+        },
+        "xgb_d4": {
+          "pr_auc": 0.3276199025126265,
+          "topk_recall": 0.30543884220354806
+        }
+      },
+      "selected": {
+        "pr_auc": 0.3276199025126265,
+        "topk_recall": 0.30543884220354806
+      }
+    },
+    "weather_prior_s8_k8": {
+      "selected_model": "xgb_d4",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.2800608495410871,
+          "topk_recall": 0.2707983193277311
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.2874947242462181,
+          "topk_recall": 0.2810924369747899
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.2981974275663268,
+          "topk_recall": 0.25880018674136324
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.29578167308444187,
+          "topk_recall": 0.2688375350140056
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.32267636365895414,
+          "topk_recall": 0.32390289449112974
+        },
+        "xgb_d2": {
+          "pr_auc": 0.33518498610073444,
+          "topk_recall": 0.28632119514472454
+        },
+        "xgb_d3": {
+          "pr_auc": 0.335754951003014,
+          "topk_recall": 0.2765172735760971
+        },
+        "xgb_d4": {
+          "pr_auc": 0.3444837602092684,
+          "topk_recall": 0.3059290382819795
+        }
+      },
+      "selected": {
+        "pr_auc": 0.3444837602092684,
+        "topk_recall": 0.3059290382819795
+      }
+    },
+    "weather_prior_s8_k15": {
+      "selected_model": "xgb_d3",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.2899713611232905,
+          "topk_recall": 0.3323295985060691
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.29638969000425747,
+          "topk_recall": 0.2740662931839402
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.3094225648426088,
+          "topk_recall": 0.3097805788982259
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.2852718178263996,
+          "topk_recall": 0.2917133520074696
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.33306339291850745,
+          "topk_recall": 0.32063492063492066
+        },
+        "xgb_d2": {
+          "pr_auc": 0.3364502324410377,
+          "topk_recall": 0.28632119514472454
+        },
+        "xgb_d3": {
+          "pr_auc": 0.34263996540102043,
+          "topk_recall": 0.26475256769374417
+        },
+        "xgb_d4": {
+          "pr_auc": 0.3342106827159216,
+          "topk_recall": 0.32413632119514474
+        }
+      },
+      "selected": {
+        "pr_auc": 0.34263996540102043,
+        "topk_recall": 0.26475256769374417
+      }
+    },
+    "weather_prior_s12_k3": {
+      "selected_model": "xgb_d4",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.27045500583300597,
+          "topk_recall": 0.3010504201680672
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.295965631051762,
+          "topk_recall": 0.31837068160597576
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.3204048141277605,
+          "topk_recall": 0.3426237161531279
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.28365459122491576,
+          "topk_recall": 0.27425303454715216
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.3352109210389756,
+          "topk_recall": 0.31507936507936507
+        },
+        "xgb_d2": {
+          "pr_auc": 0.3291776341320477,
+          "topk_recall": 0.3448179271708684
+        },
+        "xgb_d3": {
+          "pr_auc": 0.33976671493699423,
+          "topk_recall": 0.3546218487394958
+        },
+        "xgb_d4": {
+          "pr_auc": 0.3424181007556631,
+          "topk_recall": 0.3546218487394958
+        }
+      },
+      "selected": {
+        "pr_auc": 0.3424181007556631,
+        "topk_recall": 0.3546218487394958
+      }
+    },
+    "weather_prior_s12_k8": {
+      "selected_model": "xgb_d4",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.28286989733882606,
+          "topk_recall": 0.2740896358543417
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.29549923979487747,
+          "topk_recall": 0.22964519140989728
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.3173448712976926,
+          "topk_recall": 0.32301587301587303
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.3043228178814692,
+          "topk_recall": 0.3184407096171802
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.3265019856559696,
+          "topk_recall": 0.32161531279178335
+        },
+        "xgb_d2": {
+          "pr_auc": 0.3505857117154082,
+          "topk_recall": 0.38730158730158726
+        },
+        "xgb_d3": {
+          "pr_auc": 0.3494019919969286,
+          "topk_recall": 0.3657329598506069
+        },
+        "xgb_d4": {
+          "pr_auc": 0.35644064464224734,
+          "topk_recall": 0.34808590102707754
+        }
+      },
+      "selected": {
+        "pr_auc": 0.35644064464224734,
+        "topk_recall": 0.34808590102707754
+      }
+    },
+    "weather_prior_s12_k15": {
+      "selected_model": "xgb_d4",
+      "models": {
+        "extra_leaf1": {
+          "pr_auc": 0.28020273539290474,
+          "topk_recall": 0.25056022408963585
+        },
+        "extra_leaf2": {
+          "pr_auc": 0.292436422779705,
+          "topk_recall": 0.288468720821662
+        },
+        "extra_leaf4": {
+          "pr_auc": 0.313231994220897,
+          "topk_recall": 0.3200746965452848
+        },
+        "rf_leaf2": {
+          "pr_auc": 0.30343366943272604,
+          "topk_recall": 0.3066760037348273
+        },
+        "rf_leaf4": {
+          "pr_auc": 0.35292958751370296,
+          "topk_recall": 0.3176237161531279
+        },
+        "xgb_d2": {
+          "pr_auc": 0.3479632713075358,
+          "topk_recall": 0.3494864612511671
+        },
+        "xgb_d3": {
+          "pr_auc": 0.356402470494959,
+          "topk_recall": 0.3794584500466853
+        },
+        "xgb_d4": {
+          "pr_auc": 0.36703577763575357,
+          "topk_recall": 0.3627917833800187
+        }
+      },
+      "selected": {
+        "pr_auc": 0.36703577763575357,
+        "topk_recall": 0.3627917833800187
+      }
+    }
+  },
+  "base_test": {
+    "selected_model_metrics": {
+      "pr_auc": 0.23186061003196617,
+      "precision": 0.19642857142857142,
+      "recall": 0.7333333333333333,
+      "roc_auc": 0.8829312626328725
+    },
+    "model_topk_recall": 0.2735690235690236,
+    "baseline_metrics": {
+      "pr_auc": 0.13816378570215965,
+      "precision": 0.23809523809523808,
+      "recall": 0.037037037037037035,
+      "roc_auc": 0.7493274585932616
+    },
+    "baseline_topk_recall": 0.24463447607387,
+    "feature_importance": {
+      "initial_count": 0.060048967599868774,
+      "initial_intensity": 0.03952751308679581,
+      "min_distance": 0.08114279806613922,
+      "neighbor_count": 0.043297987431287766,
+      "radius3_count": 0.0373946875333786,
+      "prior": 0.38991686701774597,
+      "hour_sin": 0.0396123006939888,
+      "hour_cos": 0.04029768705368042,
+      "centroid_distance": 0.03550705686211586,
+      "nearest_intensity": 0.04732696712017059,
+      "weighted_intensity": 0.035136837512254715,
+      "observed_grid_count": 0.05266772583127022,
+      "observed_report_count": 0.049914680421352386,
+      "first15_count": 0.02336445078253746,
+      "growth": 0.024843363091349602
+    }
+  },
+  "weather_test": {
+    "selected_model_metrics": {
+      "pr_auc": 0.23556506852383383,
+      "precision": 0.19550561797752808,
+      "recall": 0.6444444444444445,
+      "roc_auc": 0.8687446378455408
+    },
+    "model_topk_recall": 0.2851130351130351,
+    "baseline_metrics": {
+      "pr_auc": 0.13816378570215965,
+      "precision": 0.23809523809523808,
+      "recall": 0.037037037037037035,
+      "roc_auc": 0.7493274585932616
+    },
+    "baseline_topk_recall": 0.24463447607387,
+    "feature_importance": {
+      "initial_count": 0.0426061674952507,
+      "initial_intensity": 0.027957050129771233,
+      "min_distance": 0.04841908812522888,
+      "neighbor_count": 0.026751453056931496,
+      "radius3_count": 0.033742111176252365,
+      "prior": 0.25000035762786865,
+      "hour_sin": 0.03281906992197037,
+      "hour_cos": 0.04019903391599655,
+      "centroid_distance": 0.031145943328738213,
+      "nearest_intensity": 0.03553011268377304,
+      "weighted_intensity": 0.032585304230451584,
+      "observed_grid_count": 0.04289622604846954,
+      "observed_report_count": 0.042345087975263596,
+      "first15_count": 0.02219025418162346,
+      "growth": 0.016911771148443222,
+      "wind_sector_prior": 0.2739008963108063
+    }
+  },
+  "ensemble": {
+    "base_weight_selected_on_validation": 0.05,
+    "validation_weights": {
+      "0.0": {
+        "pr_auc": 0.36703577763575357,
+        "topk_recall": 0.3627917833800187
+      },
+      "0.05": {
+        "pr_auc": 0.37247115499572475,
+        "topk_recall": 0.38926237161531274
+      },
+      "0.1": {
+        "pr_auc": 0.36750490515514395,
+        "topk_recall": 0.38926237161531274
+      },
+      "0.15000000000000002": {
+        "pr_auc": 0.36664067390048954,
+        "topk_recall": 0.3710550887021475
+      },
+      "0.2": {
+        "pr_auc": 0.36165775335114153,
+        "topk_recall": 0.3710550887021475
+      },
+      "0.25": {
+        "pr_auc": 0.36211344290365116,
+        "topk_recall": 0.3592903828197946
+      },
+      "0.30000000000000004": {
+        "pr_auc": 0.36163907835961967,
+        "topk_recall": 0.3592903828197946
+      },
+      "0.35000000000000003": {
+        "pr_auc": 0.35830631236255084,
+        "topk_recall": 0.3527544351073763
+      },
+      "0.4": {
+        "pr_auc": 0.3591557755330101,
+        "topk_recall": 0.3527544351073763
+      },
+      "0.45": {
+        "pr_auc": 0.3558886295954249,
+        "topk_recall": 0.3380485527544351
+      },
+      "0.5": {
+        "pr_auc": 0.3510270602986524,
+        "topk_recall": 0.3454014939309057
+      },
+      "0.55": {
+        "pr_auc": 0.349377004590123,
+        "topk_recall": 0.31598972922502333
+      },
+      "0.6000000000000001": {
+        "pr_auc": 0.34458752991600616,
+        "topk_recall": 0.31598972922502333
+      },
+      "0.65": {
+        "pr_auc": 0.34345970525549097,
+        "topk_recall": 0.3424603174603174
+      },
+      "0.7000000000000001": {
+        "pr_auc": 0.34268345601734496,
+        "topk_recall": 0.3424603174603174
+      },
+      "0.75": {
+        "pr_auc": 0.3396005819293368,
+        "topk_recall": 0.3228524743230626
+      },
+      "0.8": {
+        "pr_auc": 0.3373868862072575,
+        "topk_recall": 0.31108776844070957
+      },
+      "0.8500000000000001": {
+        "pr_auc": 0.3326269315563011,
+        "topk_recall": 0.32089169000933704
+      },
+      "0.9": {
+        "pr_auc": 0.3290187611157771,
+        "topk_recall": 0.32089169000933704
+      },
+      "0.9500000000000001": {
+        "pr_auc": 0.33186656815192583,
+        "topk_recall": 0.31108776844070957
+      },
+      "1.0": {
+        "pr_auc": 0.3302502588180735,
+        "topk_recall": 0.31108776844070957
+      }
+    },
+    "test_metrics": {
+      "pr_auc": 0.24168520092450146,
+      "precision": 0.19772727272727272,
+      "recall": 0.6444444444444445,
+      "roc_auc": 0.8771932120577587
+    },
+    "test_topk_recall": 0.24571909571909573
+  },
+  "topk_selected": {
+    "configuration": "weather_prior_s12_k8",
+    "model": "xgb_d2",
+    "parameters": {
+      "sectors": 12,
+      "smoothing": 8.0
+    },
+    "selected_model_metrics": {
+      "pr_auc": 0.2339918978873953,
+      "precision": 0.18582375478927204,
+      "recall": 0.7185185185185186,
+      "roc_auc": 0.8697567217787086
+    },
+    "model_topk_recall": 0.2708032708032708,
+    "baseline_metrics": {
+      "pr_auc": 0.13816378570215965,
+      "precision": 0.23809523809523808,
+      "recall": 0.037037037037037035,
+      "roc_auc": 0.7493274585932616
+    },
+    "baseline_topk_recall": 0.24463447607387,
+    "feature_importance": {
+      "initial_count": 0.03487177565693855,
+      "initial_intensity": 0.027261242270469666,
+      "min_distance": 0.054187025874853134,
+      "neighbor_count": 0.021364279091358185,
+      "radius3_count": 0.03618647903203964,
+      "prior": 0.2597225308418274,
+      "hour_sin": 0.030656587332487106,
+      "hour_cos": 0.04298780858516693,
+      "centroid_distance": 0.024904781952500343,
+      "nearest_intensity": 0.03127983212471008,
+      "weighted_intensity": 0.029647422954440117,
+      "observed_grid_count": 0.038324955850839615,
+      "observed_report_count": 0.046560030430555344,
+      "first15_count": 0.0,
+      "growth": 0.016827315092086792,
+      "wind_sector_prior": 0.3052179515361786
+    }
+  },
+  "delta": {
+    "pr_auc": 0.0037044584918676515,
+    "roc_auc": -0.01418662478733168,
+    "topk_recall": 0.011544011544011523
+  }
+}
