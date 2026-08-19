@@ -40,7 +40,7 @@ EARTH_RADIUS_KM = 6371.0088
 
 
 def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """민원 및 새로 확보한 네 공공데이터를 컬럼 구조로 식별해 읽는다."""
+    """민원을 읽고, 존재하는 경우에만 과거 보조 실험 데이터를 함께 읽는다."""
     raw, mapping = base.load_data()
     complaints = base.filter_target_region(base.preprocess_data(raw, mapping), include_adjacent=False)
     tables: list[pd.DataFrame] = []
@@ -53,10 +53,13 @@ def load_inputs() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFram
                 break
             except UnicodeDecodeError:
                 continue
-    sensor = next(x for x in tables if {"센서명", "복합악취", "황화수소", "암모니아", "TVOC"}.issubset(x.columns))
-    farms = next(x for x in tables if {"사육업종", "시설면적(제곱미터)", "사육두수"}.issubset(x.columns))
-    pig_waste = next(x for x in tables if {"가축분뇨폐수량", "처리방법"}.issubset(x.columns))
-    wanju = next(x for x in tables if {"시군구명", "주사육업종"}.issubset(x.columns))
+    def optional_table(required: set[str]) -> pd.DataFrame:
+        return next((x for x in tables if required.issubset(x.columns)), pd.DataFrame())
+
+    sensor = optional_table({"센서명", "복합악취", "황화수소", "암모니아", "TVOC"})
+    farms = optional_table({"사육업종", "시설면적(제곱미터)", "사육두수"})
+    pig_waste = optional_table({"가축분뇨폐수량", "처리방법"})
+    wanju = optional_table({"시군구명", "주사육업종"})
     return complaints, sensor, farms, pig_waste, wanju
 
 

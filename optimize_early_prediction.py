@@ -9,10 +9,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.metrics import average_precision_score
-from xgboost import XGBRanker
+from xgboost import XGBClassifier, XGBRanker
 
 import build_odor_ai_mvp as odor
-import experiment_weather_model as weather_exp
 
 
 OUTPUT_DIR = Path("outputs/early_prediction_optimization")
@@ -165,7 +164,28 @@ def fit_predict(
         model = make_ranker(model_name, final=final)
         model.fit(fit_ordered[features], fit_ordered["target"], group=groups)
     else:
-        model = weather_exp.make_experiment_model(model_name, fit["target"], final=final)
+        if model_name.startswith("xgb_"):
+            positive = max(int(fit["target"].sum()), 1)
+            configurations = {
+                "xgb_d2": {"max_depth": 2, "min_child_weight": 8, "learning_rate": 0.035},
+                "xgb_d3": {"max_depth": 3, "min_child_weight": 7, "learning_rate": 0.03},
+                "xgb_d4": {"max_depth": 4, "min_child_weight": 10, "learning_rate": 0.025},
+            }
+            model = XGBClassifier(
+                n_estimators=650 if final else 350,
+                **configurations[model_name],
+                subsample=0.8,
+                colsample_bytree=0.8,
+                reg_alpha=0.15,
+                reg_lambda=2.0,
+                scale_pos_weight=(len(fit) - positive) / positive,
+                objective="binary:logistic",
+                eval_metric="aucpr",
+                random_state=odor.RANDOM_STATE,
+                n_jobs=4,
+            )
+        else:
+            model = odor.make_candidate_model(model_name, final=final)
         model.fit(fit[features], fit["target"])
     return model.predict(validation[features]), model
 

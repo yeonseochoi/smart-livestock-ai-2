@@ -10,12 +10,15 @@ import pandas as pd
 from sklearn.metrics import average_precision_score
 
 import build_odor_ai_mvp as odor
-import experiment_weather_model as experiment
 import optimize_early_prediction as optimize
 
 
 OUTPUT_DIR = Path("outputs/early_prediction_sensitivity")
-FEATURES = experiment.BASE_FEATURES
+FEATURES = [
+    "initial_count", "initial_intensity", "min_distance", "neighbor_count", "radius3_count",
+    "prior", "hour_sin", "hour_cos", "centroid_distance", "nearest_intensity",
+    "weighted_intensity", "observed_grid_count", "observed_report_count", "first15_count", "growth",
+]
 
 
 def add_grid(df: pd.DataFrame, grid_m: int) -> pd.DataFrame:
