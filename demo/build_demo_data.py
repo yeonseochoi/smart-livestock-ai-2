@@ -31,6 +31,14 @@ def normalized_score(values: pd.Series) -> np.ndarray:
     return np.clip((ranks - 0.45) / 0.55, 0, 1)
 
 
+def top3_relative_score(values: pd.Series) -> np.ndarray:
+    """Top 3 내부의 실제 모델 점수 간격을 0.35~1.0 상대 위험도로 변환한다."""
+    lo, hi = float(values.min()), float(values.max())
+    if math.isclose(lo, hi):
+        return np.full(len(values), 0.65)
+    return 0.35 + 0.65 * (values.to_numpy(float) - lo) / (hi - lo)
+
+
 def weather_value(row: pd.Series, aws: str, asos: str) -> float | None:
     value = row.get(aws)
     if pd.isna(value):
@@ -42,10 +50,6 @@ def main() -> None:
     complaints, _, _, _, _ = odor.load_inputs()
     complaints, meta = odor.add_grid_columns(complaints)
     events, _ = odor.build_bounded_events(complaints)
-    pred500 = pd.read_csv(
-        ROOT / "outputs/odor_ai_mvp/early_prediction_test_predictions.csv",
-        encoding="utf-8-sig", parse_dates=["event_hour"],
-    )
     pred1000 = pd.read_csv(
         ROOT / "outputs/early_prediction_sensitivity/selected_test_predictions.csv",
         encoding="utf-8-sig", parse_dates=["event_hour"],
@@ -55,18 +59,15 @@ def main() -> None:
         encoding="utf-8-sig", parse_dates=["event_hour"],
     ).set_index("event_id")
 
-    common = sorted(set(pred500["event_id"]) & set(pred1000["event_id"]))
+    common = sorted(set(events["event_id"]) & set(pred1000["event_id"]))
     payload = {"meta": {"city": "익산시", "generated": "2026-08-18"}, "events": []}
     for event_id in common:
-        p500 = pred500[pred500["event_id"] == event_id].copy()
         p1000 = pred1000[pred1000["event_id"] == event_id].copy()
-        event_hour = pd.Timestamp(p500["event_hour"].iloc[0])
+        event_hour = pd.Timestamp(p1000["event_hour"].iloc[0])
         raw = events[events["event_id"] == event_id].copy()
         initial = raw[raw["datetime"] < event_hour + pd.Timedelta(minutes=30)]
         future = raw[raw["datetime"] >= event_hour + pd.Timedelta(minutes=30)]
-        p500["display_score"] = normalized_score(p500["hybrid_score"])
         p1000["display_score"] = normalized_score(p1000["model_score"])
-        top500 = p500.nlargest(min(18, len(p500)), "hybrid_score")
         top1000 = p1000.nlargest(min(12, len(p1000)), "model_score")
         weather_row = weather.loc[event_id]
         rain = weather_value(weather_row, "aws_rainfall_60m", "asos_rainfall_hour")
@@ -87,11 +88,6 @@ def main() -> None:
             "broad": [{"center": center(int(r.grid_x), int(r.grid_y), meta, 1000),
                        "score": round(float(r.display_score), 3), "actual": bool(r.target)}
                       for r in top1000.itertuples()],
-            "detail": [{"center": [round(float(r.center_latitude), 6),
-                                    round(float(r.center_longitude), 6)],
-                        "score": round(float(r.display_score), 3), "actual": bool(r.target),
-                        "distance": round(float(r.min_distance) * 0.5, 1),
-                        "prior": round(float(r.prior), 3)} for r in top500.itertuples()],
         })
 
     OUTPUT.write_text(

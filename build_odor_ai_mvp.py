@@ -505,54 +505,6 @@ def enrich_prediction_coordinates(prediction: pd.DataFrame, meta: dict[str, floa
     return out
 
 
-def build_agent_report(
-    prediction: pd.DataFrame, event_summary: pd.DataFrame, farms: pd.DataFrame,
-    pig_waste: pd.DataFrame, sensor_case: dict[str, object], metrics: dict[str, object],
-) -> str:
-    """가장 최근 테스트 Event에 대해 근거와 한계를 포함한 대응 리포트를 생성한다.
-
-    농가·분뇨 자료가 없으면 시설 데이터 절을 생략하고 그 사실을 명시한다.
-    """
-    latest_id = prediction.sort_values("event_hour").iloc[-1]["event_id"]
-    event_pred = prediction[prediction["event_id"] == latest_id].nlargest(5, "hybrid_score")
-    event = event_summary[event_summary["event_id"] == latest_id].iloc[0]
-    lines = [
-        "# 악취 선제대응 AI Agent 리포트(MVP)", "",
-        f"- Event: {latest_id}", f"- 발생 시간대: {event['event_hour']}",
-        f"- 전체 신고: {event['reports']}건 / 독립 Grid: {event['unique_grids']}개", "",
-        "## 향후 30분 신고 위험 Grid Top 5", "",
-        "|순위|중심 위도|중심 경도|신고 발생확률|초기 신고수|", "|---:|---:|---:|---:|---:|",
-    ]
-    for rank, (_, row) in enumerate(event_pred.iterrows(), 1):
-        lines.append(f"|{rank}|{row['center_latitude']:.6f}|{row['center_longitude']:.6f}|{row['hybrid_score']:.1%}|{int(row['initial_count'])}|")
-    lines += ["", "## 시설 데이터 현황", ""]
-    if farms.empty and pig_waste.empty:
-        lines.append("- 농가·분뇨 자료가 없어 시설 기반 점검 후보를 제시하지 않음.")
-    else:
-        farm_types = farms["사육업종"].value_counts().head(5).to_dict() if not farms.empty else {}
-        waste = pd.to_numeric(pig_waste["가축분뇨폐수량"], errors="coerce") if not pig_waste.empty else pd.Series(dtype=float)
-        lines += [
-            f"- 익산 축산농가 {len(farms):,}곳: {json.dumps(farm_types, ensure_ascii=False)}",
-            f"- 돼지농장 분뇨자료 {len(pig_waste):,}곳, 폐수량 합계 {waste.sum():,.2f}",
-            "- 농가 파일에는 주소만 있고 좌표가 없으므로 현재 리포트에서는 거리 기반 후보 순위를 제시하지 않음.",
-            "- 주소 좌표화 이후 풍상 방향·거리·축종·사육두수·분뇨량으로 점검 후보를 산정해야 함.",
-        ]
-    lines += [
-        "", "## 권고 대응", "",
-        "1. 위험확률 상위 Grid에 이동형 악취 측정기를 우선 배치한다.",
-        "2. Event 초기 30분 이후 새로 활성화될 가능성이 높은 Grid를 순찰한다.",
-        "3. 농가 좌표와 기상자료가 연결되면 풍상 방향 시설부터 운영·분뇨처리 상태를 확인한다.",
-        "4. 모델 결과는 신고 발생 가능성이며 실제 악취 농도 또는 원인 시설 확정 결과가 아니다.",
-        "", "## 모델 근거와 한계", "",
-        f"- Early Prediction 테스트 Event: {metrics['test_events']}개",
-        f"- 선택 모델({metrics['selected_model']}) PR-AUC: {metrics['selected_model_metrics']['pr_auc']:.3f}",
-        f"- Baseline PR-AUC: {metrics['persistence_baseline']['pr_auc']:.3f}",
-        f"- 센서 중첩 신고: {sensor_case['overlap_complaints']}건",
-        f"- 센서 검증 한계: {sensor_case['limitation']}",
-    ]
-    return "\n".join(lines)
-
-
 def create_plots(recon: pd.DataFrame, pred: pd.DataFrame, sensor_time: pd.DataFrame) -> None:
     """복원·예측 성능과 센서 사례를 시각화한다.
 
@@ -608,8 +560,6 @@ def main() -> None:
     with (OUTPUT_DIR / "model_metrics.json").open("w", encoding="utf-8") as f:
         json.dump({"grid": grid_meta, "reconstruction": reconstruction_metrics, "early_prediction": prediction_metrics,
                    "sensor_case": sensor_case, "wanju_farms": len(wanju)}, f, ensure_ascii=False, indent=2)
-    report = build_agent_report(prediction, event_summary, farms, pig_waste, sensor_case, prediction_metrics)
-    (OUTPUT_DIR / "agent_response.md").write_text(report, encoding="utf-8")
     create_plots(reconstruction, prediction, sensor_time)
 
     print("===== 악취 AI MVP 실행 결과 =====")

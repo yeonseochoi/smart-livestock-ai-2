@@ -28,6 +28,16 @@
 
 Agent는 시설을 원인으로 단정하거나 자동으로 행정조치를 내리지 않는다. 모든 문서는 근거와 불확실성을 표시하고 담당자 검토 후 사용한다.
 
+예측 엔진과 Agent는 분리되어 있다. 예측 엔진은 1km 권역 Top 3와 상대 순위를 출력하고,
+`administrative_agent/`는 이 표준 출력만 입력받아 문서를 만든다. Agent는 민원 원본, 농가,
+센서 데이터를 직접 조회하거나 원인 시설을 추론하지 않는다.
+
+- `generate_agent_documents.py`: 운영 격자 비교 결과에서 최신 Event 문서 3종 생성
+- `outputs/administrative_agent/complaint_briefing.md`: 악취 민원 상황 브리핑
+- `outputs/administrative_agent/field_inspection_order.md`: 현장 점검 지시서
+- `outputs/administrative_agent/followup_report_template.md`: 사후 결과보고서 확장 예시
+- `outputs/administrative_agent/agent_output.json`: 서비스 연동용 구조화 결과
+
 ## 데이터와 검증
 
 - 민원 원본: `data/익산시 악취 민원 데이터_20190528-20260818.xlsx`
@@ -64,10 +74,21 @@ Agent는 시설을 원인으로 단정하거나 자동으로 행정조치를 내
 
 ## 실행
 
+Windows에서는 `run_demo.bat`을 더블클릭하면 Gemini 모드로 실행된다. API 호출 없이 발표하려면
+`run_demo_template.bat`을 사용한다. 두 파일 모두 필요한 경우 `.venv`와 패키지를 자동으로 준비하고
+브라우저에서 `http://127.0.0.1:8765`를 연다.
+
 ```powershell
 python -m pip install -r requirements.txt
 python compare_operational_grid_sizes.py
-python -m http.server 8765 --directory demo
+python generate_agent_documents.py
+python demo/server.py
 ```
+
+브라우저에서 `http://127.0.0.1:8765`를 연다. `.env`에 `GEMINI_API_KEY`와
+`GEMINI_MODEL=gemini-3.6-flash`를 설정하면 Gemini로 문안을 생성한다. OpenAI를 사용하려면
+`LLM_PROVIDER=openai`, `OPENAI_API_KEY`, `OPENAI_MODEL`을 설정한다. 키를 설정하지 않으면 검증 가능한 안전 템플릿을 사용한다.
+API 키는 브라우저나 `demo/index.html`에 입력하지 않는다. 현장 결과는 화면에서 입력할 수 있으며
+완성된 사후 결과보고서는 `outputs/administrative_agent/`에 저장된다.
 
 현재 로컬 `.venv`는 존재하지 않는 Python 3.12 설치 경로를 참조하므로 Python을 설치하거나 가상환경을 다시 만들어야 한다.

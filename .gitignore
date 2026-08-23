@@ -12,6 +12,7 @@ data/kma_weather_cache/
 data/kakao_geocode_cache/
 outputs/farm_geocoding/
 outputs/vworld_source_run.*
-demo/server.*
+demo/server.log
+demo/server.pid
 outputs/grid_compare.*
 outputs/severity_expansion.*
