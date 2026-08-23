@@ -154,7 +154,11 @@ def main() -> None:
     score, _ = optimize.fit_predict(selected_model, train, test, FEATURES, final=True)
     test_metrics = optimize.score_prediction(test, score)
     test["model_score"] = score
-    current = json.loads(Path("outputs/odor_ai_mvp/model_metrics.json").read_text(encoding="utf-8"))["early_prediction"]
+    # 500m 기준값은 참고용 비교 항목이다. build_odor_ai_mvp.py를 아직 돌리지 않아
+    # 파일이 없더라도 민감도 결과 자체는 저장되어야 하므로 선택적으로 읽는다.
+    reference_path = Path("outputs/odor_ai_mvp/model_metrics.json")
+    reference = (json.loads(reference_path.read_text(encoding="utf-8"))["early_prediction"]
+                 if reference_path.exists() else None)
     report = {
         "selection_policy": "grid/input/forecast/model selected on inner temporal validation PR-AUC",
         "validation_results": validation_results,
@@ -164,10 +168,10 @@ def main() -> None:
         "test_metrics": test_metrics,
         "positive_rate_test": float(test["target"].mean()),
         "current_500m_30m_30m": {
-            "pr_auc": current["selected_model_metrics"]["pr_auc"],
-            "roc_auc": current["selected_model_metrics"]["roc_auc"],
-            "topk_recall": current["model_topk_recall"],
-        },
+            "pr_auc": reference["selected_model_metrics"]["pr_auc"],
+            "roc_auc": reference["selected_model_metrics"]["roc_auc"],
+            "topk_recall": reference["model_topk_recall"],
+        } if reference else None,
     }
     (OUTPUT_DIR / "sensitivity_metrics.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
