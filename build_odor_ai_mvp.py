@@ -453,7 +453,15 @@ def validate_sensor_case(complaints: pd.DataFrame, sensor: pd.DataFrame) -> tupl
     """공개 센서와 겹치는 하루를 시간 기준 사례 검증한다.
 
     센서 좌표가 없으므로 현재는 공간 검증이 아니라 시간 일치도만 평가한다.
+    센서 파일이 없으면 검증을 건너뛰고 그 사실을 한계로 기록한다.
     """
+    if sensor.empty:
+        return pd.DataFrame(), pd.DataFrame(), {
+            "sensor_start": None, "sensor_end": None, "sensor_count": 0,
+            "overlap_complaints": 0, "best_absolute_correlation_lag_minutes": None,
+            "correlation_at_best_lag": None,
+            "limitation": "센서 자료가 없어 센서-민원 시간 일치도 검증을 수행하지 않음",
+        }
     s = sensor.copy()
     s["날짜"] = pd.to_datetime(s["날짜"], errors="coerce")
     metrics_cols = ["복합악취", "황화수소", "암모니아", "TVOC"]
@@ -501,12 +509,13 @@ def build_agent_report(
     prediction: pd.DataFrame, event_summary: pd.DataFrame, farms: pd.DataFrame,
     pig_waste: pd.DataFrame, sensor_case: dict[str, object], metrics: dict[str, object],
 ) -> str:
-    """가장 최근 테스트 Event에 대해 근거와 한계를 포함한 대응 리포트를 생성한다."""
+    """가장 최근 테스트 Event에 대해 근거와 한계를 포함한 대응 리포트를 생성한다.
+
+    농가·분뇨 자료가 없으면 시설 데이터 절을 생략하고 그 사실을 명시한다.
+    """
     latest_id = prediction.sort_values("event_hour").iloc[-1]["event_id"]
     event_pred = prediction[prediction["event_id"] == latest_id].nlargest(5, "hybrid_score")
     event = event_summary[event_summary["event_id"] == latest_id].iloc[0]
-    farm_types = farms["사육업종"].value_counts().head(5).to_dict()
-    waste = pd.to_numeric(pig_waste["가축분뇨폐수량"], errors="coerce")
     lines = [
         "# 악취 선제대응 AI Agent 리포트(MVP)", "",
         f"- Event: {latest_id}", f"- 발생 시간대: {event['event_hour']}",
@@ -516,12 +525,19 @@ def build_agent_report(
     ]
     for rank, (_, row) in enumerate(event_pred.iterrows(), 1):
         lines.append(f"|{rank}|{row['center_latitude']:.6f}|{row['center_longitude']:.6f}|{row['hybrid_score']:.1%}|{int(row['initial_count'])}|")
+    lines += ["", "## 시설 데이터 현황", ""]
+    if farms.empty and pig_waste.empty:
+        lines.append("- 농가·분뇨 자료가 없어 시설 기반 점검 후보를 제시하지 않음.")
+    else:
+        farm_types = farms["사육업종"].value_counts().head(5).to_dict() if not farms.empty else {}
+        waste = pd.to_numeric(pig_waste["가축분뇨폐수량"], errors="coerce") if not pig_waste.empty else pd.Series(dtype=float)
+        lines += [
+            f"- 익산 축산농가 {len(farms):,}곳: {json.dumps(farm_types, ensure_ascii=False)}",
+            f"- 돼지농장 분뇨자료 {len(pig_waste):,}곳, 폐수량 합계 {waste.sum():,.2f}",
+            "- 농가 파일에는 주소만 있고 좌표가 없으므로 현재 리포트에서는 거리 기반 후보 순위를 제시하지 않음.",
+            "- 주소 좌표화 이후 풍상 방향·거리·축종·사육두수·분뇨량으로 점검 후보를 산정해야 함.",
+        ]
     lines += [
-        "", "## 시설 데이터 현황", "",
-        f"- 익산 축산농가 {len(farms):,}곳: {json.dumps(farm_types, ensure_ascii=False)}",
-        f"- 돼지농장 분뇨자료 {len(pig_waste):,}곳, 폐수량 합계 {waste.sum():,.2f}",
-        "- 농가 파일에는 주소만 있고 좌표가 없으므로 현재 리포트에서는 거리 기반 후보 순위를 제시하지 않음.",
-        "- 주소 좌표화 이후 풍상 방향·거리·축종·사육두수·분뇨량으로 점검 후보를 산정해야 함.",
         "", "## 권고 대응", "",
         "1. 위험확률 상위 Grid에 이동형 악취 측정기를 우선 배치한다.",
         "2. Event 초기 30분 이후 새로 활성화될 가능성이 높은 Grid를 순찰한다.",
@@ -538,7 +554,10 @@ def build_agent_report(
 
 
 def create_plots(recon: pd.DataFrame, pred: pd.DataFrame, sensor_time: pd.DataFrame) -> None:
-    """복원·예측 성능과 센서 사례를 시각화한다."""
+    """복원·예측 성능과 센서 사례를 시각화한다.
+
+    센서 자료가 없으면 센서 비교 그림만 생략한다.
+    """
     plt.rcParams["font.family"] = ["Malgun Gothic", "DejaVu Sans"]
     plt.rcParams["axes.unicode_minus"] = False
     plt.figure(figsize=(8, 5))
@@ -556,6 +575,8 @@ def create_plots(recon: pd.DataFrame, pred: pd.DataFrame, sensor_time: pd.DataFr
     plt.colorbar(sc, label="예측확률"); plt.legend(); plt.xlabel("경도"); plt.ylabel("위도"); plt.title(f"{last} 다음 30분 Grid 예측"); plt.tight_layout()
     plt.savefig(OUTPUT_DIR / "early_prediction_grid.png", dpi=160); plt.close()
 
+    if sensor_time.empty:
+        return
     fig, ax1 = plt.subplots(figsize=(11, 5))
     ax1.plot(sensor_time["날짜"], sensor_time["sensor_anomaly"], color="#d62728", label="센서 최대 이상도")
     ax1.set_ylabel("센서 이상도"); ax2 = ax1.twinx()
@@ -582,7 +603,8 @@ def main() -> None:
     event_summary.to_csv(OUTPUT_DIR / "bounded_event_summary.csv", index=False, encoding="utf-8-sig")
     reconstruction.to_csv(OUTPUT_DIR / "virtual_sensor_test_predictions.csv", index=False, encoding="utf-8-sig")
     prediction.to_csv(OUTPUT_DIR / "early_prediction_test_predictions.csv", index=False, encoding="utf-8-sig")
-    sensor_time.to_csv(OUTPUT_DIR / "sensor_complaint_timeline.csv", index=False, encoding="utf-8-sig")
+    if not sensor_time.empty:
+        sensor_time.to_csv(OUTPUT_DIR / "sensor_complaint_timeline.csv", index=False, encoding="utf-8-sig")
     with (OUTPUT_DIR / "model_metrics.json").open("w", encoding="utf-8") as f:
         json.dump({"grid": grid_meta, "reconstruction": reconstruction_metrics, "early_prediction": prediction_metrics,
                    "sensor_case": sensor_case, "wanju_farms": len(wanju)}, f, ensure_ascii=False, indent=2)

@@ -1,10 +1,15 @@
-"""향후 30분 신고 Grid 예측을 고급 prior와 Learning-to-Rank로 최적화한다."""
+"""향후 30분 신고 Grid 예측에 사용하는 모델 라이브러리.
+
+`compare_operational_grid_sizes.py`와 `sensitivity_early_prediction.py`가
+`fit_predict`와 `score_prediction`을 가져다 쓴다. 단독 실행 대상이 아니다.
+
+기상 자료로 후보를 구성하던 최적화 실험은 현재 기획(민원 데이터만 사용)에서
+제외되었고 필요한 모듈도 남아 있지 않아 제거했다.
+"""
 from __future__ import annotations
 
-import json
 import math
 from collections import Counter, defaultdict
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -14,30 +19,10 @@ from xgboost import XGBClassifier, XGBRanker
 import build_odor_ai_mvp as odor
 
 
-OUTPUT_DIR = Path("outputs/early_prediction_optimization")
 ADVANCED_FEATURES = [
     "spatial_smooth_prior", "hour_prior", "season_prior", "weekend_prior",
     "odor_prior", "recent_prior", "wind_sector_prior_advanced",
 ]
-
-
-def event_context(events: pd.DataFrame, weather: dict[str, dict[str, float]]) -> dict[str, dict[str, object]]:
-    context: dict[str, dict[str, object]] = {}
-    for event_id, group in events.groupby("event_id"):
-        hour = pd.Timestamp(group["event_hour"].iloc[0])
-        initial = group[group["datetime"] < hour + pd.Timedelta(minutes=odor.INPUT_MINUTES)]
-        future = group[group["datetime"] >= hour + pd.Timedelta(minutes=odor.INPUT_MINUTES)]
-        odor_type = str(initial["odor_type"].mode().iloc[0]) if not initial.empty else "unknown"
-        context[event_id] = {
-            "hour": hour,
-            "hour_bin": hour.hour // 4,
-            "season": (hour.month % 12) // 3,
-            "weekend": int(hour.dayofweek >= 5),
-            "odor_type": odor_type,
-            "wind_sector": weather_exp.wind_sector(weather[event_id], 12),
-            "future_cells": set(zip(future["grid_x"].astype(int), future["grid_y"].astype(int))),
-        }
-    return context
 
 
 def count_maps(
@@ -163,6 +148,8 @@ def fit_predict(
         fit_ordered, groups = grouped(fit)
         model = make_ranker(model_name, final=final)
         model.fit(fit_ordered[features], fit_ordered["target"], group=groups)
+        # 랭커는 확률을 모형화하지 않는다. predict 출력이 곧 Event 내부 순위 점수다.
+        return model.predict(validation[features]), model
     else:
         if model_name.startswith("xgb_"):
             positive = max(int(fit["target"].sum()), 1)
@@ -187,7 +174,9 @@ def fit_predict(
         else:
             model = odor.make_candidate_model(model_name, final=final)
         model.fit(fit[features], fit["target"])
-    return model.predict(validation[features]), model
+    # 분류기의 predict는 0.5에서 자른 0/1 라벨이라 PR-AUC, Top-K Recall 같은
+    # 순위 기반 지표에 쓸 수 없다. 양성 확률을 그대로 순위 점수로 사용한다.
+    return model.predict_proba(validation[features])[:, 1], model
 
 
 def score_prediction(frame: pd.DataFrame, score: np.ndarray) -> dict[str, float]:
@@ -206,100 +195,3 @@ def candidate_models() -> list[str]:
         "xgb_d2", "xgb_d3", "xgb_d4", "rank_d2", "rank_d3", "rank_d4",
     ]
 
-
-def main() -> None:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    complaints, _, _, _, _ = odor.load_inputs()
-    complaints, _ = odor.add_grid_columns(complaints)
-    events, summary = odor.build_bounded_events(complaints)
-    weather_frame = pd.read_csv(weather_exp.WEATHER_FILE, encoding="utf-8-sig")
-    weather = weather_exp.weather_lookup(weather_frame)
-    candidates, train_ids, test_ids = weather_exp.build_candidates(events, summary, weather)
-    context = event_context(events, weather)
-    train = candidates[candidates["is_train"]].copy()
-    test = candidates[~candidates["is_train"]].copy()
-    ordered_ids = (train[["event_id", "event_hour"]].drop_duplicates()
-                   .sort_values("event_hour")["event_id"].tolist())
-    cut = max(1, int(len(ordered_ids) * 0.8))
-    fit_ids, validation_ids = set(ordered_ids[:cut]), set(ordered_ids[cut:])
-    fit_raw = train[train["event_id"].isin(fit_ids)].copy()
-    validation_raw = train[train["event_id"].isin(validation_ids)].copy()
-    fit = apply_advanced_priors(fit_raw, fit_ids, context, leave_one_out=True)
-    validation = apply_advanced_priors(validation_raw, fit_ids, context, leave_one_out=False)
-
-    feature_sets = {
-        "advanced": weather_exp.BASE_FEATURES + ADVANCED_FEATURES,
-        "advanced_weather": weather_exp.BASE_FEATURES + ADVANCED_FEATURES
-                            + weather_exp.DIRECTION_FEATURES + weather_exp.REGIME_FEATURES,
-    }
-    validation_results: dict[str, dict[str, dict[str, float]]] = {}
-    for feature_name, features in feature_sets.items():
-        validation_results[feature_name] = {}
-        for model_name in candidate_models():
-            score, _ = fit_predict(model_name, fit, validation, features)
-            validation_results[feature_name][model_name] = score_prediction(validation, score)
-            print(f"검증 {feature_name}/{model_name}: "
-                  f"PR {validation_results[feature_name][model_name]['pr_auc']:.3f}, "
-                  f"Top-K {validation_results[feature_name][model_name]['topk_recall']:.3f}")
-
-    choices = [
-        (metrics["pr_auc"], metrics["topk_recall"], feature_name, model_name)
-        for feature_name, models in validation_results.items()
-        for model_name, metrics in models.items()
-    ]
-    _, _, pr_features_name, pr_model_name = max(choices)
-    _, _, topk_features_name, topk_model_name = max(
-        (metrics["topk_recall"], metrics["pr_auc"], feature_name, model_name)
-        for feature_name, models in validation_results.items()
-        for model_name, metrics in models.items()
-    )
-
-    full_train = apply_advanced_priors(train, train_ids, context, leave_one_out=True)
-    final_test = apply_advanced_priors(test, train_ids, context, leave_one_out=False)
-    selected = {
-        "pr_selected": (pr_features_name, pr_model_name),
-        "topk_selected": (topk_features_name, topk_model_name),
-    }
-    test_results: dict[str, object] = {}
-    prediction = final_test[["event_id", "event_hour", "grid_x", "grid_y", "target"]].copy()
-    for objective, (feature_name, model_name) in selected.items():
-        features = feature_sets[feature_name]
-        score, model = fit_predict(model_name, full_train, final_test, features, final=True)
-        prediction[f"{objective}_score"] = score
-        test_results[objective] = {
-            "feature_set": feature_name,
-            "model": model_name,
-            **score_prediction(final_test, score),
-        }
-
-    current = json.loads(Path("outputs/odor_ai_mvp/model_metrics.json").read_text(encoding="utf-8"))["early_prediction"]
-    report = {
-        "experiment": "advanced_prior_and_learning_to_rank",
-        "selection_policy": "inner temporal validation only; final future test used once",
-        "train_events": len(train_ids),
-        "test_events": len(test_ids),
-        "validation_results": validation_results,
-        "selected": selected,
-        "test_results": test_results,
-        "current_model": {
-            "pr_auc": current["selected_model_metrics"]["pr_auc"],
-            "roc_auc": current["selected_model_metrics"]["roc_auc"],
-            "topk_recall": current["model_topk_recall"],
-        },
-    }
-    (OUTPUT_DIR / "optimization_metrics.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    prediction.to_csv(OUTPUT_DIR / "optimization_test_predictions.csv", index=False, encoding="utf-8-sig")
-
-    print("===== 조기예측 최적화 결과 =====")
-    print(f"현재 모델: PR {report['current_model']['pr_auc']:.3f}, "
-          f"ROC {report['current_model']['roc_auc']:.3f}, Top-K {report['current_model']['topk_recall']:.3f}")
-    for objective, result in test_results.items():
-        print(f"{objective}: {result['feature_set']}/{result['model']} - "
-              f"PR {result['pr_auc']:.3f}, ROC {result['roc_auc']:.3f}, Top-K {result['topk_recall']:.3f}")
-    print(f"산출물: {OUTPUT_DIR.resolve()}")
-
-
-if __name__ == "__main__":
-    main()
