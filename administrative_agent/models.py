@@ -13,6 +13,7 @@ class RiskArea:
     center_latitude: float | None = None
     center_longitude: float | None = None
     initial_complaints: int | None = None
+    region_name: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

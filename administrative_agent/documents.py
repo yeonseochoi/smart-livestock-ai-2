@@ -5,9 +5,15 @@ from .policy import DISCLAIMER, response_level
 
 
 def _location(area) -> str:
+    """현장에서 찾아갈 수 있도록 읍면동 이름을 앞세우고 중심 좌표를 덧붙인다.
+
+    격자 인덱스는 내부 식별자라 그대로 노출하면 담당자가 위치를 알 수 없다.
+    읍면동이 없으면 격자 인덱스로 되돌린다.
+    """
+    label = area.region_name or area.grid_id
     if area.center_latitude is None or area.center_longitude is None:
-        return area.grid_id
-    return f"{area.grid_id} (중심 {area.center_latitude:.6f}, {area.center_longitude:.6f})"
+        return label
+    return f"{label} (중심 {area.center_latitude:.6f}, {area.center_longitude:.6f})"
 
 
 def create_briefing(forecast: ForecastResult) -> str:
@@ -40,6 +46,7 @@ def create_dispatch_order(forecast: ForecastResult) -> str:
         lines += [
             f"### {area.rank}순위 — {_location(area)}", "",
             f"- 상대 위험도: {area.relative_risk}/100 ({level})",
+            f"- 격자 식별자: {area.grid_id}",
             f"- 권고: {action}",
             "- 확인 항목: 현장 악취 감지 여부, 측정값, 풍향·풍속, 민원 추가 접수 여부",
             "- 기록 항목: 도착·종료 시각, 확인 위치, 측정 장비, 조치 내용", "",

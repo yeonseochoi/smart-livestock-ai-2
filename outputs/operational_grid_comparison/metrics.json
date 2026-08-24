@@ -5,22 +5,22 @@
   "test_events": 48,
   "grids": {
     "1000": {
-      "selected_model": "rank_d2",
+      "selected_model": "xgb_d3",
       "inner_validation": {
         "extra_leaf4": {
-          "pr_auc": 0.2975789224999262,
-          "topk_recall": 0.3996428616012702,
-          "roc_auc": 0.7280106774024155
+          "pr_auc": 0.47500714339819144,
+          "topk_recall": 0.5025534851621809,
+          "roc_auc": 0.8772098722212498
         },
         "xgb_d2": {
-          "pr_auc": 0.31707131936766536,
-          "topk_recall": 0.41224328785765463,
-          "roc_auc": 0.7693199719936986
+          "pr_auc": 0.5115303946903857,
+          "topk_recall": 0.5242926155969635,
+          "roc_auc": 0.8794416243654822
         },
         "xgb_d3": {
-          "pr_auc": 0.30797096579868166,
-          "topk_recall": 0.4020528009658445,
-          "roc_auc": 0.7582924908104323
+          "pr_auc": 0.5240705703561369,
+          "topk_recall": 0.5460317460317461,
+          "roc_auc": 0.8805575004375983
         },
         "rank_d2": {
           "pr_auc": 0.5122096547727308,
@@ -34,36 +34,36 @@
         }
       },
       "test": {
-        "pr_auc": 0.472243483047552,
-        "topk_recall": 0.49407294832826754,
-        "roc_auc": 0.9082754054948693,
-        "recall_at_3": 0.4436676798378925,
-        "event_hit_rate_at_3": 0.8297872340425532,
+        "pr_auc": 0.48599051976824614,
+        "topk_recall": 0.506838905775076,
+        "roc_auc": 0.908346337541968,
+        "recall_at_3": 0.4426038500506585,
+        "event_hit_rate_at_3": 0.851063829787234,
         "mean_inspected_cells": 3.0,
         "positive_rate": 0.10678307588985897,
-        "pr_auc_lift_over_prevalence": 4.422456265772357,
+        "pr_auc_lift_over_prevalence": 4.551194238584393,
         "mean_candidates_per_event": 31.020833333333332,
         "mean_positive_cells_per_event": 3.3125,
         "top3_inspection_area_km2": 3.0
       }
     },
     "1500": {
-      "selected_model": "rank_d2",
+      "selected_model": "xgb_d2",
       "inner_validation": {
         "extra_leaf4": {
-          "pr_auc": 0.5120967741935485,
-          "topk_recall": 0.5796420467616119,
-          "roc_auc": 0.7795698924731183
+          "pr_auc": 0.6236772481232389,
+          "topk_recall": 0.6299171842650103,
+          "roc_auc": 0.8588661502293138
         },
         "xgb_d2": {
-          "pr_auc": 0.4807238394964595,
-          "topk_recall": 0.5527783006043875,
-          "roc_auc": 0.7741935483870968
+          "pr_auc": 0.6648384913899007,
+          "topk_recall": 0.6632505175983436,
+          "roc_auc": 0.8649940262843488
         },
         "xgb_d3": {
-          "pr_auc": 0.4789502460360853,
-          "topk_recall": 0.5497260388564736,
-          "roc_auc": 0.7688172043010753
+          "pr_auc": 0.6562264377299127,
+          "topk_recall": 0.6632505175983436,
+          "roc_auc": 0.8648784059814236
         },
         "rank_d2": {
           "pr_auc": 0.646769465919507,
@@ -77,36 +77,36 @@
         }
       },
       "test": {
-        "pr_auc": 0.6030952839282815,
-        "topk_recall": 0.6119565217391305,
-        "roc_auc": 0.8742306147047006,
-        "recall_at_3": 0.6481884057971014,
-        "event_hit_rate_at_3": 0.9347826086956522,
+        "pr_auc": 0.5892329178121871,
+        "topk_recall": 0.6409420289855072,
+        "roc_auc": 0.8665166733627963,
+        "recall_at_3": 0.6608695652173913,
+        "event_hit_rate_at_3": 0.9565217391304348,
         "mean_inspected_cells": 3.0,
         "positive_rate": 0.21617161716171618,
-        "pr_auc_lift_over_prevalence": 2.78989116076747,
+        "pr_auc_lift_over_prevalence": 2.7257644900319495,
         "mean_candidates_per_event": 12.625,
         "mean_positive_cells_per_event": 2.7291666666666665,
         "top3_inspection_area_km2": 6.75
       }
     },
     "2000": {
-      "selected_model": "rank_d2",
+      "selected_model": "extra_leaf4",
       "inner_validation": {
         "extra_leaf4": {
-          "pr_auc": 0.5546247968500452,
-          "topk_recall": 0.6161522052826401,
-          "roc_auc": 0.8201123595505618
+          "pr_auc": 0.6973552407287253,
+          "topk_recall": 0.6543478260869565,
+          "roc_auc": 0.9014382022471911
         },
         "xgb_d2": {
-          "pr_auc": 0.5476202313479832,
-          "topk_recall": 0.6200726667478585,
-          "roc_auc": 0.8092584269662921
+          "pr_auc": 0.6908156031524848,
+          "topk_recall": 0.6471014492753623,
+          "roc_auc": 0.8941573033707865
         },
         "xgb_d3": {
-          "pr_auc": 0.5362073436314965,
-          "topk_recall": 0.6055454065684244,
-          "roc_auc": 0.7911685393258427
+          "pr_auc": 0.6784015972559772,
+          "topk_recall": 0.6543478260869564,
+          "roc_auc": 0.8906067415730338
         },
         "rank_d2": {
           "pr_auc": 0.6503474014346633,
@@ -120,14 +120,14 @@
         }
       },
       "test": {
-        "pr_auc": 0.6524638698859961,
-        "topk_recall": 0.6340425531914893,
-        "roc_auc": 0.8886962118097146,
-        "recall_at_3": 0.6648936170212765,
-        "event_hit_rate_at_3": 0.9148936170212766,
+        "pr_auc": 0.6492324105743692,
+        "topk_recall": 0.625177304964539,
+        "roc_auc": 0.8961689043030553,
+        "recall_at_3": 0.6542553191489362,
+        "event_hit_rate_at_3": 0.8936170212765957,
         "mean_inspected_cells": 3.0,
         "positive_rate": 0.23476702508960573,
-        "pr_auc_lift_over_prevalence": 2.7791972473006554,
+        "pr_auc_lift_over_prevalence": 2.7654327106908245,
         "mean_candidates_per_event": 11.625,
         "mean_positive_cells_per_event": 2.7291666666666665,
         "top3_inspection_area_km2": 12.0

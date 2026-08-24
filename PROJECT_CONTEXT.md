@@ -14,7 +14,8 @@
 - 출력: 이후 30분 추가 민원 위험이 높은 1km 권역 Top 3
 - 운영 단위: 1km 격자
 - 표현: 확률이 아닌 상대 위험 점수와 순위
-- 신규 데이터 검증 결과: PR-AUC 0.472, Top-K Recall 0.494, Recall@3 0.444, Event Hit@3 0.830
+- 신규 데이터 검증 결과: PR-AUC 0.486, Top-K Recall 0.507, Recall@3 0.443, Event Hit@3 0.851
+- 선택 모델: `xgb_d3`. 학습 구간 내부의 마지막 20% Event로만 선택했고 최종 테스트는 1회 사용했다.
 
 기상정보는 현재 최종 예측 점수에 사용하지 않는다. 동일한 시간 분할 실험에서 개선이 작고 일관되지 않았기 때문이다. 다만 풍향·풍속·강수·습도는 담당자의 현장 판단을 위한 상황 정보로 제공할 수 있다.
 
@@ -49,17 +50,23 @@ Agent는 시설을 원인으로 단정하거나 자동으로 행정조치를 내
 - 최종 지표: `outputs/operational_grid_comparison/metrics.json`
 - 테스트 예측: `outputs/operational_grid_comparison/test_predictions.csv`
 
-성능은 Event를 시간순으로 나누고 미래 Event만 테스트하는 방식으로 측정했다. Event Hit@3 83.0%는 실제 추가 민원이 있는 평가 가능 테스트 Event에서 상위 3개 권역 중 하나 이상에 추가 민원이 포함된 비율이다.
+성능은 Event를 시간순으로 나누고 미래 Event만 테스트하는 방식으로 측정했다. Event Hit@3 85.1%는 실제 추가 민원이 있는 평가 가능 테스트 Event 47개에서 상위 3개 권역 중 하나 이상에 추가 민원이 포함된 비율이다. 표본이 47개이므로 이 비율의 95% 신뢰구간은 대략 75~95%다.
+
+예측 CSV에는 격자 인덱스와 함께 중심 위·경도와 대표 읍면동 이름을 저장한다. 격자 원점은 민원 위·경도 중앙값이라 데이터가 바뀌면 이동하므로, 인덱스만으로는 다른 실행의 산출물과 위치를 맞출 수 없다.
 
 ## 주요 파일
 
 - `compare_operational_grid_sizes.py`: 1km·1.5km·2km 공통 검증 및 최종 성능 재현
-- `sensitivity_early_prediction.py`: 격자별 학습 데이터 구성
+- `sensitivity_early_prediction.py`: 격자·시간창 후보를 내부검증으로 비교한 설계 근거. 제품 파이프라인의 입력은 아니다
 - `optimize_early_prediction.py`: 후보 모델 학습·평가
 - `build_odor_ai_mvp.py`: 민원 전처리와 Event 구성 공용 함수
 - `fetch_kma_weather.py`: 담당자 상황 정보용 기상자료 수집
 - `demo/index.html`: 운영 화면 데모
-- `demo/build_demo_data.py`: 검증 결과로 데모 데이터 생성
+- `demo/build_demo_data.py`: `compare_operational_grid_sizes.py`의 1km 결과로 데모 데이터 생성
+
+산출물끼리 결합할 때는 `event_id`를 키로 쓰지 않는다. `event_id`는 Event를 시각순으로
+정렬한 뒤 붙이는 일련번호여서, 민원 데이터가 바뀌면 같은 번호가 다른 사건을 가리킨다.
+실행 간 값이 변하지 않는 `event_hour`를 기준으로 결합한다.
 
 ## 현재 한계
 
