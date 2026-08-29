@@ -55,13 +55,21 @@ def forecast_from_csv(
     if len(event) < 3:
         raise ValueError(f"{selected_id}에 Top 3를 만들 충분한 후보 권역이 없습니다.")
     risks = _relative_scores(event["score"])
+
+    def optional(row: pd.Series, column: str):
+        """예측 CSV에 위치 컬럼이 없던 시기의 산출물과도 호환되도록 한다."""
+        if column not in event.columns or pd.isna(row[column]):
+            return None
+        return row[column]
+
     areas = tuple(
         RiskArea(
             rank=rank,
-            grid_id=f"G{int(row.grid_x):+d}:{int(row.grid_y):+d}",
+            grid_id=f"G{int(row['grid_x']):+d}:{int(row['grid_y']):+d}",
             relative_risk=risks[rank - 1],
-            center_latitude=float(row.center_latitude) if "center_latitude" in event.columns and pd.notna(row.center_latitude) else None,
-            center_longitude=float(row.center_longitude) if "center_longitude" in event.columns and pd.notna(row.center_longitude) else None,
+            center_latitude=(lambda v: None if v is None else float(v))(optional(row, "center_latitude")),
+            center_longitude=(lambda v: None if v is None else float(v))(optional(row, "center_longitude")),
+            region_name=(lambda v: None if v is None else str(v))(optional(row, "region_name")),
         )
         for rank, (_, row) in enumerate(event.iterrows(), 1)
     )

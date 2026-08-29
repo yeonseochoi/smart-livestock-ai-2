@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .documents import create_briefing, create_dispatch_order, create_followup_template
+from .documents import _location, create_briefing, create_dispatch_order, create_followup_template
 from .models import ForecastResult, ResponsePackage
 
 
@@ -42,7 +42,7 @@ def create_completed_followup(package: ResponsePackage, outcome: dict[str, objec
         row = by_rank.get(area.rank, {})
         values = [row.get("additional_complaint"), row.get("odor_detected"), row.get("measurement"), row.get("action")]
         safe = [str(value or "미입력").replace("|", "\\|").replace("\n", " ") for value in values]
-        lines.append(f"|{area.rank}|{area.grid_id}|{safe[0]}|{safe[1]}|{safe[2]}|{safe[3]}|")
+        lines.append(f"|{area.rank}|{_location(area)}|{safe[0]}|{safe[1]}|{safe[2]}|{safe[3]}|")
     notes = str(outcome.get("notes") or "미입력").replace("\n", " ")
     lines += ["", "## 담당자 의견", "", notes, "", "※ 현장 입력값을 기록한 문서이며 원인 시설 확정 문서가 아닙니다."]
     return "\n".join(lines)

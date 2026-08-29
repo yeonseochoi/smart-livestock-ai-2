@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sklearn.neighbors import BallTree
 
 import build_odor_ai_mvp as odor
 import optimize_early_prediction as optimize
@@ -15,6 +16,35 @@ import sensitivity_early_prediction as sensitivity
 OUTPUT_DIR = Path("outputs/operational_grid_comparison")
 GRID_SIZES = (1000, 1500, 2000)
 MODELS = ("extra_leaf4", "xgb_d2", "xgb_d3", "rank_d2", "rank_d3")
+
+
+def add_location_columns(frame: pd.DataFrame, complaints: pd.DataFrame, grid_m: int) -> pd.DataFrame:
+    """격자 인덱스에 중심 위·경도와 대표 읍면동 이름을 붙인다.
+
+    격자 원점은 민원 위·경도 중앙값이라 데이터가 바뀌면 이동한다. 인덱스만 저장하면
+    다른 실행의 산출물과 합칠 때 좌표가 어긋나므로, 산출물 자체에 좌표를 기록한다.
+    읍면동은 격자 중심에서 가장 가까운 민원의 지역명을 사용한다. 후보 격자에는
+    과거 민원이 한 건도 없는 칸이 포함되므로 최빈값 대신 최근접을 쓴다.
+    """
+    result = frame.copy()
+    meta = {
+        "lat0": float(complaints["latitude"].median()),
+        "lon0": float(complaints["longitude"].median()),
+        "grid_m": grid_m,
+    }
+    centers = np.array([
+        odor.grid_centroid(int(x), int(y), meta)
+        for x, y in zip(result["grid_x"], result["grid_y"])
+    ], dtype=float)
+    result["center_latitude"] = centers[:, 0]
+    result["center_longitude"] = centers[:, 1]
+
+    labelled = complaints.dropna(subset=["region"])
+    tree = BallTree(np.radians(labelled[["latitude", "longitude"]].to_numpy(float)), metric="haversine")
+    distance, index = tree.query(np.radians(centers), k=1)
+    result["region_name"] = labelled["region"].to_numpy()[index[:, 0]]
+    result["region_distance_km"] = distance[:, 0] * odor.EARTH_RADIUS_KM
+    return result
 
 
 def fixed_k_metrics(frame: pd.DataFrame, score: np.ndarray, k: int = 3) -> dict[str, float]:
@@ -96,6 +126,7 @@ def main() -> None:
         output = test[["event_id", "event_hour", "grid_x", "grid_y", "target"]].copy()
         output["score"] = score
         output["grid_m"] = grid_m
+        output = add_location_columns(output, complaints, grid_m)
         prediction_rows.append(output)
         print(grid_m, selected, json.dumps(metrics, ensure_ascii=False))
 
