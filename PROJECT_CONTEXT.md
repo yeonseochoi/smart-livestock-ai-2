@@ -1,5 +1,9 @@
 # 익산시 악취 민원 선제 대응 프로젝트
 
+> 최종 정리일: 2026-08-29
+>
+> 기준 버전: `main` / `7e737d7` (확인 당시 `origin/main`과 동기화)
+
 ## 프로젝트 목적
 
 익산악취24가 시민 신고와 현재 관측 상황을 수집·조회하는 시스템이라면, 이 프로젝트는 현재까지 접수된 민원의 시공간 패턴을 바탕으로 향후 30분 안에 추가 민원이 발생할 가능성이 높은 1km 권역 3곳을 우선순위로 제시한다.
@@ -32,11 +36,13 @@ Agent는 시설을 원인으로 단정하거나 자동으로 행정조치를 내
 `administrative_agent/`는 이 표준 출력만 입력받아 문서를 만든다. Agent는 민원 원본, 농가,
 센서 데이터를 직접 조회하거나 원인 시설을 추론하지 않는다.
 
-- `generate_agent_documents.py`: 운영 격자 비교 결과에서 최신 Event 문서 3종 생성
+- `generate_agent_documents.py`: 운영 격자 비교 결과에서 지정 Event(미지정 시 데이터상 최신 Event)의 문서 3종 생성
 - `outputs/administrative_agent/complaint_briefing.md`: 악취 민원 상황 브리핑
 - `outputs/administrative_agent/field_inspection_order.md`: 현장 점검 지시서
 - `outputs/administrative_agent/followup_report_template.md`: 사후 결과보고서 확장 예시
 - `outputs/administrative_agent/agent_output.json`: 서비스 연동용 구조화 결과
+
+현재 저장된 문서 예시는 `EVT-0175`(2024-09-05 01:00)를 기준으로 생성되어 있다. 이는 사용자가 선택한 과거 Event의 대응 문서 예시이며, 예측 CSV에서 시간상 가장 최신인 `EVT-0182`와는 다르다. `generate_agent_documents.py`를 Event 지정 없이 다시 실행하면 최신 Event 기준 산출물로 교체된다.
 
 ## 데이터와 검증
 
@@ -91,4 +97,13 @@ python demo/server.py
 API 키는 브라우저나 `demo/index.html`에 입력하지 않는다. 현장 결과는 화면에서 입력할 수 있으며
 완성된 사후 결과보고서는 `outputs/administrative_agent/`에 저장된다.
 
-현재 로컬 `.venv`는 존재하지 않는 Python 3.12 설치 경로를 참조하므로 Python을 설치하거나 가상환경을 다시 만들어야 한다.
+## 최종 확인 상태
+
+- Git: 2026-08-29 확인 당시 로컬 `main`과 `origin/main`의 커밋 차이는 0건이다.
+- 로컬 산출물: `outputs/administrative_agent/`의 JSON 1개와 Markdown 3개는 `EVT-0175` 예시로 갱신된 미커밋 변경 상태다.
+- 실행 환경: 현재 `.venv`는 존재하지 않는 `C:\Users\Public\Python312\python.exe`를 참조해 실행되지 않는다. Python 3.12 설치 후 기존 `.venv`를 제거하고 다시 생성해야 한다. 배치 파일의 자동 생성은 `.venv`가 아예 없을 때만 동작한다.
+- 테스트: 위 가상환경 문제로 최종 단위 테스트는 실행하지 못했다. 환경 복구 후 아래 명령으로 확인한다.
+
+```powershell
+.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
