@@ -8,7 +8,7 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.62-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![XGBoost](https://img.shields.io/badge/XGBoost-3.x-EB5B25?style=flat-square)](https://xgboost.ai/)
 
-[🚀 데모 실행하기](https://smart-livestock-ai-2.streamlit.app/) · [📘 프로젝트 상세 문서](PROJECT_CONTEXT.md)
+[🚀 데모 실행하기](https://smart-livestock-ai-2.streamlit.app/) · [▶️ 데모 영상 보기](https://www.youtube.com/watch?v=ZC-iM7M16fY) · [📘 프로젝트 상세 문서](PROJECT_CONTEXT.md)
 
 </div>
 
@@ -49,6 +49,18 @@
 
 <img width="1635" height="907" alt="image" src="https://github.com/user-attachments/assets/8cdf192e-f3fd-4a29-bf2c-09e1b032237c" />
 [웹 페이지 메인 화면]
+
+### ▶️ 데모 영상
+
+아래 이미지를 클릭하면 YouTube 데모 영상으로 이동합니다.
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=ZC-iM7M16fY">
+    <img src="https://img.youtube.com/vi/ZC-iM7M16fY/hqdefault.jpg" alt="익산시 악취 민원 선제 대응 AI 데모 영상" width="720">
+  </a>
+</p>
+
+<p align="center"><a href="https://www.youtube.com/watch?v=ZC-iM7M16fY"><b>유튜브에서 데모 영상 시청하기</b></a></p>
 
 ---
 
