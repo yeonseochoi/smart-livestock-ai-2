@@ -32,6 +32,8 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIn("💨", rendered)
         self.assertIn("0.6 m/s", rendered)
         self.assertIn("🌧️", rendered)
+        self.assertIn(".st-key-map_panel{position:sticky", rendered)
+        self.assertIn(".st-key-agent_panel{height:calc(100vh - 5.1rem);overflow-y:auto", rendered)
 
         previous = next(button for button in app.button if button.key == "prev")
         previous.click().run()

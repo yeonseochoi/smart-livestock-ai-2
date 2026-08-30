@@ -158,11 +158,19 @@ def apply_styles() -> None:
     .weather-label{font-size:.68rem;color:#68757c;margin-bottom:.15rem}.weather-value{font-size:.92rem;font-weight:750;color:#182126;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     div[data-testid="stMetric"]{background:white;border:1px solid #dce2e5;padding:.55rem}.stButton button{border-radius:4px;font-weight:700}
     iframe[title="streamlit_folium.st_folium"]{border:1px solid #dce2e5}
+    .st-key-map_panel{position:sticky;top:4.2rem;align-self:flex-start}
+    .st-key-agent_panel{height:calc(100vh - 5.1rem);overflow-y:auto;overflow-x:hidden;padding-right:.65rem;scrollbar-gutter:stable}
+    .st-key-agent_panel::-webkit-scrollbar{width:8px}
+    .st-key-agent_panel::-webkit-scrollbar-thumb{background:#bdc8cd;border-radius:8px}
+    .st-key-agent_panel::-webkit-scrollbar-track{background:#f3f5f6}
     .st-key-agent_panel h1{font-size:1.7rem;line-height:1.25;margin:.8rem 0 .55rem}
     .st-key-agent_panel h2{font-size:1.25rem;line-height:1.3;margin:1rem 0 .45rem}
     .st-key-agent_panel h3{font-size:1.05rem;line-height:1.35;margin:.8rem 0 .4rem}
     .st-key-agent_panel p,.st-key-agent_panel li,.st-key-agent_panel table{font-size:.88rem;line-height:1.55}
-    @media(max-width:760px){.block-container{padding-top:4.3rem;padding-left:.6rem;padding-right:.6rem}.weather-value{font-size:.84rem}}
+    @media(max-width:760px){
+      .block-container{padding-top:4.3rem;padding-left:.6rem;padding-right:.6rem}.weather-value{font-size:.84rem}
+      .st-key-map_panel{position:static}.st-key-agent_panel{height:auto;overflow:visible;padding-right:0;scrollbar-gutter:auto}
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -237,7 +245,7 @@ with st.sidebar:
 
 map_column, agent_column = st.columns([1.45, 1], gap="large")
 
-with map_column:
+with map_column.container(key="map_panel"):
     st.markdown("#### 과거 Event 재현 모드")
     st.caption("1km 광역 경보 · 향후 30분 · 지도 위험도는 Event 내부 상대 순위입니다.")
     st_folium(event_map(event, show_actual), use_container_width=True, height=650, returned_objects=[])
