@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import tomllib
 import unittest
 
 from streamlit.testing.v1 import AppTest
@@ -10,6 +11,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class StreamlitAppTest(unittest.TestCase):
+    def test_deployment_disables_hot_reload_module_eviction(self) -> None:
+        config = tomllib.loads((ROOT / ".streamlit" / "config.toml").read_text(encoding="utf-8"))
+        self.assertEqual(config["server"]["fileWatcherType"], "none")
+        self.assertFalse(config["server"]["runOnSave"])
+
     def app(self) -> AppTest:
         app = AppTest.from_file(ROOT / "streamlit_app.py", default_timeout=20)
         app.run()
