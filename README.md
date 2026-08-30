@@ -30,6 +30,51 @@ Event Hit@3는 추가 민원이 실제로 존재하는 평가 가능 Event 가�
 
 상세 결과는 `outputs/operational_grid_comparison/metrics.json`에서 확인할 수 있습니다.
 
+## 데모 화면
+
+> 아래 파일명으로 화면을 캡처해 `docs/screenshots/` 폴더에 추가한 뒤, 아래 주석 안의 마크업을 README 본문으로 옮기면 됩니다.
+>
+> - `demo-overview.png`: 전체 화면과 지도
+> - `demo-weather.png`: 현장 참고 기상정보
+> - `demo-documents.png`: 상황 브리핑·현장점검 지시서
+> - `demo-followup.png`: 사후 결과보고서
+
+<!-- 스크린샷을 추가한 뒤 이 줄과 아래의 주석 종료 줄을 삭제하세요.
+
+### 민원 확산 예측 대시보드
+
+<p align="center">
+  <img src="docs/screenshots/demo-overview.png" alt="익산시 악취 민원 선제 대응 AI 데모 전체 화면" width="920">
+</p>
+
+초기 30분 민원과 AI가 예측한 향후 30분의 우선 확인 권역 Top 3를 지도에서 한눈에 확인할 수 있습니다.
+
+### 주요 운영 화면
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/demo-weather.png" alt="현장 참고 기상정보" width="100%"><br>
+      <b>현장 참고 기상정보</b><br>
+      풍속·풍향·상대습도·최근 강수 확인
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/screenshots/demo-documents.png" alt="행정 대응 문서 생성 화면" width="100%"><br>
+      <b>행정 대응 문서</b><br>
+      상황 브리핑과 현장점검 지시서 생성
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center">
+      <img src="docs/screenshots/demo-followup.png" alt="사후 결과보고서 작성 화면" width="80%"><br>
+      <b>사후 결과보고서</b><br>
+      AI 예측과 실제 출동·측정·조치 결과를 Event ID 기준으로 기록
+    </td>
+  </tr>
+</table>
+
+-->
+
 ## 빠른 실행
 
 ### Streamlit 데모

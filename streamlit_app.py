@@ -216,62 +216,81 @@ with st.sidebar:
     st.caption(f'{provider_name()} LLM 연결됨' if llm_configured() else "안전 템플릿 모드 · API 키 미설정")
     show_actual = st.toggle("검증용 실제 이후 신고 표시", value=False)
 
-st.markdown("#### 과거 Event 재현 모드")
-st.caption("1km 광역 경보 · 향후 30분 · 지도 위험도는 Event 내부 상대 순위입니다.")
-st_folium(event_map(event, show_actual), use_container_width=True, height=650, returned_objects=[])
+map_column, agent_column = st.columns([1.45, 1], gap="large")
 
-if st.session_state.documents is not None and st.session_state.document_event == event["id"]:
-    package = st.session_state.documents
-    st.divider()
-    st.subheader("행정 대응 Agent")
-    warning = st.session_state.get("document_warning")
-    message = warning or f'{st.session_state.get("document_mode", "안전 템플릿")} 문서 생성 완료 · 담당자 검토 필요'
-    st.markdown(f'<div class="notice">{message}</div>', unsafe_allow_html=True)
-    tab1, tab2, tab3, tab4 = st.tabs(["상황 브리핑", "현장점검 지시서", "사후 결과보고서", "현장 결과 입력"])
-    with tab1:
-        st.markdown(package.briefing)
-        st.download_button("브리핑 다운로드", package.briefing, f"briefing_{event['id']}.md", "text/markdown")
-    with tab2:
-        st.markdown(package.dispatch_order)
-        st.download_button("점검 지시서 다운로드", package.dispatch_order, f"inspection_{event['id']}.md", "text/markdown")
-    with tab3:
-        st.markdown(package.followup_report_template)
-        st.download_button("사후보고서 양식 다운로드", package.followup_report_template, f"followup_template_{event['id']}.md", "text/markdown")
-    with tab4:
-        with st.form("followup_form"):
-            author = st.text_input("작성자")
-            date_col, time_col = st.columns(2)
-            inspected_date = date_col.date_input("점검 날짜", value=date.today())
-            inspected_time = time_col.time_input("점검 시각", value=datetime.now().time().replace(second=0, microsecond=0))
-            time1, time2, time3 = st.columns(3)
-            dispatch_decided_at = time1.text_input("출동 결정시각", placeholder="예: 20:32")
-            departed_at = time2.text_input("현장 출발시각", placeholder="예: 20:35")
-            arrived_at = time3.text_input("현장 도착시각", placeholder="예: 20:48")
-            distance_col, count_col = st.columns(2)
-            total_distance_km = distance_col.text_input("총 출동거리(km)", placeholder="예: 5.2")
-            actual_additional_area_count = count_col.text_input("실제 추가 민원 권역 수", placeholder="예: 2")
-            areas = []
-            for area in package.forecast.areas:
-                st.markdown(f"**{area.rank}순위 · {area.grid_id}**")
-                c1, c2 = st.columns(2)
-                additional = c1.selectbox("추가 민원", ["미확인", "발생", "미발생"], key=f"add_{event['id']}_{area.rank}")
-                detected = c2.selectbox("악취 감지", ["미확인", "감지", "미감지"], key=f"odor_{event['id']}_{area.rank}")
-                measurement = st.text_input("측정 결과", key=f"measurement_{event['id']}_{area.rank}")
-                action = st.text_input("조치 내용", key=f"action_{event['id']}_{area.rank}")
-                areas.append({"rank": area.rank, "additional_complaint": additional, "odor_detected": detected, "measurement": measurement, "action": action})
-            checked_area = st.text_input("실제 우선 점검 권역")
-            field_findings = st.text_area("현장 확인내용")
-            notes = st.text_area("담당자 의견 및 종합 결과")
-            followup_required = st.radio("추가 조치 필요 여부", ["미확인", "필요", "불필요"], horizontal=True)
-            submitted = st.form_submit_button("사후 결과보고서 생성", type="primary")
-        if submitted:
-            inspected_at = datetime.combine(inspected_date, inspected_time)
-            report = create_completed_followup(package, {
-                "author": author, "inspected_at": inspected_at.isoformat(timespec="minutes"),
-                "dispatch_decided_at": dispatch_decided_at, "departed_at": departed_at, "arrived_at": arrived_at,
-                "total_distance_km": total_distance_km, "actual_additional_area_count": actual_additional_area_count,
-                "checked_area": checked_area, "field_findings": field_findings,
-                "followup_required": followup_required, "areas": areas, "notes": notes,
-            })
-            st.markdown(report)
-            st.download_button("완성 보고서 다운로드", report, f"followup_{event['id']}.md", "text/markdown")
+with map_column:
+    st.markdown("#### 과거 Event 재현 모드")
+    st.caption("1km 광역 경보 · 향후 30분 · 지도 위험도는 Event 내부 상대 순위입니다.")
+    st_folium(event_map(event, show_actual), use_container_width=True, height=650, returned_objects=[])
+
+with agent_column:
+    st.markdown("#### 행정 대응 Agent")
+    if st.session_state.documents is None or st.session_state.document_event != event["id"]:
+        st.markdown(
+            '<div class="notice"><b>예측 결과를 현장 대응 문서로 변환합니다.</b><br>'
+            '상황 브리핑, 현장점검 지시서와 입력 가능한 사후 결과보고서를 생성할 수 있습니다.</div>',
+            unsafe_allow_html=True,
+        )
+        if st.button("이 Event의 대응 문서 생성", type="primary", use_container_width=True, key="generate_main"):
+            with st.spinner("대응 문서를 생성하고 있습니다..."):
+                package, mode, warning = generate_documents(event)
+                st.session_state.documents = package
+                st.session_state.document_event = event["id"]
+                st.session_state.document_mode = mode
+                st.session_state.document_warning = warning
+                st.rerun()
+        st.caption("문서를 생성하면 이 영역에서 바로 확인하고 현장 결과를 입력할 수 있습니다.")
+    else:
+        package = st.session_state.documents
+        warning = st.session_state.get("document_warning")
+        message = warning or f'{st.session_state.get("document_mode", "안전 템플릿")} 문서 생성 완료 · 담당자 검토 필요'
+        st.markdown(f'<div class="notice">{message}</div>', unsafe_allow_html=True)
+        tab1, tab2, tab3 = st.tabs(["① 상황 브리핑", "② 점검 지시서", "③ 사후 결과 입력"])
+        with tab1:
+            st.markdown(package.briefing)
+            st.download_button("브리핑 다운로드", package.briefing, f"briefing_{event['id']}.md", "text/markdown")
+        with tab2:
+            st.markdown(package.dispatch_order)
+            st.download_button("점검 지시서 다운로드", package.dispatch_order, f"inspection_{event['id']}.md", "text/markdown")
+        with tab3:
+            st.caption("문서에서 ‘미입력’으로 표시된 현장 확인값을 아래에서 직접 작성하세요.")
+            with st.expander("빈 사후 결과보고서 양식 보기"):
+                st.markdown(package.followup_report_template)
+                st.download_button("빈 양식 다운로드", package.followup_report_template, f"followup_template_{event['id']}.md", "text/markdown")
+            with st.form("followup_form"):
+                author = st.text_input("작성자", placeholder="예: 홍길동 주무관")
+                date_col, time_col = st.columns(2)
+                inspected_date = date_col.date_input("점검 날짜", value=date.today())
+                inspected_time = time_col.time_input("점검 시각", value=datetime.now().time().replace(second=0, microsecond=0))
+                time1, time2, time3 = st.columns(3)
+                dispatch_decided_at = time1.text_input("출동 결정시각", placeholder="예: 20:32")
+                departed_at = time2.text_input("현장 출발시각", placeholder="예: 20:35")
+                arrived_at = time3.text_input("현장 도착시각", placeholder="예: 20:48")
+                distance_col, count_col = st.columns(2)
+                total_distance_km = distance_col.text_input("총 출동거리(km)", placeholder="예: 5.2")
+                actual_additional_area_count = count_col.text_input("실제 추가 민원 권역 수", placeholder="예: 2")
+                areas = []
+                for area in package.forecast.areas:
+                    st.markdown(f"**{area.rank}순위 · {area.grid_id}**")
+                    c1, c2 = st.columns(2)
+                    additional = c1.selectbox("추가 민원", ["미확인", "발생", "미발생"], key=f"add_{event['id']}_{area.rank}")
+                    detected = c2.selectbox("악취 감지", ["미확인", "감지", "미감지"], key=f"odor_{event['id']}_{area.rank}")
+                    measurement = st.text_input("측정 결과", key=f"measurement_{event['id']}_{area.rank}")
+                    action = st.text_input("조치 내용", key=f"action_{event['id']}_{area.rank}")
+                    areas.append({"rank": area.rank, "additional_complaint": additional, "odor_detected": detected, "measurement": measurement, "action": action})
+                checked_area = st.text_input("실제 우선 점검 권역", placeholder="예: 1순위 권역 또는 격자 ID")
+                field_findings = st.text_area("현장 확인내용", placeholder="현장에서 확인한 악취 상태와 주변 상황을 입력하세요.")
+                notes = st.text_area("담당자 의견 및 종합 결과", placeholder="실시 조치와 추가 확인 필요사항을 입력하세요.")
+                followup_required = st.radio("추가 조치 필요 여부", ["미확인", "필요", "불필요"], horizontal=True)
+                submitted = st.form_submit_button("입력값으로 결과보고서 완성", type="primary", use_container_width=True)
+            if submitted:
+                inspected_at = datetime.combine(inspected_date, inspected_time)
+                report = create_completed_followup(package, {
+                    "author": author, "inspected_at": inspected_at.isoformat(timespec="minutes"),
+                    "dispatch_decided_at": dispatch_decided_at, "departed_at": departed_at, "arrived_at": arrived_at,
+                    "total_distance_km": total_distance_km, "actual_additional_area_count": actual_additional_area_count,
+                    "checked_area": checked_area, "field_findings": field_findings,
+                    "followup_required": followup_required, "areas": areas, "notes": notes,
+                })
+                st.markdown(report)
+                st.download_button("완성 보고서 다운로드", report, f"followup_{event['id']}.md", "text/markdown")
