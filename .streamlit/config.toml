@@ -7,8 +7,8 @@ font = "sans serif"
 
 [server]
 headless = true
-fileWatcherType = "none"
-runOnSave = false
+fileWatcherType = "poll"
+runOnSave = true
 
 [browser]
 gatherUsageStats = false

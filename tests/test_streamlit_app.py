@@ -11,10 +11,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class StreamlitAppTest(unittest.TestCase):
-    def test_deployment_disables_hot_reload_module_eviction(self) -> None:
+    def test_deployment_uses_polling_reload(self) -> None:
         config = tomllib.loads((ROOT / ".streamlit" / "config.toml").read_text(encoding="utf-8"))
-        self.assertEqual(config["server"]["fileWatcherType"], "none")
-        self.assertFalse(config["server"]["runOnSave"])
+        self.assertEqual(config["server"]["fileWatcherType"], "poll")
+        self.assertTrue(config["server"]["runOnSave"])
 
     def app(self) -> AppTest:
         app = AppTest.from_file(ROOT / "streamlit_app.py", default_timeout=20)
