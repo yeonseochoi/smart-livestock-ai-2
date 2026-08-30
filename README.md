@@ -47,26 +47,8 @@
 
 ### 🖥️ 데모 화면
 
-<!--
-스크린샷을 docs/screenshots/ 폴더에 아래 파일명으로 추가한 뒤 이 주석의 시작과 끝 줄을 삭제하세요.
+<img width="1637" height="902" alt="image" src="https://github.com/user-attachments/assets/d8d8fa9b-91dc-402a-92e1-607f1d9de6a8" />
 
-<p align="center">
-  <img src="docs/screenshots/demo-overview.png" alt="익산시 악취 민원 선제 대응 AI 데모 전체 화면" width="920">
-</p>
-
-<table>
-  <tr>
-    <td width="50%" align="center"><img src="docs/screenshots/demo-weather.png" alt="현장 참고 기상정보" width="100%"><br><b>현장 참고 기상정보</b></td>
-    <td width="50%" align="center"><img src="docs/screenshots/demo-documents.png" alt="행정 대응 문서 생성 화면" width="100%"><br><b>행정 대응 Agent</b></td>
-  </tr>
-  <tr>
-    <td colspan="2" align="center"><img src="docs/screenshots/demo-followup.png" alt="사후 결과보고서 작성 화면" width="80%"><br><b>사후 결과 입력 및 결과보고서 생성</b></td>
-  </tr>
-</table>
-
--->
-
-스크린샷 파일명과 촬영 방법은 [데모 스크린샷 가이드](docs/screenshots/README.md)를 참고하세요.
 
 ---
 
