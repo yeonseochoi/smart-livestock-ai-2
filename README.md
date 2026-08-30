@@ -45,10 +45,9 @@
 | 배포 주소 | [Streamlit 데모](https://smart-livestock-ai-2.streamlit.app/) |
 | 저장소 | [GitHub Repository](https://github.com/yeonseochoi/smart-livestock-ai-2) |
 
-### 🖥️ 데모 화면
+### 🖥️ 데모 메인 화면
 
 <img width="1635" height="907" alt="image" src="https://github.com/user-attachments/assets/8cdf192e-f3fd-4a29-bf2c-09e1b032237c" />
-[웹 페이지 메인 화면]
 
 ### ▶️ 데모 영상
 
