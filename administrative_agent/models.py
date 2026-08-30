@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any
 
@@ -28,6 +28,11 @@ class ForecastResult:
     areas: tuple[RiskArea, ...]
     model_metrics: dict[str, float]
     generated_at: datetime
+    initial_complaint_count: int | None = None
+    initial_grid_count: int | None = None
+    initial_intensity_average: float | None = None
+    initial_intensity_maximum: float | None = None
+    weather: dict[str, float | int | None] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.grid_size_m != 1000:

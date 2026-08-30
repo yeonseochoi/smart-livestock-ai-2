@@ -74,8 +74,10 @@ def refine_with_openai(forecast: ForecastResult, fallback: ResponsePackage) -> R
             "당신은 지자체 악취 민원 대응 문서 작성 보조자다. 입력의 수치, 권역, 순위를 절대 변경하거나 "
             "새 사실을 만들지 않는다. 악취 발생원·원인 시설·실제 악취 발생을 단정하지 않는다. "
             "세 문서를 간결한 한국어 Markdown으로 작성하고, 담당자 검토 필요와 상대 우선순위라는 한계를 포함한다. "
-            "각 문서는 # 제목, ## 섹션, 핵심 정보 표, 짧은 목록을 사용하고 HTML은 출력하지 않는다. "
-            "사후 결과보고서는 미입력 필드가 있는 확장용 양식으로만 작성한다."
+            "상황 브리핑은 발생 현황·AI 예측·기상정보·상황 판단, 현장점검 지시서는 점검 대상·현장 확인항목·결과 입력항목·유의사항, "
+            "사후 결과보고서는 발생 개요·AI 우선권역·현장 대응·조치내용·예측과 실제 결과 비교·종합 결과 순서를 유지한다. "
+            "각 문서는 # 제목, ## 번호 섹션, 핵심 정보 표와 짧은 목록을 사용하고 HTML은 출력하지 않는다. "
+            "확인되지 않은 현장 결과는 미입력으로 남기며 사후 결과를 추정하지 않는다."
         ),
         "input": json.dumps({"forecast": forecast.to_dict(), "safe_template": fallback.to_dict()["documents"]}, ensure_ascii=False),
         "text": {"format": {"type": "json_schema", "name": "administrative_documents", "strict": True, "schema": SCHEMA}},
@@ -110,8 +112,10 @@ def refine_with_gemini(forecast: ForecastResult, fallback: ResponsePackage) -> R
         "당신은 지자체 악취 민원 대응 문서 작성 보조자다. 입력의 수치, 권역, 순위를 절대 변경하거나 "
         "새 사실을 만들지 않는다. 악취 발생원·원인 시설·실제 악취 발생을 단정하지 않는다. "
         "세 문서를 간결한 한국어 Markdown으로 작성하고 담당자 검토 필요와 상대 우선순위라는 한계를 포함한다. "
-        "각 문서는 # 제목, ## 섹션, 핵심 정보 표, 짧은 목록을 사용하고 HTML은 출력하지 않는다. "
-        "사후 결과보고서는 미입력 필드가 있는 확장용 양식으로만 작성한다."
+        "상황 브리핑은 발생 현황·AI 예측·기상정보·상황 판단, 현장점검 지시서는 점검 대상·현장 확인항목·결과 입력항목·유의사항, "
+        "사후 결과보고서는 발생 개요·AI 우선권역·현장 대응·조치내용·예측과 실제 결과 비교·종합 결과 순서를 유지한다. "
+        "각 문서는 # 제목, ## 번호 섹션, 핵심 정보 표와 짧은 목록을 사용하고 HTML은 출력하지 않는다. "
+        "확인되지 않은 현장 결과는 미입력으로 남기며 사후 결과를 추정하지 않는다."
     )
     prompt = instructions + "\n\n입력:\n" + json.dumps(
         {"forecast": forecast.to_dict(), "safe_template": fallback.to_dict()["documents"]}, ensure_ascii=False

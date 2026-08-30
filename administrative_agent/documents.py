@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 from .models import ForecastResult
 from .policy import DISCLAIMER, response_level
 
@@ -16,62 +18,123 @@ def _location(area) -> str:
     return f"{label} (중심 {area.center_latitude:.6f}, {area.center_longitude:.6f})"
 
 
+def _value(value, suffix: str = "") -> str:
+    return "미제공" if value is None else f"{value}{suffix}"
+
+
+def _wind_direction(degrees: float | int | None) -> str:
+    if degrees is None:
+        return "미제공"
+    names = ("북풍", "북동풍", "동풍", "남동풍", "남풍", "남서풍", "서풍", "북서풍")
+    return f"{names[round(float(degrees) / 45) % 8]}({float(degrees):.0f}°)"
+
+
+def _time_windows(forecast: ForecastResult) -> tuple[str, str]:
+    boundary = forecast.event_time + timedelta(minutes=forecast.forecast_minutes)
+    end = boundary + timedelta(minutes=forecast.forecast_minutes)
+    return (
+        f"{forecast.event_time:%H:%M}~{boundary:%H:%M}",
+        f"{boundary:%H:%M}~{end:%H:%M}",
+    )
+
+
 def create_briefing(forecast: ForecastResult) -> str:
+    analysis_window, forecast_window = _time_windows(forecast)
+    regions = list(dict.fromkeys(area.region_name for area in forecast.areas if area.region_name))
     lines = [
-        "# 악취 민원 상황 브리핑", "",
-        f"- 이벤트: {forecast.event_id}",
-        f"- 기준 시각: {forecast.event_time:%Y-%m-%d %H:%M}",
-        f"- 예측 구간: 기준 시각 이후 {forecast.forecast_minutes}분",
-        "- 판단: 추가 민원이 접수될 가능성이 높은 1km 권역 3곳을 선별함", "",
-        "## 우선 대응 권역", "",
-        "|순위|1km 권역|상대 위험도|대응 수준|", "|---:|---|---:|---|",
+        "# 악취 민원 확산 상황 브리핑", "",
+        f"- **Event ID:** {forecast.event_id}",
+        f"- **기준시각:** {forecast.event_time:%Y.%m.%d. %H:%M}",
+        f"- **분석구간:** {analysis_window}",
+        f"- **예측구간:** {forecast_window}", "",
+        "## 1. 민원 발생 현황", "",
+        f"- 초기 30분 접수 민원: **{_value(forecast.initial_complaint_count, '건')}**",
+        f"- 초기 민원 발생 격자: **{_value(forecast.initial_grid_count, '개')}**",
+        f"- 주요 우선확인 지역: {', '.join(regions) + ' 일대' if regions else '미제공'}",
+        f"- 초기 신고 강도: 평균 {_value(forecast.initial_intensity_average)} / 최대 {_value(forecast.initial_intensity_maximum)}", "",
+        "## 2. AI 예측 결과", "",
+        "초기 민원 위치·강도·신고 분포와 과거 민원 패턴을 분석한 결과, 향후 30분 동안 추가 민원이 접수될 가능성이 상대적으로 높은 권역은 다음과 같습니다.", "",
+        "|순위|우선 확인 권역|상대위험점수|대응 수준|", "|---:|---|---:|---|",
     ]
     for area in forecast.areas:
         level, _ = response_level(area.relative_risk)
         lines.append(f"|{area.rank}|{_location(area)}|{area.relative_risk}/100|{level}|")
-    lines += ["", "## 해석 시 주의사항", "", DISCLAIMER]
+    weather = forecast.weather
+    lines += [
+        "", "※ 상대위험점수는 실제 악취 발생확률이 아닌 동일 Event 내 후보권역 간 우선순위 판단을 위한 상대적 점수입니다.", "",
+        "## 3. 참고 기상정보", "",
+        f"- 풍향: {_wind_direction(weather.get('windDirection'))}",
+        f"- 풍속: {_value(weather.get('windSpeed'), 'm/s')}",
+        f"- 상대습도: {_value(weather.get('humidity'), '%')}",
+        f"- 최근 1시간 강수량: {_value(weather.get('rainfall'), 'mm')}",
+        "- 기상정보는 현장 판단용 참고정보이며 현재 민원 예측모델 입력에는 사용하지 않음", "",
+        "## 4. 상황 판단", "",
+        "현재 민원 분포와 AI 예측 결과를 고려하여 1순위 권역을 우선 확인대상으로 검토하고, 현장 상황과 기상조건에 따라 2·3순위 권역을 순차적으로 확인할 필요가 있습니다.", "",
+        f"> **주의:** {DISCLAIMER}",
+    ]
     return "\n".join(lines)
 
 
 def create_dispatch_order(forecast: ForecastResult) -> str:
     lines = [
-        "# 현장 점검 지시서", "",
-        f"- 관련 이벤트: {forecast.event_id}",
-        f"- 점검 권고 시간: {forecast.event_time:%Y-%m-%d %H:%M}부터 {forecast.forecast_minutes}분 이내",
-        "- 승인 상태: 담당자 검토 필요", "",
-        "## 점검 순서", "",
+        "# 악취 민원 현장점검 지시서", "",
+        f"- **Event ID:** {forecast.event_id}",
+        f"- **지시시각:** {forecast.generated_at:%Y.%m.%d. %H:%M}",
+        "- **점검목적:** 추가 민원 가능성이 높은 권역의 우선 현장 확인",
+        "- **승인상태:** 담당자 검토 필요", "",
+        "## 1. 점검 대상", "",
+        "|우선순위|점검 권역|상대위험점수|점검 기준|", "|---:|---|---:|---|",
     ]
     for area in forecast.areas:
         level, action = response_level(area.relative_risk)
-        lines += [
-            f"### {area.rank}순위 — {_location(area)}", "",
-            f"- 상대 위험도: {area.relative_risk}/100 ({level})",
-            f"- 격자 식별자: {area.grid_id}",
-            f"- 권고: {action}",
-            "- 확인 항목: 현장 악취 감지 여부, 측정값, 풍향·풍속, 민원 추가 접수 여부",
-            "- 기록 항목: 도착·종료 시각, 확인 위치, 측정 장비, 조치 내용", "",
-        ]
-    lines += ["## 담당자 확인", "", "- [ ] 우선순위와 가용 인력을 확인함", "- [ ] 현장 안전 및 점검 권한을 확인함", "", DISCLAIMER]
+        lines.append(f"|{area.rank}순위|{_location(area)}|{area.relative_risk}/100|{action}|")
+    lines += [
+        "", "## 2. 현장 확인 항목", "",
+        "현장 도착 시 다음 사항을 확인·기록합니다.", "",
+        "- 도착시각 및 실제 점검 위치",
+        "- 현장 악취 감지 여부와 악취강도 또는 측정값",
+        "- 현장 풍향·풍속 및 주변 악취 발생 상황",
+        "- 추가 민원 발생 여부와 현장 조치 내용",
+        "- 추가 점검 필요 여부", "",
+        "## 3. 점검 결과 입력항목", "",
+        "|항목|입력|", "|---|---|",
+        "|출동 결정시각|미입력|", "|현장 출발시각|미입력|", "|현장 도착시각|미입력|",
+        "|점검 권역|미입력|", "|악취 감지|□ 확인 / □ 미확인|", "|측정값|미입력|",
+        "|조치 내용|미입력|", "|추가 점검|□ 필요 / □ 불필요|", "",
+        "## 4. 담당자 확인", "",
+        "- [ ] 우선순위와 가용 인력을 확인함", "- [ ] 현장 안전 및 점검 권한을 확인함", "",
+        "## 5. 유의사항", "", DISCLAIMER,
+    ]
     return "\n".join(lines)
 
 
 def create_followup_template(forecast: ForecastResult) -> str:
+    _, forecast_window = _time_windows(forecast)
     lines = [
-        "# 사후 결과보고서(확장 예시)", "",
-        f"- 관련 이벤트: {forecast.event_id}",
-        f"- 예측 기준 시각: {forecast.event_time:%Y-%m-%d %H:%M}",
-        "- 작성 상태: 실제 서비스 도입 시 현장 결과 입력 필요", "",
-        "## 권역별 결과", "",
-        "|예측 순위|1km 권역|추가 민원 발생|현장 악취 감지|측정 결과|조치 내용|", "|---:|---|---|---|---|---|",
+        "# 악취 민원 대응 사후 결과보고서", "",
+        f"- **Event ID:** {forecast.event_id}",
+        f"- **Event 발생시각:** {forecast.event_time:%Y.%m.%d. %H:%M}",
+        "- **보고서 작성시각:** 미입력", "- **작성상태:** 현장 결과 입력 필요", "",
+        "## 1. 발생 개요", "",
+        f"- 초기 민원 접수: {_value(forecast.initial_complaint_count, '건')}",
+        f"- 초기 민원 발생 격자: {_value(forecast.initial_grid_count, '개')}",
+        f"- 예측대상 기간: {forecast_window}", "",
+        "## 2. AI 우선권역", "",
+        "|순위|예측 권역|상대위험점수|이후 추가 민원|", "|---:|---|---:|---|",
     ]
     for area in forecast.areas:
-        lines.append(f"|{area.rank}|{_location(area)}|미입력|미입력|미입력|미입력|")
+        lines.append(f"|{area.rank}|{_location(area)}|{area.relative_risk}/100|미입력|")
     lines += [
-        "", "## 운영 성과 기록", "",
-        "- Top 3 권역 내 추가 민원 적중 여부: 미입력",
-        "- 최초 현장 도착 소요시간: 미입력",
-        "- 불필요 출동 또는 누락 사유: 미입력",
-        "- 담당자 의견 및 모델 개선 메모: 미입력", "",
-        "※ 이 문서는 현재 예측 성능 평가값을 사후 사실처럼 채우지 않는 입력 템플릿입니다.",
+        "", "## 3. 현장 대응 결과", "",
+        "- 출동 결정시각: 미입력", "- 현장 출발시각: 미입력", "- 현장 도착시각: 미입력",
+        "- 실제 점검 권역: 미입력", "- 현장 악취 감지 여부: 미입력", "- 현장 측정값: 미입력", "- 총 출동거리: 미입력", "",
+        "## 4. 현장 확인 및 조치내용", "",
+        "- 현장 확인내용: 미입력", "- 실시 조치: 미입력", "- 추가 조치 필요 여부: □ 필요 / □ 불필요", "",
+        "## 5. AI 예측 결과와 실제 결과 비교", "",
+        "- Top 3 내 실제 추가 민원 권역 포함 여부: 미입력", "- 실제 추가 민원 권역 수: 미입력",
+        "- Top 3 내 포함 권역 수: 미입력", "- 현장 악취 확인 여부: 미입력", "- 최초 현장 도착 소요시간: 미입력", "",
+        "## 6. 종합 결과", "",
+        "현장 확인 결과와 조치 내용을 종합하여 작성하며, 동일 Event ID를 기준으로 저장해 향후 현장 실증 성능평가와 모델 개선 자료로 활용합니다.", "",
+        "※ 확인되지 않은 현장 결과나 현재 예측 성능 평가값을 사후 사실처럼 자동 기입하지 않습니다.",
     ]
     return "\n".join(lines)
