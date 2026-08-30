@@ -209,11 +209,13 @@ with st.sidebar:
         if st.button("‹", disabled=st.session_state.event_index == 0, use_container_width=True, key="prev"):
             st.session_state.event_index -= 1
             st.session_state.documents = None
+            st.session_state.show_actual = False
             st.rerun()
     with right:
         if st.button("›", disabled=st.session_state.event_index == len(events) - 1, use_container_width=True, key="next"):
             st.session_state.event_index += 1
             st.session_state.documents = None
+            st.session_state.show_actual = False
             st.rerun()
 
     m1, m2, m3 = st.columns(3)
@@ -247,7 +249,7 @@ with st.sidebar:
     if st.button("대응 문서 생성", type="primary", use_container_width=True):
         store_generated_documents(event)
     st.caption(f'{provider_name()} LLM 연결됨' if llm_configured() else "안전 템플릿 모드 · API 키 미설정")
-    show_actual = st.toggle("검증용 실제 이후 신고 표시", value=False)
+    show_actual = st.toggle("검증용 실제 이후 신고 표시", value=False, key="show_actual")
 
 map_column, agent_column = st.columns([1.45, 1], gap="large")
 

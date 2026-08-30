@@ -36,10 +36,14 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIn(".st-key-agent_panel{height:calc(100vh - 5.1rem);overflow-y:auto", rendered)
         self.assertEqual(app.session_state["document_schema_version"], 2)
 
+        actual_toggle = next(toggle for toggle in app.toggle if toggle.label == "검증용 실제 이후 신고 표시")
+        actual_toggle.set_value(True).run()
+        self.assertTrue(actual_toggle.value)
         previous = next(button for button in app.button if button.key == "prev")
         previous.click().run()
         self.assertFalse(app.exception)
         self.assertEqual(app.metric[0].value, "11")
+        self.assertFalse(next(toggle for toggle in app.toggle if toggle.key == "show_actual").value)
 
     def test_safe_template_document_generation(self) -> None:
         app = self.app()
