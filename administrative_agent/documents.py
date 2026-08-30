@@ -138,3 +138,32 @@ def create_followup_template(forecast: ForecastResult) -> str:
         "※ 확인되지 않은 현장 결과나 현재 예측 성능 평가값을 사후 사실처럼 자동 기입하지 않습니다.",
     ]
     return "\n".join(lines)
+
+
+def create_response_guide(forecast: ForecastResult) -> str:
+    """확인된 입력만 사용해 담당자 검토용 대응 참고사항을 만든다."""
+    first = forecast.areas[0]
+    weather = forecast.weather
+    weather_items = [
+        f"풍향 {_wind_direction(weather.get('windDirection'))}",
+        f"풍속 {_value(weather.get('windSpeed'), 'm/s')}",
+        f"상대습도 {_value(weather.get('humidity'), '%')}",
+        f"최근 강수 {_value(weather.get('rainfall'), 'mm')}",
+    ]
+    return "\n".join([
+        "# AI 현장 대응 참고 가이드", "",
+        "## 우선 확인 방향", "",
+        f"현재 Event에서는 **{_location(first)}**가 1순위 권역입니다. 해당 권역을 먼저 확인하고, 현장 확인 결과와 추가 민원 접수 상황을 함께 검토한 뒤 2·3순위 권역의 점검 필요성을 판단합니다.", "",
+        "## 현장 확인 순서", "",
+        "1. 출발 전 최신 추가 민원 위치와 접근 가능한 점검 경로를 확인합니다.",
+        "2. 현장 도착 시 악취 감지 여부, 시각, 위치와 측정값을 기록합니다.",
+        "3. 한 지점의 결과만으로 판단하지 않고 필요하면 권역 내 복수 지점을 확인합니다.",
+        "4. 1순위에서 악취가 확인되지 않으면 추가 민원과 현장 여건을 근거로 2·3순위 이동을 검토합니다.", "",
+        "## Event 참고정보", "",
+        f"- 초기 접수 민원: {_value(forecast.initial_complaint_count, '건')}",
+        f"- 현장 참고 기상: {', '.join(weather_items)}",
+        "- 기상정보는 현재 예측모델 입력이 아니며, 발생원 역추적이나 시설 특정에 사용하지 않습니다.", "",
+        "## 기록 및 후속 검토", "",
+        "현장 확인값과 실시 조치를 동일 Event ID에 기록하고, 확인되지 않은 내용은 추정해 채우지 않습니다. 추가 민원이나 현장 측정 결과가 확보되면 담당자가 대응 우선순위를 다시 검토합니다.", "",
+        "> **담당자 검토 필요:** 본 가이드는 AI가 생성한 현장 대응 참고사항이며 행정조치 지시가 아닙니다. 실제 대응은 현장 측정 결과, 안전수칙과 담당자의 판단을 따릅니다.",
+    ])

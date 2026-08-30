@@ -25,6 +25,8 @@ class AdministrativeAgentTest(unittest.TestCase):
         self.assertIn("악취 민원 확산 상황 브리핑", package.briefing)
         self.assertIn("악취 민원 현장점검 지시서", package.dispatch_order)
         self.assertIn("사후 결과보고서", package.followup_report_template)
+        self.assertIn("AI 현장 대응 참고 가이드", package.response_guide)
+        self.assertIn("담당자 검토 필요", package.response_guide)
         self.assertIn("원인 시설을 확정하지 않", package.briefing)
         self.assertIn("## 1. 민원 발생 현황", package.briefing)
         self.assertIn("## 2. 현장 확인 항목", package.dispatch_order)
@@ -65,6 +67,7 @@ class AdministrativeAgentTest(unittest.TestCase):
             "briefing": "# Gemini 브리핑",
             "dispatch_order": "# Gemini 점검 지시서",
             "followup_report_template": "# Gemini 사후보고서",
+            "response_guide": "# Gemini 대응 가이드",
         }
         response = Mock()
         response.raise_for_status.return_value = None
@@ -76,6 +79,7 @@ class AdministrativeAgentTest(unittest.TestCase):
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key", "GEMINI_MODEL": "gemini-3.6-flash"}, clear=False):
             package = refine_with_gemini(self.forecast, fallback)
         self.assertEqual(package.briefing, "# Gemini 브리핑")
+        self.assertEqual(package.response_guide, "# Gemini 대응 가이드")
         request = post.call_args.kwargs
         self.assertIn("gemini-3.6-flash:generateContent", post.call_args.args[0])
         self.assertEqual(request["json"]["generationConfig"]["responseMimeType"], "application/json")

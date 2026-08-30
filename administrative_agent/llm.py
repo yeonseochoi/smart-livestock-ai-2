@@ -15,8 +15,9 @@ SCHEMA = {
         "briefing": {"type": "string"},
         "dispatch_order": {"type": "string"},
         "followup_report_template": {"type": "string"},
+        "response_guide": {"type": "string"},
     },
-    "required": ["briefing", "dispatch_order", "followup_report_template"],
+    "required": ["briefing", "dispatch_order", "followup_report_template", "response_guide"],
     "additionalProperties": False,
 }
 
@@ -77,7 +78,9 @@ def refine_with_openai(forecast: ForecastResult, fallback: ResponsePackage) -> R
             "상황 브리핑은 발생 현황·AI 예측·기상정보·상황 판단, 현장점검 지시서는 점검 대상·현장 확인항목·결과 입력항목·유의사항, "
             "사후 결과보고서는 발생 개요·AI 우선권역·현장 대응·조치내용·예측과 실제 결과 비교·종합 결과 순서를 유지한다. "
             "각 문서는 # 제목, ## 번호 섹션, 핵심 정보 표와 짧은 목록을 사용하고 HTML은 출력하지 않는다. "
-            "확인되지 않은 현장 결과는 미입력으로 남기며 사후 결과를 추정하지 않는다."
+            "확인되지 않은 현장 결과는 미입력으로 남기며 사후 결과를 추정하지 않는다. "
+            "response_guide에는 Event별 현장 확인 순서, 기록 항목과 후속 검토사항을 자연스러운 문장으로 작성한다. "
+            "가이드는 입력에 근거해야 하며 시설 특정, 발생원 역추적, 허위 수치, 자동 행정명령을 포함하지 않는다."
         ),
         "input": json.dumps({"forecast": forecast.to_dict(), "safe_template": fallback.to_dict()["documents"]}, ensure_ascii=False),
         "text": {"format": {"type": "json_schema", "name": "administrative_documents", "strict": True, "schema": SCHEMA}},
@@ -100,6 +103,7 @@ def refine_with_openai(forecast: ForecastResult, fallback: ResponsePackage) -> R
         event_id=forecast.event_id, review_required=True, forecast=forecast,
         briefing=documents["briefing"], dispatch_order=documents["dispatch_order"],
         followup_report_template=documents["followup_report_template"],
+        response_guide=documents["response_guide"],
     )
 
 
@@ -115,7 +119,9 @@ def refine_with_gemini(forecast: ForecastResult, fallback: ResponsePackage) -> R
         "상황 브리핑은 발생 현황·AI 예측·기상정보·상황 판단, 현장점검 지시서는 점검 대상·현장 확인항목·결과 입력항목·유의사항, "
         "사후 결과보고서는 발생 개요·AI 우선권역·현장 대응·조치내용·예측과 실제 결과 비교·종합 결과 순서를 유지한다. "
         "각 문서는 # 제목, ## 번호 섹션, 핵심 정보 표와 짧은 목록을 사용하고 HTML은 출력하지 않는다. "
-        "확인되지 않은 현장 결과는 미입력으로 남기며 사후 결과를 추정하지 않는다."
+        "확인되지 않은 현장 결과는 미입력으로 남기며 사후 결과를 추정하지 않는다. "
+        "response_guide에는 Event별 현장 확인 순서, 기록 항목과 후속 검토사항을 자연스러운 문장으로 작성한다. "
+        "가이드는 입력에 근거해야 하며 시설 특정, 발생원 역추적, 허위 수치, 자동 행정명령을 포함하지 않는다."
     )
     prompt = instructions + "\n\n입력:\n" + json.dumps(
         {"forecast": forecast.to_dict(), "safe_template": fallback.to_dict()["documents"]}, ensure_ascii=False
@@ -135,6 +141,7 @@ def refine_with_gemini(forecast: ForecastResult, fallback: ResponsePackage) -> R
         event_id=forecast.event_id, review_required=True, forecast=forecast,
         briefing=documents["briefing"], dispatch_order=documents["dispatch_order"],
         followup_report_template=documents["followup_report_template"],
+        response_guide=documents["response_guide"],
     )
 
 

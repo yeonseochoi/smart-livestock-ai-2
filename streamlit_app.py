@@ -259,7 +259,7 @@ with agent_column.container(key="agent_panel"):
         warning = st.session_state.get("document_warning")
         message = warning or f'{st.session_state.get("document_mode", "안전 템플릿")} 문서 생성 완료 · 담당자 검토 필요'
         st.markdown(f'<div class="notice">{message}</div>', unsafe_allow_html=True)
-        tab1, tab2, tab3 = st.tabs(["① 상황 브리핑", "② 점검 지시서", "③ 사후 결과 입력"])
+        tab1, tab2, tab3, tab4 = st.tabs(["① 상황 브리핑", "② 점검 지시서", "③ 사후 결과 입력", "④ AI 대응 가이드"])
         with tab1:
             st.markdown(package.briefing)
             st.download_button("브리핑 다운로드", package.briefing, f"briefing_{event['id']}.md", "text/markdown")
@@ -308,3 +308,6 @@ with agent_column.container(key="agent_panel"):
                 })
                 st.markdown(report)
                 st.download_button("완성 보고서 다운로드", report, f"followup_{event['id']}.md", "text/markdown")
+        with tab4:
+            st.markdown(package.response_guide)
+            st.download_button("AI 대응 가이드 다운로드", package.response_guide, f"response_guide_{event['id']}.md", "text/markdown")

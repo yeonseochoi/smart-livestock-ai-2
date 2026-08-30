@@ -56,6 +56,7 @@ class ResponsePackage:
     briefing: str
     dispatch_order: str
     followup_report_template: str
+    response_guide: str
     forecast: ForecastResult
 
     def to_dict(self) -> dict[str, Any]:
@@ -67,5 +68,6 @@ class ResponsePackage:
                 "briefing": self.briefing,
                 "dispatch_order": self.dispatch_order,
                 "followup_report_template": self.followup_report_template,
+                "response_guide": self.response_guide,
             },
         }

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .documents import _location, create_briefing, create_dispatch_order, create_followup_template
+from .documents import _location, create_briefing, create_dispatch_order, create_followup_template, create_response_guide
 from .models import ForecastResult, ResponsePackage
 
 
@@ -15,6 +15,7 @@ def build_response_package(forecast: ForecastResult) -> ResponsePackage:
         briefing=create_briefing(forecast),
         dispatch_order=create_dispatch_order(forecast),
         followup_report_template=create_followup_template(forecast),
+        response_guide=create_response_guide(forecast),
         forecast=forecast,
     )
 
@@ -24,6 +25,7 @@ def write_response_package(package: ResponsePackage, output_dir: Path) -> None:
     (output_dir / "complaint_briefing.md").write_text(package.briefing, encoding="utf-8")
     (output_dir / "field_inspection_order.md").write_text(package.dispatch_order, encoding="utf-8")
     (output_dir / "followup_report_template.md").write_text(package.followup_report_template, encoding="utf-8")
+    (output_dir / "response_guide.md").write_text(package.response_guide, encoding="utf-8")
     (output_dir / "agent_output.json").write_text(
         json.dumps(package.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
     )

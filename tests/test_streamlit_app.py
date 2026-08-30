@@ -44,12 +44,13 @@ class StreamlitAppTest(unittest.TestCase):
         generate.click().run(timeout=20)
         self.assertFalse(app.exception)
         tabs = [tab.label for tab in app.tabs]
-        self.assertEqual(tabs, ["① 상황 브리핑", "② 점검 지시서", "③ 사후 결과 입력"])
+        self.assertEqual(tabs, ["① 상황 브리핑", "② 점검 지시서", "③ 사후 결과 입력", "④ AI 대응 가이드"])
         rendered = "\n".join(item.value for item in app.markdown)
         self.assertIn("악취 민원 확산 상황 브리핑", rendered)
         self.assertIn("악취 민원 현장점검 지시서", rendered)
         self.assertIn("참고 기상정보", rendered)
         self.assertIn("AI 예측 결과와 실제 결과 비교", rendered)
+        self.assertIn("AI 현장 대응 참고 가이드", rendered)
         inputs = [item.label for item in app.text_input]
         self.assertIn("작성자", inputs)
         self.assertIn("현장 도착시각", inputs)
