@@ -153,15 +153,18 @@ Streamlit Community Cloud에서는 실행 파일을 `streamlit_app.py`로 지정
 | 평가 지표 | 결과 |
 |---|---:|
 | ROC-AUC | 0.908 |
-| PR-AUC | 0.472 |
-| Top-K Recall | 0.494 |
-| Recall@3 | 0.444 |
-| Event Hit@3 | 83.0% |
+| PR-AUC | 0.486 |
+| Top-K Recall | 0.507 |
+| Recall@3 | 0.443 |
+| Event Hit@3 | 85.1% |
 | 실제 추가 민원 격자 비율 | 약 10.7% |
 | Event당 평균 후보 권역 | 약 31개 |
+| 선택 모델 | XGBoost 분류모델 `xgb_d3` |
 | 운영 출력 | 상위 3개 권역 |
 
-`Event Hit@3`는 추가 민원이 존재하는 평가 Event 중 예측 상위 3개 권역 하나 이상에 실제 추가 민원이 포함된 비율입니다. 테스트 Event는 48개이므로 추가적인 연도별·현장 검증이 필요합니다.
+`Event Hit@3`는 추가 민원이 존재하는 평가 Event 중 예측 상위 3개 권역 하나 이상에 실제 추가 민원이 포함된 비율입니다. 테스트 Event 48개 가운데 추가 민원이 실제 발생해 평가가 가능한 Event는 47개이며, 그중 40개에서 상위 3개 권역이 적중했습니다. 표본이 47개이므로 이 비율의 95% 신뢰구간은 대략 75~95%입니다. 연도별·현장 검증이 추가로 필요합니다.
+
+후보 모델은 학습 구간 안에서만 선택했습니다. 학습 112개 Event의 앞 80%로 학습하고 뒤 20%를 내부 검증에 사용해 5개 후보 중 하나를 고른 뒤, 최종 테스트 48개 Event는 한 번만 사용했습니다. 모델 출력은 절대확률이 아니라 하나의 Event 안에서 후보 권역 간 상대적 우선순위로 활용합니다.
 
 > 재현 참고자료: [실험 코드](compare_operational_grid_sizes.py) · [결과 산출물](outputs/operational_grid_comparison/metrics.json)
 
@@ -181,7 +184,7 @@ streamlit_app.py                   Streamlit Community Cloud 실행 파일
 compare_operational_grid_sizes.py  격자 크기 비교와 최종 성능 재현
 generate_agent_documents.py        예측 결과 기반 문서 생성
 optimize_early_prediction.py       후보 모델 학습·평가
-sensitivity_early_prediction.py    격자별 학습 데이터 구성
+sensitivity_early_prediction.py    격자·시간창 후보 비교(설계 근거, 제품 입력 아님)
 fetch_kma_weather.py               현장 참고용 기상자료 수집
 ```
 
