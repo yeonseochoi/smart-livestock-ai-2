@@ -108,15 +108,35 @@ def current_forecast(event: dict):
     )
 
 
-def generate_documents(event: dict) -> tuple[object, str, str | None]:
+def generate_documents(event: dict, update_progress=None) -> tuple[object, str, str | None]:
+    update = update_progress or (lambda _value, _message: None)
+    update(10, "Event 예측정보를 정리하고 있습니다.")
     forecast = current_forecast(event)
+    update(35, "행정문서 기본 양식을 작성하고 있습니다.")
     safe = build_response_package(forecast)
     if not llm_configured():
+        update(100, "안전 템플릿 문서 생성이 완료되었습니다.")
         return safe, "안전 템플릿", None
     try:
-        return refine_with_llm(forecast, safe), provider_name(), None
+        update(60, f"{provider_name()}가 문안을 보정하고 있습니다.")
+        refined = refine_with_llm(forecast, safe)
+        update(100, "대응 문서 생성이 완료되었습니다.")
+        return refined, provider_name(), None
     except Exception as exc:
+        update(100, "LLM 대신 안전 템플릿으로 생성을 완료했습니다.")
         return safe, "안전 템플릿", f"LLM 호출 실패로 안전 템플릿을 사용했습니다: {exc}"
+
+
+def store_generated_documents(event: dict) -> None:
+    progress = st.progress(0, text="대응 문서 생성을 준비하고 있습니다.")
+    package, mode, warning = generate_documents(
+        event,
+        lambda value, message: progress.progress(value, text=f"{value}% · {message}"),
+    )
+    st.session_state.documents = package
+    st.session_state.document_event = event["id"]
+    st.session_state.document_mode = mode
+    st.session_state.document_warning = warning
 
 
 def apply_styles() -> None:
@@ -138,6 +158,10 @@ def apply_styles() -> None:
     .weather-label{font-size:.68rem;color:#68757c;margin-bottom:.15rem}.weather-value{font-size:.92rem;font-weight:750;color:#182126;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     div[data-testid="stMetric"]{background:white;border:1px solid #dce2e5;padding:.55rem}.stButton button{border-radius:4px;font-weight:700}
     iframe[title="streamlit_folium.st_folium"]{border:1px solid #dce2e5}
+    .st-key-agent_panel h1{font-size:1.7rem;line-height:1.25;margin:.8rem 0 .55rem}
+    .st-key-agent_panel h2{font-size:1.25rem;line-height:1.3;margin:1rem 0 .45rem}
+    .st-key-agent_panel h3{font-size:1.05rem;line-height:1.35;margin:.8rem 0 .4rem}
+    .st-key-agent_panel p,.st-key-agent_panel li,.st-key-agent_panel table{font-size:.88rem;line-height:1.55}
     @media(max-width:760px){.block-container{padding-top:4.3rem;padding-left:.6rem;padding-right:.6rem}.weather-value{font-size:.84rem}}
     </style>
     """, unsafe_allow_html=True)
@@ -207,12 +231,7 @@ with st.sidebar:
 
     st.markdown('<div class="eyebrow">Administrative Agent</div>', unsafe_allow_html=True)
     if st.button("대응 문서 생성", type="primary", use_container_width=True):
-        with st.spinner("대응 문서를 생성하고 있습니다..."):
-            package, mode, warning = generate_documents(event)
-            st.session_state.documents = package
-            st.session_state.document_event = event["id"]
-            st.session_state.document_mode = mode
-            st.session_state.document_warning = warning
+        store_generated_documents(event)
     st.caption(f'{provider_name()} LLM 연결됨' if llm_configured() else "안전 템플릿 모드 · API 키 미설정")
     show_actual = st.toggle("검증용 실제 이후 신고 표시", value=False)
 
@@ -223,7 +242,7 @@ with map_column:
     st.caption("1km 광역 경보 · 향후 30분 · 지도 위험도는 Event 내부 상대 순위입니다.")
     st_folium(event_map(event, show_actual), use_container_width=True, height=650, returned_objects=[])
 
-with agent_column:
+with agent_column.container(key="agent_panel"):
     st.markdown("#### 행정 대응 Agent")
     if st.session_state.documents is None or st.session_state.document_event != event["id"]:
         st.markdown(
@@ -232,13 +251,8 @@ with agent_column:
             unsafe_allow_html=True,
         )
         if st.button("이 Event의 대응 문서 생성", type="primary", use_container_width=True, key="generate_main"):
-            with st.spinner("대응 문서를 생성하고 있습니다..."):
-                package, mode, warning = generate_documents(event)
-                st.session_state.documents = package
-                st.session_state.document_event = event["id"]
-                st.session_state.document_mode = mode
-                st.session_state.document_warning = warning
-                st.rerun()
+            store_generated_documents(event)
+            st.rerun()
         st.caption("문서를 생성하면 이 영역에서 바로 확인하고 현장 결과를 입력할 수 있습니다.")
     else:
         package = st.session_state.documents
