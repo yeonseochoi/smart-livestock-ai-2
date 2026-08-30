@@ -32,6 +32,16 @@ Event Hit@3는 추가 민원이 실제로 존재하는 평가 가능 Event 가�
 
 ## 빠른 실행
 
+### Streamlit 데모
+
+```powershell
+.venv\Scripts\python.exe -m streamlit run streamlit_app.py
+```
+
+브라우저에서 표시되는 로컬 주소를 열면 기존 데모와 동일한 Event 이동, 초기 민원·위험 격자 지도, 실제 이후 신고 표시, 기상정보, 대응 문서 생성과 현장 결과보고서 다운로드 기능을 사용할 수 있습니다.
+
+Streamlit Community Cloud에서는 GitHub 저장소를 연결하고 실행 파일을 `streamlit_app.py`로 지정합니다. LLM을 연동하려면 App settings의 Secrets에 [.streamlit/secrets.toml.example](.streamlit/secrets.toml.example)과 같은 형식으로 키를 등록합니다. 키가 없으면 안전 템플릿 모드로 실행됩니다.
+
 ### Windows 데모
 
 Python 3.12가 설치된 환경에서 다음 중 하나를 실행합니다.

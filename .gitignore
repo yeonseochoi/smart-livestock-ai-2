@@ -4,6 +4,7 @@ __pycache__/
 .python/
 venv/
 .env
+.streamlit/secrets.toml
 .DS_Store
 Thumbs.db
 .idea/
