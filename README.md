@@ -47,8 +47,8 @@
 
 ### 🖥️ 데모 화면
 
-<img width="1637" height="902" alt="image" src="https://github.com/user-attachments/assets/d8d8fa9b-91dc-402a-92e1-607f1d9de6a8" />
-
+<img width="1635" height="907" alt="image" src="https://github.com/user-attachments/assets/8cdf192e-f3fd-4a29-bf2c-09e1b032237c" />
+[웹 페이지 메인 화면]
 
 ---
 
