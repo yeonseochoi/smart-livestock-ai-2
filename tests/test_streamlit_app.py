@@ -34,6 +34,7 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIn("🌧️", rendered)
         self.assertIn(".st-key-map_panel{position:sticky", rendered)
         self.assertIn(".st-key-agent_panel{height:calc(100vh - 5.1rem);overflow-y:auto", rendered)
+        self.assertEqual(app.session_state["document_schema_version"], 2)
 
         previous = next(button for button in app.button if button.key == "prev")
         previous.click().run()

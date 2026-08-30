@@ -13,6 +13,7 @@ import folium
 import streamlit as st
 from streamlit_folium import st_folium
 
+from administrative_agent.documents import create_response_guide
 from administrative_agent.llm import llm_configured, provider_name, refine_with_llm
 from administrative_agent.service import build_response_package, create_completed_followup
 from generate_agent_documents import DEFAULT_METRICS, DEFAULT_PREDICTIONS, forecast_from_csv
@@ -20,6 +21,7 @@ from generate_agent_documents import DEFAULT_METRICS, DEFAULT_PREDICTIONS, forec
 
 ROOT = Path(__file__).resolve().parent
 DEMO_DATA = ROOT / "demo" / "demo-data.js"
+DOCUMENT_SCHEMA_VERSION = 2
 
 st.set_page_config(page_title="익산 악취 대응 AI", page_icon="🌿", layout="wide", initial_sidebar_state="expanded")
 
@@ -189,6 +191,10 @@ if "documents" not in st.session_state:
     st.session_state.documents = None
 if "document_event" not in st.session_state:
     st.session_state.document_event = None
+if st.session_state.get("document_schema_version") != DOCUMENT_SCHEMA_VERSION:
+    st.session_state.documents = None
+    st.session_state.document_event = None
+    st.session_state.document_schema_version = DOCUMENT_SCHEMA_VERSION
 
 event = events[st.session_state.event_index]
 grids = event.get("broad", [])
@@ -317,5 +323,6 @@ with agent_column.container(key="agent_panel"):
                 st.markdown(report)
                 st.download_button("완성 보고서 다운로드", report, f"followup_{event['id']}.md", "text/markdown")
         with tab4:
-            st.markdown(package.response_guide)
-            st.download_button("AI 대응 가이드 다운로드", package.response_guide, f"response_guide_{event['id']}.md", "text/markdown")
+            response_guide = getattr(package, "response_guide", None) or create_response_guide(package.forecast)
+            st.markdown(response_guide)
+            st.download_button("AI 대응 가이드 다운로드", response_guide, f"response_guide_{event['id']}.md", "text/markdown")
