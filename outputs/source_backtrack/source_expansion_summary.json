@@ -1,0 +1,38 @@
+{
+  "livestock_rows_preserved": 2778,
+  "non_livestock_rows": 1002,
+  "sources_total": 3780,
+  "by_type": {
+    "factory": {
+      "rows": 879,
+      "geocoded": 768,
+      "geocode_rate": 0.8737201365187713,
+      "by_city": {
+        "김제시": 529,
+        "익산시": 350
+      }
+    },
+    "other": {
+      "rows": 30,
+      "geocoded": 30,
+      "geocode_rate": 1.0,
+      "by_city": {
+        "익산시": 20,
+        "김제시": 10
+      }
+    },
+    "wastewater": {
+      "rows": 93,
+      "geocoded": 81,
+      "geocode_rate": 0.8709677419354839,
+      "by_city": {
+        "김제시": 64,
+        "익산시": 29
+      }
+    }
+  },
+  "source_urls": [
+    "https://file.localdata.go.kr/file/air_pollution_facility_installation/info",
+    "https://www.data.go.kr/data/3073222/fileData.do"
+  ]
+}

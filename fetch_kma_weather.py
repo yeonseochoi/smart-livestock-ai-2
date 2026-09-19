@@ -30,6 +30,7 @@ CACHE_DIR = Path("data/kma_weather_cache")
 OUTPUT_DIR = Path("outputs/weather_integration")
 REQUEST_TIMEOUT = 45
 INVALID_THRESHOLD = -90.0
+STABILITY_STATION_IDS = (140, 146)  # 군산, 전주
 
 
 @dataclass(frozen=True)
@@ -143,6 +144,12 @@ def parse_number(value: object, *, wind: bool = False, rain: bool = False) -> fl
     return number
 
 
+def parse_asos_optional(value: object) -> float:
+    """ASOS에서 -9/-99로 표기되는 비관측 보조 요소를 NaN으로 바꾼다."""
+    number = parse_number(value)
+    return np.nan if not pd.isna(number) and number in {-9.0, -99.0} else number
+
+
 def parse_asos(text: str) -> pd.DataFrame:
     records: list[dict[str, object]] = []
     for line in text.splitlines():
@@ -162,6 +169,125 @@ def parse_asos(text: str) -> pd.DataFrame:
             "rainfall_intensity": parse_number(f[18], rain=True),
         })
     return pd.DataFrame(records)
+
+
+def pasquill_gifford_class(
+    wind_speed: float, solar_radiation: float, sunshine_duration: float,
+    total_cloud_cover: float, hour: int,
+) -> str | None:
+    """시간별 ASOS 값으로 Turner식 Pasquill-Gifford 안정도 A~F를 근사한다.
+
+    낮은 일사량(W/m2)을 strong/moderate/slight로, 밤은 전운량(0~10)을
+    5/10 이상/미만으로 나눈다. 관측값이 부족하면 등급을 만들지 않는다.
+    """
+    if pd.isna(wind_speed):
+        return None
+    speed = float(wind_speed)
+    solar = float(solar_radiation) if not pd.isna(solar_radiation) else np.nan
+    sunshine = float(sunshine_duration) if not pd.isna(sunshine_duration) else np.nan
+    cloud = float(total_cloud_cover) if not pd.isna(total_cloud_cover) else np.nan
+    is_day = (not pd.isna(solar) and solar > 0) or (
+        pd.isna(solar) and not pd.isna(sunshine) and sunshine > 0
+    )
+    speed_bin = 0 if speed < 2 else 1 if speed < 3 else 2 if speed < 5 else 3 if speed < 6 else 4
+    if is_day:
+        if not pd.isna(solar):
+            insolation_bin = 0 if solar >= 700 else 1 if solar >= 350 else 2
+        elif not pd.isna(sunshine):
+            insolation_bin = 0 if sunshine >= 0.7 else 1 if sunshine >= 0.35 else 2
+        else:
+            return None
+        daytime = (
+            (("A", "A-B", "B"), ("A-B", "B", "C"), ("B", "B-C", "C"),
+             ("C", "C-D", "D"), ("C", "D", "D"))
+        )
+        value = daytime[speed_bin][insolation_bin]
+    else:
+        if pd.isna(cloud):
+            return None
+        overcast = cloud >= 5.0
+        nighttime = (
+            (("E", "F"), ("E", "F"), ("D", "E"), ("D", "D"), ("D", "D"))
+        )
+        value = nighttime[speed_bin][0 if overcast else 1]
+    # 중간 등급은 보수적으로 더 안정한 쪽으로 정규화한다.
+    return {"A-B": "B", "B-C": "C", "C-D": "D"}.get(value, value)
+
+
+def parse_asos_stability(text: str) -> pd.DataFrame:
+    """kma_sfctm3 원문의 안정도 산출용 관측 열을 읽는다."""
+    records: list[dict[str, object]] = []
+    for line in text.splitlines():
+        if not re.match(r"^\d{12}\s+\d+", line):
+            continue
+        f = line.split()
+        if len(f) < 38:
+            continue
+        item = {
+            "datetime": pd.to_datetime(f[0], format="%Y%m%d%H%M"),
+            "station_id": int(f[1]),
+            "wind_direction": parse_number(f[2], wind=True) * 10.0,
+            "wind_speed": parse_number(f[3], wind=True),
+            "temperature": parse_number(f[11]),
+            "dew_point_temperature": parse_number(f[12]),
+            "total_cloud_cover": parse_asos_optional(f[25]),
+            "sunshine_duration": parse_asos_optional(f[33]),
+            "solar_radiation": parse_asos_optional(f[34]),
+            "ground_temperature": parse_number(f[36]),
+        }
+        item["stability_class"] = pasquill_gifford_class(
+            item["wind_speed"], item["solar_radiation"], item["sunshine_duration"],
+            item["total_cloud_cover"], item["datetime"].hour,
+        )
+        records.append(item)
+    return pd.DataFrame(records)
+
+
+def fetch_asos_stability_month(
+    api_key: str, station: Station, start: pd.Timestamp, end: pd.Timestamp,
+) -> pd.DataFrame:
+    suffix = f"{start:%Y%m%d%H%M}_{end:%Y%m%d%H%M}"
+    cache = CACHE_DIR / "asos_stability" / str(station.station_id) / f"{suffix}.txt"
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    if not cache.exists():
+        text = request_text(
+            "url/kma_sfctm3.php",
+            {"tm1": start.strftime("%Y%m%d%H%M"), "tm2": end.strftime("%Y%m%d%H%M"),
+             "stn": station.station_id, "help": 0},
+            api_key,
+        )
+        cache.write_text(text, encoding="utf-8")
+    frame = parse_asos_stability(cache.read_text(encoding="utf-8"))
+    if not frame.empty:
+        frame["station_name"] = station.name
+        frame["station_latitude"] = station.latitude
+        frame["station_longitude"] = station.longitude
+    return frame
+
+
+def collect_asos_stability(
+    api_key: str, start: pd.Timestamp, end: pd.Timestamp, workers: int,
+) -> pd.DataFrame:
+    stations = fetch_station_list(api_key, "ASOS", end)
+    by_id = {station.station_id: station for station in stations}
+    missing = [station_id for station_id in STABILITY_STATION_IDS if station_id not in by_id]
+    if missing:
+        raise RuntimeError(f"ASOS 지점 목록에서 요청 지점을 찾지 못했습니다: {missing}")
+    selected = [by_id[station_id] for station_id in STABILITY_STATION_IDS]
+    jobs = [(station, left, right) for station in selected for left, right in month_ranges(start, end)]
+    frames: list[pd.DataFrame] = []
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(fetch_asos_stability_month, api_key, *job): job for job in jobs}
+        for index, future in enumerate(as_completed(futures), 1):
+            frame = future.result()
+            if not frame.empty:
+                frames.append(frame)
+            if index % 25 == 0 or index == len(jobs):
+                print(f"      안정도 ASOS {index}/{len(jobs)} 구간 완료")
+    if not frames:
+        raise RuntimeError("안정도 ASOS 자료가 한 행도 수집되지 않았습니다.")
+    result = pd.concat(frames, ignore_index=True).drop_duplicates(["datetime", "station_id"])
+    return result.sort_values(["datetime", "station_id"]).reset_index(drop=True)
 
 
 def fetch_asos_month(api_key: str, station: Station, start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
@@ -363,12 +489,29 @@ def main() -> None:
     parser.add_argument("--aws-stations", type=int, default=3)
     parser.add_argument("--asos-stations", type=int, default=2)
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument(
+        "--stability-only", action="store_true",
+        help="군산(140)·전주(146) ASOS 안정도 원자료만 별도 CSV로 수집하고 종료",
+    )
     args = parser.parse_args()
 
     start, end = pd.Timestamp(args.start), pd.Timestamp(args.end)
     api_key = load_env_key()
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    if args.stability_only:
+        print("[1/1] 군산·전주 ASOS 안정도 원자료 수집")
+        stability = collect_asos_stability(api_key, start, end, args.workers)
+        output = OUTPUT_DIR / "asos_hourly_stability_2020_2026.csv"
+        stability.to_csv(output, index=False, encoding="utf-8-sig")
+        coverage = stability[[
+            "total_cloud_cover", "sunshine_duration", "solar_radiation",
+            "temperature", "dew_point_temperature", "ground_temperature", "stability_class",
+        ]].notna().mean().to_dict()
+        print(json.dumps({"rows": len(stability), "coverage": coverage}, ensure_ascii=False, indent=2))
+        print(f"산출물: {output.resolve()}")
+        return
 
     print("[1/5] 악취 Event 구성")
     events = event_table(start, end)

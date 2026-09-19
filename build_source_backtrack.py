@@ -67,7 +67,7 @@ GRID_COLUMNS = [
 SOURCE_COLUMNS = [
     "source_id", "source_type", "city", "name", "species", "head_count", "area_m2", "status",
     "address", "latitude", "longitude", "location_precision", "geocode_method", "emission_weight",
-    "weight_imputed",
+    "weight_imputed", "extra_json",
 ]
 CANDIDATE_COLUMNS = [
     "event_hour", "rank", "source_id", "name", "city", "species", "location_precision",
@@ -236,6 +236,7 @@ def prepare_sources(workers: int = 6) -> tuple[pd.DataFrame, dict[str, object]]:
         "location_precision": np.where(iksan_lat.notna() & iksan_lon.notna(), "point", None),
         "geocode_method": iksan_method,
         "emission_weight": iksan_weight, "weight_imputed": iksan_imputed.astype(int),
+        "extra_json": "{}",
     })
 
     existing_point = gimje["위도"].notna() & gimje["경도"].notna()
@@ -268,6 +269,7 @@ def prepare_sources(workers: int = 6) -> tuple[pd.DataFrame, dict[str, object]]:
         "latitude": gimje_lat, "longitude": gimje_lon,
         "location_precision": gimje_precision, "geocode_method": gimje_method,
         "emission_weight": gimje_heads * gimje_coeff, "weight_imputed": 1,
+        "extra_json": "{}",
     })
     sources = pd.concat([iksan_out, gimje_out], ignore_index=True)[SOURCE_COLUMNS]
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
