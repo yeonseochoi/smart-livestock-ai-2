@@ -1,44 +1,86 @@
 {
   "random_wind_contrast": {
     "all": {
-      "real_percentile": 0.5060593945315265,
-      "shuffled_mean": 0.5015629482149865,
-      "mean_difference": 0.004496446316540004,
-      "p_value": 0.15841584158415842
+      "real_percentile": 0.5373562696934796,
+      "shuffled_mean": 0.5325319493225803,
+      "mean_difference": 0.004824320370899304,
+      "p_value": 0.10891089108910891
     },
     "dry": {
-      "real_percentile": 0.5041465733263352,
-      "shuffled_mean": 0.5014752114311612,
-      "mean_difference": 0.002671361895173918,
-      "p_value": 0.32673267326732675
+      "real_percentile": 0.5326369858049935,
+      "shuffled_mean": 0.5308261478781198,
+      "mean_difference": 0.001810837926873754,
+      "p_value": 0.297029702970297
     },
     "wet": {
-      "real_percentile": 0.5237964638887558,
-      "shuffled_mean": 0.5023765074831852,
-      "mean_difference": 0.021419956405570595,
-      "p_value": 0.18811881188118812
+      "real_percentile": 0.5811169021139867,
+      "shuffled_mean": 0.5483493808984885,
+      "mean_difference": 0.032767521215498197,
+      "p_value": 0.039603960396039604
+    }
+  },
+  "random_wind_contrast_comparison": {
+    "travel_10km": {
+      "all": {
+        "real_percentile": 0.463918996308203,
+        "shuffled_mean": 0.4632277693953194,
+        "mean_difference": 0.0006912269128835913,
+        "p_value": 0.40594059405940597
+      },
+      "dry": {
+        "real_percentile": 0.4634358502377861,
+        "shuffled_mean": 0.4658574218504332,
+        "mean_difference": -0.002421571612647111,
+        "p_value": 0.6534653465346535
+      },
+      "wet": {
+        "real_percentile": 0.46839907805206826,
+        "shuffled_mean": 0.4388437193569916,
+        "mean_difference": 0.02955535869507664,
+        "p_value": 0.0891089108910891
+      }
+    },
+    "fixed0_6km": {
+      "all": {
+        "real_percentile": 0.5373562696934796,
+        "shuffled_mean": 0.5325319493225803,
+        "mean_difference": 0.004824320370899304,
+        "p_value": 0.10891089108910891
+      },
+      "dry": {
+        "real_percentile": 0.5326369858049935,
+        "shuffled_mean": 0.5308261478781198,
+        "mean_difference": 0.001810837926873754,
+        "p_value": 0.297029702970297
+      },
+      "wet": {
+        "real_percentile": 0.5811169021139867,
+        "shuffled_mean": 0.5483493808984885,
+        "mean_difference": 0.032767521215498197,
+        "p_value": 0.039603960396039604
+      }
     }
   },
   "direction_sensitivity": {
-    "10": 0.8628318584070795,
-    "20": 0.7212389380530974,
-    "30": 0.6091445427728615
+    "10": 0.9070796460176991,
+    "20": 0.8407079646017699,
+    "30": 0.7581120943952802
   },
   "direction_sensitivity_by_condition": {
     "all": {
-      "10": 0.8628318584070795,
-      "20": 0.7212389380530974,
-      "30": 0.6091445427728615
+      "10": 0.9070796460176991,
+      "20": 0.8407079646017699,
+      "30": 0.7581120943952802
     },
     "dry": {
-      "10": 0.8676470588235294,
-      "20": 0.7271241830065358,
-      "30": 0.6143790849673202
+      "10": 0.9035947712418301,
+      "20": 0.8366013071895424,
+      "30": 0.7516339869281045
     },
     "wet": {
-      "10": 0.8181818181818182,
-      "20": 0.6666666666666665,
-      "30": 0.5606060606060606
+      "10": 0.9393939393939394,
+      "20": 0.8787878787878788,
+      "30": 0.8181818181818182
     }
   },
   "facility_lift_top10pct": 0.5256077147631371,
@@ -77,11 +119,16 @@
       "slow_or_night": 4.0
     },
     "min_wind_speed": 0.5,
-    "max_travel_hours": 3.0
+    "max_travel_hours": 3.0,
+    "wind_lag": "fixed0",
+    "max_source_km": 6.0
   },
   "method_notes": {
     "wind_direction": "KMA wind-from direction converted to downwind by adding 180 degrees",
+    "fixed0": "wind-speed-weighted circular mean of event_hour and event_hour-1h wind, shared by every source-grid pair",
+    "lagged_wind_alignment": "emission_weight-weighted mean cosine alignment among sources within max_source_km",
     "stagnation": "ASOS hourly phase: wind speed <1 m/s only; 30-minute direction SD unavailable",
-    "random_contrast": "candidate-grid ranks are recomputed for each of 100 event-profile wind shuffles"
+    "random_contrast": "candidate-grid ranks recomputed for each of 100 event-profile wind shuffles",
+    "facility_lift_top10pct": "numerator=sum(emission_weight in the top 10% of traversed cells ranked by 5km upwind-line count); denominator=sum(emission_weight in all traversed cells) * number_of_top_cells / number_of_traversed_cells"
   }
 }

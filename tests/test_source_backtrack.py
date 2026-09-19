@@ -42,6 +42,41 @@ class SourceBacktrackTest(unittest.TestCase):
         far = self.exposure(35.95, 126.98)
         self.assertGreater(near, far)
 
+    def test_source_outside_radius_is_zero(self) -> None:
+        result = backtrack.lagged_exposure(
+            self.source_lat, self.source_lon, self.weight, 35.95, 127.05,
+            self.hour, self.profile, max_source_km=6.0,
+        )
+        self.assertAlmostEqual(float(result["exposure"][0]), 0.0, places=10)
+
+    def test_alignment_is_emission_weighted_mean(self) -> None:
+        detail = {
+            "within": np.array([True, True, False]),
+            "alignment": np.array([1.0, -1.0, 1.0]),
+        }
+        value = backtrack.emission_weighted_alignment(detail, np.array([3.0, 1.0, 100.0]))
+        self.assertAlmostEqual(value, 0.5)
+
+    def test_wind_lag_modes_use_different_reference_winds(self) -> None:
+        profile = {
+            "by_offset": {
+                -3: {"wind_direction": 90.0, "wind_speed": 1.0, "rainfall_hour": 0.0},
+                -2: {"wind_direction": 90.0, "wind_speed": 1.0, "rainfall_hour": 0.0},
+                -1: {"wind_direction": 90.0, "wind_speed": 1.0, "rainfall_hour": 0.0},
+                0: {"wind_direction": 270.0, "wind_speed": 2.0, "rainfall_hour": 0.0},
+            }
+        }
+        fixed = backtrack.lagged_exposure(
+            self.source_lat, self.source_lon, self.weight, 35.95, 126.96,
+            self.hour, profile, wind_lag="fixed0",
+        )
+        travel = backtrack.lagged_exposure(
+            self.source_lat, self.source_lon, self.weight, 35.95, 126.96,
+            self.hour, profile, wind_lag="travel",
+        )
+        self.assertGreater(float(fixed["exposure"][0]), 0.0)
+        self.assertAlmostEqual(float(travel["exposure"][0]), 0.0, places=10)
+
     def test_future_complaints_do_not_change_initial_input(self) -> None:
         base = pd.DataFrame({
             "datetime": [self.hour + pd.Timedelta(minutes=5)],

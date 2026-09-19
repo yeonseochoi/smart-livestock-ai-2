@@ -51,6 +51,12 @@ MAX_TRAVEL_HOURS = 3.0
 DECAY_LENGTH_KM = {"fast": 1.5, "moderate": 2.5, "slow_or_night": 4.0}
 TOP_SOURCE_COUNT = 5
 RANDOM_SEED = 42
+DEFAULT_WIND_LAG = "fixed0"
+DEFAULT_MAX_SOURCE_KM = 6.0
+COMPARISON_CONFIGS = {
+    "travel_10km": {"wind_lag": "travel", "max_source_km": 10.0},
+    "fixed0_6km": {"wind_lag": "fixed0", "max_source_km": 6.0},
+}
 
 GRID_COLUMNS = [
     "event_hour", "event_id", "grid_x", "grid_y", "center_latitude", "center_longitude",
@@ -348,38 +354,88 @@ def event_weather_profile(asos: pd.DataFrame, event_hour: pd.Timestamp, event_la
     return {"station_id": station_id, "by_offset": by_offset}
 
 
+def fixed0_weather(profile: dict) -> tuple[float, float]:
+    """Event 정시와 직전 정시의 풍향을 풍속 가중 원형평균한다."""
+    records = [profile["by_offset"].get(offset) for offset in (-1, 0)]
+    valid = [
+        item for item in records if item is not None
+        and np.isfinite(item.get("wind_direction", np.nan))
+        and np.isfinite(item.get("wind_speed", np.nan))
+    ]
+    if not valid:
+        return np.nan, np.nan
+    directions = np.radians([float(item["wind_direction"]) for item in valid])
+    speeds = np.asarray([float(item["wind_speed"]) for item in valid], dtype=float)
+    weights = np.maximum(speeds, 0.1)
+    from_sin = float(np.average(np.sin(directions), weights=weights))
+    from_cos = float(np.average(np.cos(directions), weights=weights))
+    direction = float((np.degrees(np.arctan2(from_sin, from_cos)) + 360.0) % 360.0)
+    return direction, float(np.mean(speeds))
+
+
 def lagged_exposure(
     source_lat: np.ndarray, source_lon: np.ndarray, emission_weight: np.ndarray,
     receptor_lat: float, receptor_lon: float, event_hour: pd.Timestamp, profile: dict,
     direction_delta: float = 0.0, direction_override: dict[int, float] | None = None,
+    wind_lag: str = DEFAULT_WIND_LAG, max_source_km: float = DEFAULT_MAX_SOURCE_KM,
 ) -> dict[str, np.ndarray]:
-    """거리로 도달시간을 역산한 뒤 해당 ASOS 정시 풍향으로 노출 적합도를 계산한다."""
+    """선택한 풍향 시차와 반경 안에서 발생원별 노출 적합도를 계산한다."""
+    if wind_lag not in {"travel", "fixed0"}:
+        raise ValueError(f"지원하지 않는 wind_lag: {wind_lag}")
+    if max_source_km <= 0:
+        raise ValueError("max_source_km는 0보다 커야 합니다.")
     distance, bearing = haversine_and_bearing(source_lat, source_lon, receptor_lat, receptor_lon)
+    within = distance <= max_source_km
     current = profile["by_offset"].get(0)
     if current is None or not np.isfinite(current["wind_speed"]):
         nan = np.full(len(source_lat), np.nan)
         return {"distance": distance, "bearing": bearing, "travel_min": nan, "alignment": nan,
-                "exposure": nan, "wind_from": nan, "wind_speed": nan}
-    initial_speed = max(float(current["wind_speed"]), MIN_WIND_SPEED)
-    travel = np.minimum(distance / initial_speed * 60.0 / 3.6, MAX_TRAVEL_HOURS * 60.0)
-    offsets = -np.ceil(travel / 60.0 - 1e-12).astype(int)
-    offsets = np.clip(offsets, -3, 0)
-    lag_speed = np.array([
-        profile["by_offset"].get(int(offset), current).get("wind_speed", np.nan) for offset in offsets
-    ], dtype=float)
-    effective_speed = np.maximum(np.where(np.isfinite(lag_speed), lag_speed, initial_speed), MIN_WIND_SPEED)
-    travel = np.minimum(distance / effective_speed * 60.0 / 3.6, MAX_TRAVEL_HOURS * 60.0)
-    offsets = np.clip(-np.ceil(travel / 60.0 - 1e-12).astype(int), -3, 0)
-    wind_from = np.array([
-        (direction_override or {}).get(
-            int(offset), profile["by_offset"].get(int(offset), current).get("wind_direction", np.nan)
-        )
-        for offset in offsets
-    ], dtype=float)
-    lag_speed = np.array([
-        profile["by_offset"].get(int(offset), current).get("wind_speed", np.nan) for offset in offsets
-    ], dtype=float)
-    effective_speed = np.maximum(np.where(np.isfinite(lag_speed), lag_speed, initial_speed), MIN_WIND_SPEED)
+                "exposure": nan, "wind_from": nan, "wind_speed": nan,
+                "decay_base": np.zeros(len(source_lat)), "offset": np.zeros(len(source_lat), dtype=int),
+                "within": within}
+
+    if wind_lag == "fixed0":
+        fixed_direction, fixed_speed = fixed0_weather(profile)
+        if direction_override:
+            override_profile = {
+                "by_offset": {
+                    offset: {
+                        **profile["by_offset"].get(offset, {}),
+                        "wind_direction": direction_override.get(
+                            offset, profile["by_offset"].get(offset, {}).get("wind_direction", np.nan),
+                        ),
+                    }
+                    for offset in (-1, 0)
+                }
+            }
+            fixed_direction, _ = fixed0_weather(override_profile)
+        effective_scalar = max(fixed_speed, MIN_WIND_SPEED) if np.isfinite(fixed_speed) else np.nan
+        effective_speed = np.full(len(source_lat), effective_scalar, dtype=float)
+        wind_from = np.full(len(source_lat), fixed_direction, dtype=float)
+        offsets = np.zeros(len(source_lat), dtype=int)
+        travel = np.minimum(distance / effective_speed * 60.0 / 3.6, MAX_TRAVEL_HOURS * 60.0)
+        used_speed = np.full(len(source_lat), fixed_speed, dtype=float)
+    else:
+        initial_speed = max(float(current["wind_speed"]), MIN_WIND_SPEED)
+        travel = np.minimum(distance / initial_speed * 60.0 / 3.6, MAX_TRAVEL_HOURS * 60.0)
+        offsets = np.clip(-np.ceil(travel / 60.0 - 1e-12).astype(int), -3, 0)
+        lag_speed = np.array([
+            profile["by_offset"].get(int(offset), current).get("wind_speed", np.nan) for offset in offsets
+        ], dtype=float)
+        effective_speed = np.maximum(np.where(np.isfinite(lag_speed), lag_speed, initial_speed), MIN_WIND_SPEED)
+        travel = np.minimum(distance / effective_speed * 60.0 / 3.6, MAX_TRAVEL_HOURS * 60.0)
+        offsets = np.clip(-np.ceil(travel / 60.0 - 1e-12).astype(int), -3, 0)
+        wind_from = np.array([
+            (direction_override or {}).get(
+                int(offset), profile["by_offset"].get(int(offset), current).get("wind_direction", np.nan)
+            )
+            for offset in offsets
+        ], dtype=float)
+        used_speed = np.array([
+            profile["by_offset"].get(int(offset), current).get("wind_speed", np.nan) for offset in offsets
+        ], dtype=float)
+        effective_speed = np.maximum(np.where(np.isfinite(used_speed), used_speed, initial_speed), MIN_WIND_SPEED)
+
     downwind = (wind_from + 180.0 + direction_delta) % 360.0
     signed_alignment = np.cos(np.radians(downwind - bearing))
     alignment = np.maximum(signed_alignment, 0.0)
@@ -390,16 +446,27 @@ def lagged_exposure(
     )
     exposure = emission_weight * alignment * np.exp(-distance / decay_length)
     decay_base = emission_weight * np.exp(-distance / decay_length)
-    invalid = ~np.isfinite(wind_from) | ~np.isfinite(lag_speed)
+    invalid = ~np.isfinite(wind_from) | ~np.isfinite(effective_speed)
     exposure[invalid] = np.nan
     decay_base[invalid] = 0.0
     signed_alignment[invalid] = np.nan
+    exposure[~within] = 0.0
+    decay_base[~within] = 0.0
     return {
         "distance": distance, "bearing": bearing, "travel_min": travel,
         "alignment": signed_alignment, "exposure": exposure,
-        "wind_from": wind_from, "wind_speed": lag_speed,
-        "decay_base": decay_base, "offset": offsets,
+        "wind_from": wind_from, "wind_speed": used_speed,
+        "decay_base": decay_base, "offset": offsets, "within": within,
     }
+
+
+def emission_weighted_alignment(detail: dict[str, np.ndarray], emission_weight: np.ndarray) -> float:
+    """반경 안 발생원의 배출 가중 평균 cosine 일치도를 계산한다."""
+    valid = detail["within"] & np.isfinite(detail["alignment"]) & np.isfinite(emission_weight)
+    denominator = float(emission_weight[valid].sum())
+    if denominator <= 0:
+        return np.nan
+    return float(np.sum(emission_weight[valid] * detail["alignment"][valid]) / denominator)
 
 
 def normalize_event_score(values: np.ndarray) -> np.ndarray:
@@ -440,7 +507,10 @@ def rank_source_groups(explanation: np.ndarray, sources: pd.DataFrame) -> list[d
     return ranked
 
 
-def build_outputs(sources: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, object]]:
+def build_outputs(
+    sources: pd.DataFrame, wind_lag: str = DEFAULT_WIND_LAG,
+    max_source_km: float = DEFAULT_MAX_SOURCE_KM,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, object]]:
     reference = pd.read_csv(REFERENCE_FILE, encoding="utf-8-sig", parse_dates=["event_hour"])
     meta = json.loads(REFERENCE_META.read_text(encoding="utf-8"))
     asos = pd.read_csv(ASOS_FILE, encoding="utf-8-sig", parse_dates=["datetime"])
@@ -494,7 +564,7 @@ def build_outputs(sources: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, di
         for receptor in observed.itertuples(index=False):
             detail = lagged_exposure(
                 source_lat, source_lon, emission, float(receptor.latitude), float(receptor.longitude),
-                event_hour, profile,
+                event_hour, profile, wind_lag=wind_lag, max_source_km=max_source_km,
             )
             contribution = np.nan_to_num(detail["exposure"], nan=0.0) * int(receptor.count)
             explanation += contribution
@@ -518,7 +588,7 @@ def build_outputs(sources: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, di
         for row in candidates.itertuples(index=False):
             detail = lagged_exposure(
                 source_lat, source_lon, emission, float(row.center_latitude), float(row.center_longitude),
-                event_hour, profile,
+                event_hour, profile, wind_lag=wind_lag, max_source_km=max_source_km,
             )
             exposure = np.nan_to_num(detail["exposure"], nan=0.0)
             forward = float(exposure.sum())
@@ -526,7 +596,9 @@ def build_outputs(sources: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, di
             fit = float(reweighted.sum())
             top_basis = reweighted if reweighted.max(initial=0.0) > 0 else exposure
             top_index = int(np.argmax(top_basis))
-            top5 = np.argpartition(exposure, -min(5, len(exposure)))[-min(5, len(exposure)):]
+            eligible = np.where(detail["within"])[0]
+            top_n = min(5, len(eligible))
+            top5 = eligible[np.argsort(exposure[eligible])[-top_n:]] if top_n else np.array([], dtype=int)
             village_share = float(village[top5].mean()) if len(top5) else 0.0
             uncertainty = float(np.mean([min(wind_sd / 180.0, 1.0), float(stagnation), village_share]))
             forward_raw.append(forward)
@@ -536,7 +608,7 @@ def build_outputs(sources: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, di
             validation_bearing.append(detail["bearing"].astype(np.float32))
             validation_offset.append(detail["offset"].astype(np.int8))
             grid_details.append({
-                "alignment": float(detail["alignment"][top_index]),
+                "alignment": emission_weighted_alignment(detail, emission),
                 "travel": float(detail["travel_min"][top_index]), "uncertainty": uncertainty,
             })
         forward_norm = normalize_event_score(np.asarray(forward_raw))
@@ -579,8 +651,13 @@ def build_outputs(sources: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, di
                 "travel_time_min": travel, "wind_alignment": alignment,
                 "fit_score": float(group["score"] / top_max) if top_max > 0 else 0.0,
                 "evidence_text": (
-                    f"{wind_name(wind_from)} {best_observed_details['wind_speed'][source_index]:.1f} m/s 기준, "
-                    f"{distance:.1f} km, 약 {travel:.0f}분 전 풍향과 방위 일치 {alignment:.2f}"
+                    f"{wind_name(wind_from)} {best_observed_details['wind_speed'][source_index]:.1f} m/s "
+                    + (
+                        f"Event 정시·직전 정시 평균 기준, {distance:.1f} km, 예상 도달 {travel:.0f}분, "
+                        if wind_lag == "fixed0" else
+                        f"기준, {distance:.1f} km, 약 {travel:.0f}분 전 풍향, "
+                    )
+                    + f"방위 일치 {alignment:.2f}"
                 ),
             })
         complaint_gx, complaint_gy = latlon_to_grid(
@@ -606,9 +683,13 @@ def build_outputs(sources: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, di
             "candidate_bearing": np.stack(validation_bearing),
             "candidate_offset": np.stack(validation_offset),
             "baseline_top3": [str(group["key"]) for group in top_groups[:3]],
+            "wind_lag": wind_lag,
         })
         if event_index % 20 == 0 or event_index == reference["event_hour"].nunique():
-            print(f"  역추적 점수 {event_index}/{reference['event_hour'].nunique()} Event", flush=True)
+            print(
+                f"  {wind_lag}/{max_source_km:g}km {event_index}/{reference['event_hour'].nunique()} Event",
+                flush=True,
+            )
 
     scores = pd.DataFrame(score_rows, columns=GRID_COLUMNS)
     source_candidates = pd.DataFrame(candidate_rows, columns=CANDIDATE_COLUMNS)
@@ -616,6 +697,7 @@ def build_outputs(sources: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, di
         "events": validation_events, "valid_sources": valid_sources,
         "source_lat": source_lat, "source_lon": source_lon, "emission": emission,
         "complaints": complaints, "asos": asos, "meta": meta,
+        "wind_lag": wind_lag, "max_source_km": max_source_km,
     }
 
 
@@ -633,6 +715,7 @@ def direction_sensitivity(context: dict, degrees: Iterable[int] = (10, 20, 30)) 
                     detail = lagged_exposure(
                         source_lat, source_lon, emission, lat, lon, event["event_hour"], event["profile"],
                         direction_delta=float(delta),
+                        wind_lag=context["wind_lag"], max_source_km=context["max_source_km"],
                     )
                     explanation += np.nan_to_num(detail["exposure"], nan=0.0) * count
                 perturbed = set(str(group["key"]) for group in rank_source_groups(explanation, valid)[:3])
@@ -648,7 +731,6 @@ def direction_sensitivity(context: dict, degrees: Iterable[int] = (10, 20, 30)) 
 def random_wind_contrast(context: dict, repetitions: int = 100) -> dict[str, dict[str, float]]:
     """Event 간 풍향 profile을 섞고 매회 후보 격자 전체 순위를 다시 계산한다."""
     events = context["events"]
-    source_lat, source_lon, emission = context["source_lat"], context["source_lon"], context["emission"]
     rng = np.random.default_rng(RANDOM_SEED)
     conditions = {
         "all": np.arange(len(events)),
@@ -664,18 +746,24 @@ def random_wind_contrast(context: dict, repetitions: int = 100) -> dict[str, dic
         per_event: list[float] = []
         for i, event in enumerate(events):
             donor = profiles[int(order[i])]
-            recipient = event["profile"]
-            directions = []
-            for offset in range(-3, 1):
-                donor_item = donor["by_offset"].get(offset)
-                recipient_item = recipient["by_offset"].get(offset, recipient["by_offset"].get(0, {}))
-                value = donor_item.get("wind_direction", np.nan) if donor_item else np.nan
-                if not np.isfinite(value):
-                    value = recipient_item.get("wind_direction", np.nan)
-                directions.append(float(value))
-            direction_array = np.asarray(directions, dtype=float)
-            offsets = event["candidate_offset"].astype(int) + 3
-            downwind = (direction_array[offsets] + 180.0) % 360.0
+            if event["wind_lag"] == "fixed0":
+                donor_direction, _ = fixed0_weather(donor)
+                if not np.isfinite(donor_direction):
+                    donor_direction, _ = fixed0_weather(event["profile"])
+                downwind = (donor_direction + 180.0) % 360.0
+            else:
+                recipient = event["profile"]
+                directions = []
+                for offset in range(-3, 1):
+                    donor_item = donor["by_offset"].get(offset)
+                    recipient_item = recipient["by_offset"].get(offset, recipient["by_offset"].get(0, {}))
+                    value = donor_item.get("wind_direction", np.nan) if donor_item else np.nan
+                    if not np.isfinite(value):
+                        value = recipient_item.get("wind_direction", np.nan)
+                    directions.append(float(value))
+                direction_array = np.asarray(directions, dtype=float)
+                offsets = event["candidate_offset"].astype(int) + 3
+                downwind = (direction_array[offsets] + 180.0) % 360.0
             alignment = np.maximum(
                 np.cos(np.radians(downwind - event["candidate_bearing"])), 0.0,
             )
@@ -777,17 +865,33 @@ def facility_lift(context: dict) -> tuple[float, dict[str, float]]:
 
 
 def validate_and_write(
-    scores: pd.DataFrame, candidates: pd.DataFrame, context: dict, geocoding: dict[str, object],
-    repetitions: int,
+    scores: pd.DataFrame, candidates: pd.DataFrame, context: dict,
+    comparison_contexts: dict[str, dict], geocoding: dict[str, object], repetitions: int,
 ) -> dict[str, object]:
-    print("[검증] 무작위 풍향 대조", flush=True)
-    random_contrast = random_wind_contrast(context, repetitions=repetitions)
+    comparison: dict[str, dict[str, dict[str, float]]] = {}
+    for name, comparison_context in comparison_contexts.items():
+        print(f"[검증] 무작위 풍향 대조: {name}", flush=True)
+        comparison[name] = random_wind_contrast(comparison_context, repetitions=repetitions)
+    selected_name = next(
+        (
+            name for name, config in COMPARISON_CONFIGS.items()
+            if config["wind_lag"] == context["wind_lag"]
+            and config["max_source_km"] == context["max_source_km"]
+        ),
+        None,
+    )
+    if selected_name in comparison:
+        random_contrast = comparison[selected_name]
+    else:
+        print("[검증] 무작위 풍향 대조: 선택 설정", flush=True)
+        random_contrast = random_wind_contrast(context, repetitions=repetitions)
     print("[검증] 풍향 민감도", flush=True)
     sensitivity_all, sensitivity_by_condition = direction_sensitivity(context)
     print("[검증] 시설 겹침 lift", flush=True)
     lift_all, lift_by_condition = facility_lift(context)
     validation = {
         "random_wind_contrast": random_contrast,
+        "random_wind_contrast_comparison": comparison,
         "direction_sensitivity": sensitivity_all,
         "direction_sensitivity_by_condition": sensitivity_by_condition,
         "facility_lift_top10pct": lift_all,
@@ -796,11 +900,18 @@ def validate_and_write(
         "constants": {
             "SPECIES_WEIGHT": SPECIES_WEIGHT, "L_km": DECAY_LENGTH_KM,
             "min_wind_speed": MIN_WIND_SPEED, "max_travel_hours": MAX_TRAVEL_HOURS,
+            "wind_lag": context["wind_lag"], "max_source_km": context["max_source_km"],
         },
         "method_notes": {
             "wind_direction": "KMA wind-from direction converted to downwind by adding 180 degrees",
+            "fixed0": "wind-speed-weighted circular mean of event_hour and event_hour-1h wind, shared by every source-grid pair",
+            "lagged_wind_alignment": "emission_weight-weighted mean cosine alignment among sources within max_source_km",
             "stagnation": "ASOS hourly phase: wind speed <1 m/s only; 30-minute direction SD unavailable",
-            "random_contrast": "candidate-grid ranks are recomputed for each of 100 event-profile wind shuffles",
+            "random_contrast": f"candidate-grid ranks recomputed for each of {repetitions} event-profile wind shuffles",
+            "facility_lift_top10pct": (
+                "numerator=sum(emission_weight in the top 10% of traversed cells ranked by 5km upwind-line count); "
+                "denominator=sum(emission_weight in all traversed cells) * number_of_top_cells / number_of_traversed_cells"
+            ),
         },
     }
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -818,6 +929,8 @@ def main() -> None:
     parser.add_argument("--sources-only", action="store_true")
     parser.add_argument("--skip-geocoding", action="store_true", help="기존 로컬 sources.csv 재사용")
     parser.add_argument("--shuffle-repetitions", type=int, default=100)
+    parser.add_argument("--wind-lag", choices=("travel", "fixed0"), default=DEFAULT_WIND_LAG)
+    parser.add_argument("--max-source-km", type=float, default=DEFAULT_MAX_SOURCE_KM)
     args = parser.parse_args()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -840,9 +953,28 @@ def main() -> None:
     if args.sources_only:
         return
 
-    print("[A-2/A-3] ASOS 시간자료 기반 역추적 점수", flush=True)
-    scores, candidates, context = build_outputs(sources)
-    validation = validate_and_write(scores, candidates, context, geocoding, args.shuffle_repetitions)
+    if args.max_source_km <= 0:
+        parser.error("--max-source-km는 0보다 커야 합니다.")
+    print(
+        f"[A-2/A-3] ASOS 역추적 점수: wind_lag={args.wind_lag}, max_source_km={args.max_source_km:g}",
+        flush=True,
+    )
+    scores, candidates, context = build_outputs(
+        sources, wind_lag=args.wind_lag, max_source_km=args.max_source_km,
+    )
+    comparison_contexts: dict[str, dict] = {}
+    for name, config in COMPARISON_CONFIGS.items():
+        if config["wind_lag"] == args.wind_lag and config["max_source_km"] == args.max_source_km:
+            comparison_contexts[name] = context
+            continue
+        print(
+            f"[비교 설정] wind_lag={config['wind_lag']}, max_source_km={config['max_source_km']:g}",
+            flush=True,
+        )
+        _, _, comparison_contexts[name] = build_outputs(sources, **config)
+    validation = validate_and_write(
+        scores, candidates, context, comparison_contexts, geocoding, args.shuffle_repetitions,
+    )
     print(json.dumps({
         "grid_rows": len(scores), "events": int(scores["event_hour"].nunique()),
         "candidate_rows": len(candidates), "validation": validation,
