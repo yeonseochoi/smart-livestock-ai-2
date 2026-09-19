@@ -38,7 +38,7 @@ GRID_M = 1000
 LAG_HOURS = 3
 MODELS = compare.MODELS
 LIVESTOCK_LABEL = "가축"
-FUSION_WEIGHTS = (0.0, 0.1, 0.2, 0.3, 0.5)
+FUSION_WEIGHTS = (0.0, 0.25, 0.5, 1.0, 2.0)
 SEEDS = (42, 7, 123, 2024, 31)
 DECISION_MARGIN = 0.01
 
@@ -247,16 +247,14 @@ def inner_split(train: pd.DataFrame) -> tuple[set[str], set[str]]:
     return set(ordered[:cut]), set(ordered[cut:])
 
 
-def rank_within_event(frame: pd.DataFrame, score: np.ndarray) -> np.ndarray:
-    """Event 안에서 0~1 백분위 순위로 바꾼다. 후결합 전에 척도를 맞추기 위한 것."""
-    probe = pd.DataFrame({"event_id": frame["event_id"].to_numpy(), "score": score})
-    return probe.groupby("event_id")["score"].rank(pct=True, method="average").to_numpy()
-
-
 def fuse(frame: pd.DataFrame, base_score: np.ndarray, weight: float) -> np.ndarray:
-    """M3 후결합: 기존 모델 순위 + weight × source_fit_score. 하드 필터 없음, 결측은 0 기여."""
+    """M3 후결합: 기존 모델 확률 × (1 + weight × source_fit_score). 하드 필터 없음, 결측은 0 기여.
+
+    Event 안 순위(백분위)로 바꾼 뒤 더하면 Event 간 확률 척도가 사라져 PR-AUC를 M0과 비교할 수 없다.
+    곱셈 보정은 척도를 유지하므로 같은 지표로 비교 가능하다.
+    """
     aux = frame["source_fit_score"].fillna(0.0).to_numpy(float)
-    return (1.0 - weight) * rank_within_event(frame, base_score) + weight * aux
+    return base_score * (1.0 + weight * aux)
 
 
 def seeded_fit_predict(model_name: str, fit: pd.DataFrame, valid: pd.DataFrame, features: list[str],
@@ -354,6 +352,10 @@ def markdown_table(report: dict) -> str:
     lines.append(f"- 공통 Event {report['common_events']}개, 학습 {report['train_events']} / 테스트 {report['test_events']}")
     lines.append(f"- Track A 산출물: {report['backtrack']['status']} ({report['backtrack'].get('path')})")
     lines.append(f"- 판정: {report['decision']['verdict']} — {report['decision']['reason']}")
+    gate = report["decision"].get("backtrack_gate", {})
+    if gate.get("status") == "ok":
+        lines.append(f"- Track A 무작위 풍향 대조 p값 {gate['p_value']:.3f} → "
+                     + ("참고 정보로만 사용(계약 기준 0.05 초과)" if gate["reference_only"] else "모델 입력 후보 가능"))
     lines.append("")
     lines.append(f"- seed {report['seeds']} 평균 ± 표준편차. 판정 여유(margin) {report['decision']['margin']:.3f}")
     lines.append("")
@@ -378,6 +380,19 @@ def markdown_table(report: dict) -> str:
         lines.append(f"| {condition} | {table['events']} | " + " | ".join(cells) + " |")
     lines.append("")
     return "\n".join(lines)
+
+
+def backtrack_gate(path: Path) -> dict:
+    """Track A validation.json의 무작위 풍향 대조 p값. 0.05 초과면 계약상 역추적 점수는 참고 정보로만 쓴다."""
+    candidate = path.parent / "validation.json"
+    if not candidate.exists():
+        return {"status": "missing"}
+    try:
+        report = json.loads(candidate.read_text(encoding="utf-8"))
+        p_value = float(report["random_wind_contrast"]["all"]["p_value"])
+    except (KeyError, ValueError, TypeError) as error:
+        return {"status": "unreadable", "error": repr(error)}
+    return {"status": "ok", "p_value": p_value, "reference_only": p_value > 0.05}
 
 
 def decide(arms: dict[str, dict]) -> dict:
@@ -455,6 +470,11 @@ def main() -> None:
         test_meta["asos_rain_3h"] = np.nan
     subsets = subset_tables(arms, test_meta)
     decision = decide(arms)
+    gate = backtrack_gate(Path(backtrack_info["path"])) if scores is not None else {"status": "skipped"}
+    decision["backtrack_gate"] = gate
+    if gate.get("reference_only") and decision["verdict"].startswith(("M2", "M3")):
+        decision["verdict"] = "M0 유지"
+        decision["reason"] += f"; Track A 무작위 풍향 대조 p={gate['p_value']:.2f}>0.05 → 역추적 점수는 참고 정보로만"
 
     report = {
         "protocol": "common events (1/1.5/2 km), chronological 70/30 split, 30-min input/forecast, 1 km grid",
