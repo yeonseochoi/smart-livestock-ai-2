@@ -1,0 +1,279 @@
+{
+  "radius_km": 10.0,
+  "sector_deg": 30.0,
+  "permutations": 500,
+  "min_wind_ms": 1.0,
+  "sources_used": 2468,
+  "tests": {
+    "lag0h/all": {
+      "n": 8079,
+      "real_mean": 15939.570417130833,
+      "shuffled_mean": 14964.714825423936,
+      "shuffled_sd": 96.57602576799513,
+      "ratio_real_over_shuffled": 1.0651436130310141,
+      "z": 10.09417796968365,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag0h/livestock": {
+      "n": 3863,
+      "real_mean": 14734.410121667097,
+      "shuffled_mean": 13775.844319181982,
+      "shuffled_sd": 140.9245103089255,
+      "ratio_real_over_shuffled": 1.069583089085173,
+      "z": 6.801980722755816,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag0h/factory": {
+      "n": 1340,
+      "real_mean": 17887.75044776119,
+      "shuffled_mean": 16840.6356280597,
+      "shuffled_sd": 187.08000285057753,
+      "ratio_real_over_shuffled": 1.062177868034672,
+      "z": 5.597149902428812,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag0h/other": {
+      "n": 2876,
+      "real_mean": 16650.618045897078,
+      "shuffled_mean": 16112.896392211404,
+      "shuffled_sd": 165.67941001674916,
+      "ratio_real_over_shuffled": 1.0333721287965083,
+      "z": 3.2455550972285194,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag0h/dry": {
+      "n": 7210,
+      "real_mean": 15941.958418862689,
+      "shuffled_mean": 14994.60676185853,
+      "shuffled_sd": 98.90822491703985,
+      "ratio_real_over_shuffled": 1.0631794932704683,
+      "z": 9.578087745470702,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag0h/wet": {
+      "n": 869,
+      "real_mean": 15919.75742232451,
+      "shuffled_mean": 14860.71792543153,
+      "shuffled_sd": 269.0791145479137,
+      "ratio_real_over_shuffled": 1.0712643562852786,
+      "z": 3.9357922619609376,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag0h/night_21_06": {
+      "n": 4336,
+      "real_mean": 16590.360193726938,
+      "shuffled_mean": 15963.416596263838,
+      "shuffled_sd": 125.34615625711538,
+      "ratio_real_over_shuffled": 1.0392737728594914,
+      "z": 5.001697827710697,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag1h/all": {
+      "n": 8026,
+      "real_mean": 14586.020196860203,
+      "shuffled_mean": 13896.21070533267,
+      "shuffled_sd": 95.42902746534496,
+      "ratio_real_over_shuffled": 1.049640114571868,
+      "z": 7.228508032087371,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag1h/livestock": {
+      "n": 3814,
+      "real_mean": 13301.88683796539,
+      "shuffled_mean": 12781.065630256948,
+      "shuffled_sd": 137.645505580265,
+      "ratio_real_over_shuffled": 1.0407494353581512,
+      "z": 3.783786513862867,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag1h/factory": {
+      "n": 1353,
+      "real_mean": 16552.28647450111,
+      "shuffled_mean": 15407.450264597192,
+      "shuffled_sd": 182.75108733732307,
+      "ratio_real_over_shuffled": 1.0743040665550283,
+      "z": 6.264456351992987,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag1h/other": {
+      "n": 2859,
+      "real_mean": 15368.575760755506,
+      "shuffled_mean": 15189.380110178383,
+      "shuffled_sd": 152.38191096580456,
+      "ratio_real_over_shuffled": 1.0117974301306112,
+      "z": 1.1759640592598668,
+      "p_value_one_sided": 0.12974051896207583
+    },
+    "lag1h/dry": {
+      "n": 7202,
+      "real_mean": 14502.865773396275,
+      "shuffled_mean": 13879.23359202999,
+      "shuffled_sd": 103.5310255948735,
+      "ratio_real_over_shuffled": 1.0449327534716615,
+      "z": 6.023626036572031,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag1h/wet": {
+      "n": 824,
+      "real_mean": 15312.814077669902,
+      "shuffled_mean": 14349.128301941746,
+      "shuffled_sd": 293.8696869410627,
+      "ratio_real_over_shuffled": 1.0671598828479183,
+      "z": 3.2792962954407368,
+      "p_value_one_sided": 0.005988023952095809
+    },
+    "lag1h/night_21_06": {
+      "n": 4245,
+      "real_mean": 14581.740494699647,
+      "shuffled_mean": 14269.49358770318,
+      "shuffled_sd": 130.8949116680383,
+      "ratio_real_over_shuffled": 1.0218821295287974,
+      "z": 2.3854778082463097,
+      "p_value_one_sided": 0.005988023952095809
+    },
+    "lag2h/all": {
+      "n": 8192,
+      "real_mean": 13569.241857910156,
+      "shuffled_mean": 12987.957665844726,
+      "shuffled_sd": 94.22427971312634,
+      "ratio_real_over_shuffled": 1.0447556272526257,
+      "z": 6.1691550610436945,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag2h/livestock": {
+      "n": 3842,
+      "real_mean": 12144.288339406557,
+      "shuffled_mean": 11986.209318896408,
+      "shuffled_sd": 143.77087960177917,
+      "ratio_real_over_shuffled": 1.0131884081367524,
+      "z": 1.0995204379913464,
+      "p_value_one_sided": 0.14171656686626746
+    },
+    "lag2h/factory": {
+      "n": 1394,
+      "real_mean": 15378.93895265423,
+      "shuffled_mean": 14249.858170014348,
+      "shuffled_sd": 183.82843093723568,
+      "ratio_real_over_shuffled": 1.0792345277524082,
+      "z": 6.142035684487694,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag2h/other": {
+      "n": 2956,
+      "real_mean": 14567.873004059538,
+      "shuffled_mean": 14369.849301826793,
+      "shuffled_sd": 149.92520751944699,
+      "ratio_real_over_shuffled": 1.0137804995775128,
+      "z": 1.3208165958820477,
+      "p_value_one_sided": 0.10379241516966067
+    },
+    "lag2h/dry": {
+      "n": 7427,
+      "real_mean": 13406.986212468022,
+      "shuffled_mean": 12885.756146492527,
+      "shuffled_sd": 97.62197152678999,
+      "ratio_real_over_shuffled": 1.0404500954425846,
+      "z": 5.339270021118716,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag2h/wet": {
+      "n": 765,
+      "real_mean": 15144.500261437908,
+      "shuffled_mean": 14058.037574379085,
+      "shuffled_sd": 307.0858351827007,
+      "ratio_real_over_shuffled": 1.0772840932676773,
+      "z": 3.5379772121772817,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag2h/night_21_06": {
+      "n": 4420,
+      "real_mean": 12804.867647058822,
+      "shuffled_mean": 12611.760190995476,
+      "shuffled_sd": 131.32733737874943,
+      "ratio_real_over_shuffled": 1.0153116974267573,
+      "z": 1.4704284722260232,
+      "p_value_one_sided": 0.08582834331337326
+    },
+    "lag3h/all": {
+      "n": 8757,
+      "real_mean": 12672.640253511476,
+      "shuffled_mean": 12378.799066324085,
+      "shuffled_sd": 94.12534793937911,
+      "ratio_real_over_shuffled": 1.0237374551128122,
+      "z": 3.1218071818086366,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag3h/livestock": {
+      "n": 4161,
+      "real_mean": 11499.434198509973,
+      "shuffled_mean": 11550.402006104301,
+      "shuffled_sd": 128.97575029117385,
+      "ratio_real_over_shuffled": 0.9955873563909384,
+      "z": -0.39517356928929814,
+      "p_value_one_sided": 0.6487025948103793
+    },
+    "lag3h/factory": {
+      "n": 1492,
+      "real_mean": 14058.769034852548,
+      "shuffled_mean": 13234.866177345844,
+      "shuffled_sd": 196.43220757068102,
+      "ratio_real_over_shuffled": 1.0622524509478593,
+      "z": 4.194336904808464,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag3h/other": {
+      "n": 3104,
+      "real_mean": 13579.08556701031,
+      "shuffled_mean": 13722.147235502578,
+      "shuffled_sd": 151.70283687876463,
+      "ratio_real_over_shuffled": 0.9895743963363014,
+      "z": -0.9430388477612821,
+      "p_value_one_sided": 0.8263473053892215
+    },
+    "lag3h/dry": {
+      "n": 8003,
+      "real_mean": 12455.192265400476,
+      "shuffled_mean": 12249.779911883043,
+      "shuffled_sd": 94.8284898160955,
+      "ratio_real_over_shuffled": 1.0167686566611838,
+      "z": 2.166145995953295,
+      "p_value_one_sided": 0.013972055888223553
+    },
+    "lag3h/wet": {
+      "n": 754,
+      "real_mean": 14980.645888594165,
+      "shuffled_mean": 13894.64279761273,
+      "shuffled_sd": 310.31863738774456,
+      "ratio_real_over_shuffled": 1.0781598423795409,
+      "z": 3.4996386299043594,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag3h/night_21_06": {
+      "n": 4978,
+      "real_mean": 11215.279610285255,
+      "shuffled_mean": 11263.171988589793,
+      "shuffled_sd": 120.23454843994276,
+      "ratio_real_over_shuffled": 0.9957478782750494,
+      "z": -0.3983245990935772,
+      "p_value_one_sided": 0.6606786427145709
+    },
+    "lag1h/pigs_only/all": {
+      "n": 8026,
+      "real_mean": 9570.47769748318,
+      "shuffled_mean": 9282.031517817095,
+      "shuffled_sd": 81.90007143789246,
+      "ratio_real_over_shuffled": 1.031075759558929,
+      "z": 3.521928303625762,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag1h/pigs_only/livestock": {
+      "n": 3814,
+      "real_mean": 8582.15180912428,
+      "shuffled_mean": 8434.50286785527,
+      "shuffled_sd": 117.05513610700429,
+      "ratio_real_over_shuffled": 1.017505351955207,
+      "z": 1.2613623475183406,
+      "p_value_one_sided": 0.0998003992015968
+    }
+  }
+}
