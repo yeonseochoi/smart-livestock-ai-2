@@ -1,11 +1,27 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 import build_source_backtrack as backtrack
+
+
+ROOT = Path(__file__).resolve().parents[1]
+OUTPUT_DIR = ROOT / "outputs" / "source_backtrack"
+
+EXPECTED_GRID_COLUMNS = [
+    "event_hour", "event_id", "grid_x", "grid_y", "center_latitude", "center_longitude",
+    "source_fit_score", "forward_plume_score", "prior_downwind_score", "lagged_wind_alignment",
+    "travel_time_min", "rain_1h", "rain_3h", "stagnation_flag", "backtrack_uncertainty",
+    "weather_source", "history_cutoff",
+]
+EXPECTED_NON_LIVESTOCK_COLUMNS = [
+    "event_hour", "rank", "source_id", "source_type", "name", "city", "location_precision",
+    "distance_km", "bearing_deg", "travel_time_min", "wind_alignment", "fit_score", "evidence_text",
+]
 
 
 class SourceBacktrackTest(unittest.TestCase):
@@ -89,6 +105,24 @@ class SourceBacktrackTest(unittest.TestCase):
         left = backtrack.filter_initial_complaints(base, self.hour)
         right = backtrack.filter_initial_complaints(with_future, self.hour)
         pd.testing.assert_frame_equal(left.reset_index(drop=True), right.reset_index(drop=True))
+
+
+class SourceBacktrackOutputSchemaTest(unittest.TestCase):
+    def test_grid_scores_has_contract_columns_in_order(self) -> None:
+        scores = pd.read_csv(OUTPUT_DIR / "grid_scores.csv", encoding="utf-8-sig")
+        self.assertEqual(list(scores.columns), EXPECTED_GRID_COLUMNS)
+        self.assertEqual(backtrack.GRID_COLUMNS, EXPECTED_GRID_COLUMNS)
+
+    def test_non_livestock_candidates_schema(self) -> None:
+        candidates = pd.read_csv(
+            OUTPUT_DIR / "non_livestock_candidates.csv", encoding="utf-8-sig",
+        )
+        self.assertEqual(list(candidates.columns), EXPECTED_NON_LIVESTOCK_COLUMNS)
+        self.assertEqual(backtrack.NON_LIVESTOCK_COLUMNS, EXPECTED_NON_LIVESTOCK_COLUMNS)
+        self.assertFalse(pd.to_datetime(candidates["event_hour"], errors="coerce").isna().any())
+        self.assertTrue(set(candidates["source_type"]).issubset({"factory", "wastewater", "other"}))
+        self.assertTrue(pd.api.types.is_integer_dtype(candidates["rank"]))
+        self.assertTrue((candidates["rank"] >= 1).all())
 
 
 if __name__ == "__main__":
