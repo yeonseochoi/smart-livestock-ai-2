@@ -29,6 +29,7 @@ REFERENCE_FILE = ROOT / "outputs" / "backtrack_contract" / "reference_candidates
 REFERENCE_META = ROOT / "outputs" / "backtrack_contract" / "reference_meta.json"
 ASOS_FILE = ROOT / "outputs" / "weather_integration" / "asos_hourly_2020_2026.csv"
 OUTPUT_DIR = ROOT / "outputs" / "source_backtrack"
+SOURCES_FILE = OUTPUT_DIR / "sources.csv"  # --output-dir 를 바꿔도 발생원 테이블은 여기서 읽는다
 CACHE_FILE = ROOT / "data" / "vworld_geocode_cache" / "geocode.json"
 VWORLD_URL = "https://api.vworld.kr/req/address"
 
@@ -52,6 +53,13 @@ DECAY_LENGTH_KM = {"fast": 1.5, "moderate": 2.5, "slow_or_night": 4.0}
 TOP_SOURCE_COUNT = 5
 RANDOM_SEED = 42
 DEFAULT_WIND_LAG = "fixed0"
+# fixed0 모드의 참조 바람 창. lag=몇 시간 전 정시부터, window=몇 개 정시를 평균, weighting=simple|speed.
+# 2판 = (0, 2, speed): Event 정시와 직전 정시의 풍속 가중 원형평균.
+# 3판 = (0, 1, speed): Event 정시 바람만. 민원 8천 건 연관 검정(Track B association_sweep)과 Event 무작위 풍향 대조에서
+# 단일 정시가 2h·3h 평균이나 1~3h 시차보다 일관되게 나았음(outputs/wind_lag_sweep/engine_sweep.md).
+DEFAULT_WIND_WINDOW = {"lag": 0, "window": 1, "weighting": "speed"}
+WIND_WINDOW = dict(DEFAULT_WIND_WINDOW)
+PROFILE_MIN_OFFSET = -5
 DEFAULT_MAX_SOURCE_KM = 6.0
 COMPARISON_CONFIGS = {
     "travel_10km": {"wind_lag": "travel", "max_source_km": 10.0},
@@ -68,6 +76,12 @@ SOURCE_COLUMNS = [
     "source_id", "source_type", "city", "name", "species", "head_count", "area_m2", "status",
     "address", "latitude", "longitude", "location_precision", "geocode_method", "emission_weight",
     "weight_imputed", "extra_json",
+]
+# 축산 외 발생원(공장·하수처리 등)은 배출 대리량이 없어 grid_scores 계산에는 넣지 않고,
+# 같은 바람 창·반경으로 "상풍측에 있었던 시설" 목록만 별도 파일로 낸다(시설 1곳 = 가중치 1).
+NON_LIVESTOCK_COLUMNS = [
+    "event_hour", "rank", "source_id", "source_type", "name", "city", "location_precision",
+    "distance_km", "bearing_deg", "travel_time_min", "wind_alignment", "fit_score", "evidence_text",
 ]
 CANDIDATE_COLUMNS = [
     "event_hour", "rank", "source_id", "name", "city", "species", "location_precision",
@@ -339,11 +353,11 @@ def event_weather_profile(asos: pd.DataFrame, event_hour: pd.Timestamp, event_la
     station_id = int(stations.loc[d.idxmin(), "station_id"])
     frame = asos[
         (asos["station_id"] == station_id)
-        & (asos["datetime"] >= event_hour - pd.Timedelta(hours=3))
+        & (asos["datetime"] >= event_hour + pd.Timedelta(hours=PROFILE_MIN_OFFSET))
         & (asos["datetime"] <= event_hour)
     ].copy()
     by_offset: dict[int, dict[str, float]] = {}
-    for offset in range(-3, 1):
+    for offset in range(PROFILE_MIN_OFFSET, 1):
         row = frame[frame["datetime"] == event_hour + pd.Timedelta(hours=offset)]
         if row.empty:
             continue
@@ -356,9 +370,16 @@ def event_weather_profile(asos: pd.DataFrame, event_hour: pd.Timestamp, event_la
     return {"station_id": station_id, "by_offset": by_offset}
 
 
-def fixed0_weather(profile: dict) -> tuple[float, float]:
-    """Event 정시와 직전 정시의 풍향을 풍속 가중 원형평균한다."""
-    records = [profile["by_offset"].get(offset) for offset in (-1, 0)]
+def window_offsets(spec: dict | None = None) -> tuple[int, ...]:
+    spec = spec or WIND_WINDOW
+    lag, window = int(spec["lag"]), int(spec["window"])
+    return tuple(range(-lag - window + 1, -lag + 1))
+
+
+def fixed0_weather(profile: dict, spec: dict | None = None) -> tuple[float, float]:
+    """WIND_WINDOW 창(lag, window, weighting)의 풍향을 원형평균한다. 기본은 Event 정시·직전 정시의 풍속 가중."""
+    spec = spec or WIND_WINDOW
+    records = [profile["by_offset"].get(offset) for offset in window_offsets(spec)]
     valid = [
         item for item in records if item is not None
         and np.isfinite(item.get("wind_direction", np.nan))
@@ -368,11 +389,35 @@ def fixed0_weather(profile: dict) -> tuple[float, float]:
         return np.nan, np.nan
     directions = np.radians([float(item["wind_direction"]) for item in valid])
     speeds = np.asarray([float(item["wind_speed"]) for item in valid], dtype=float)
-    weights = np.maximum(speeds, 0.1)
+    weights = np.maximum(speeds, 0.1) if spec.get("weighting", "speed") == "speed" else np.ones(len(speeds))
     from_sin = float(np.average(np.sin(directions), weights=weights))
     from_cos = float(np.average(np.cos(directions), weights=weights))
     direction = float((np.degrees(np.arctan2(from_sin, from_cos)) + 360.0) % 360.0)
     return direction, float(np.mean(speeds))
+
+
+def window_label(spec: dict | None = None) -> str:
+    """근거 문장용 창 설명. 예: 'Event 정시', 'Event 정시·직전 정시 평균', 'Event 1시간 전~3시간 전 평균'."""
+    spec = spec or WIND_WINDOW
+    lag, window = int(spec["lag"]), int(spec["window"])
+    if lag == 0 and window == 1:
+        return "Event 정시"
+    if lag == 0 and window == 2:
+        return "Event 정시·직전 정시 평균"
+    start, end = lag + window - 1, lag
+    end_text = "정시" if end == 0 else f"{end}시간 전"
+    return f"Event {start}시간 전~{end_text} 평균"
+
+
+def parse_wind_window(text: str) -> dict:
+    """'lag,window,weighting' 문자열 → spec. 예: '1,3,simple'."""
+    parts = [part.strip() for part in text.split(",")]
+    if len(parts) != 3 or parts[2] not in {"simple", "speed"}:
+        raise ValueError("--wind-window 형식은 'lag,window,simple|speed' 입니다.")
+    lag, window = int(parts[0]), int(parts[1])
+    if lag < 0 or window < 1 or lag + window - 1 > -PROFILE_MIN_OFFSET:
+        raise ValueError(f"lag+window-1 은 {-PROFILE_MIN_OFFSET} 이하여야 합니다.")
+    return {"lag": lag, "window": window, "weighting": parts[2]}
 
 
 def lagged_exposure(
@@ -407,7 +452,7 @@ def lagged_exposure(
                             offset, profile["by_offset"].get(offset, {}).get("wind_direction", np.nan),
                         ),
                     }
-                    for offset in (-1, 0)
+                    for offset in window_offsets()
                 }
             }
             fixed_direction, _ = fixed0_weather(override_profile)
@@ -539,7 +584,7 @@ def build_outputs(
         rain_1h = profile["by_offset"].get(0, {}).get("rainfall_hour", np.nan)
         rain_values = [profile["by_offset"].get(offset, {}).get("rainfall_hour", np.nan) for offset in (-2, -1, 0)]
         rain_3h = float(np.nansum(rain_values)) if np.isfinite(rain_values).any() else np.nan
-        directions = [item["wind_direction"] for item in profile["by_offset"].values()]
+        directions = [item["wind_direction"] for offset, item in profile["by_offset"].items() if offset >= -3]
         wind_sd = circular_std_deg(directions)
         current_speed = profile["by_offset"].get(0, {}).get("wind_speed", np.nan)
         stagnation = int(current_speed < 1.0) if np.isfinite(current_speed) else np.nan
@@ -655,7 +700,7 @@ def build_outputs(
                 "evidence_text": (
                     f"{wind_name(wind_from)} {best_observed_details['wind_speed'][source_index]:.1f} m/s "
                     + (
-                        f"Event 정시·직전 정시 평균 기준, {distance:.1f} km, 예상 도달 {travel:.0f}분, "
+                        f"{window_label()} 기준, {distance:.1f} km, 예상 도달 {travel:.0f}분, "
                         if wind_lag == "fixed0" else
                         f"기준, {distance:.1f} km, 약 {travel:.0f}분 전 풍향, "
                     )
@@ -866,6 +911,74 @@ def facility_lift(context: dict) -> tuple[float, dict[str, float]]:
     return lifts["all"], lifts
 
 
+def non_livestock_candidates(
+    sources: pd.DataFrame, wind_lag: str = DEFAULT_WIND_LAG, max_source_km: float = DEFAULT_MAX_SOURCE_KM,
+    top_n: int = TOP_SOURCE_COUNT,
+) -> pd.DataFrame:
+    """Event별 상풍측 축산 외 발생원 상위 top_n. 배출 대리량이 없으므로 시설 1곳 = 1로 두고
+    방위 일치 × 거리 감쇠만으로 순위를 매긴다. grid_scores에는 반영하지 않는다."""
+    pool = sources[sources["source_type"].ne("livestock")].dropna(subset=["latitude", "longitude"]).copy()
+    pool = pool.reset_index(drop=True)
+    if pool.empty:
+        return pd.DataFrame(columns=NON_LIVESTOCK_COLUMNS)
+    reference = pd.read_csv(REFERENCE_FILE, encoding="utf-8-sig", parse_dates=["event_hour"])
+    asos = pd.read_csv(ASOS_FILE, encoding="utf-8-sig", parse_dates=["datetime"])
+    complaints, _, _, _, _ = odor.load_inputs()
+    lat = pool["latitude"].to_numpy(float)
+    lon = pool["longitude"].to_numpy(float)
+    ones = np.ones(len(pool), dtype=float)
+    rows: list[dict[str, object]] = []
+    for event_hour in sorted(reference["event_hour"].unique()):
+        event_hour = pd.Timestamp(event_hour)
+        initial = filter_initial_complaints(complaints, event_hour)
+        if initial.empty:
+            continue
+        profile = event_weather_profile(asos, event_hour, float(initial["latitude"].mean()), float(initial["longitude"].mean()))
+        if 0 not in profile["by_offset"]:
+            continue
+        observed = initial.groupby(["latitude", "longitude"]).size().reset_index(name="count")
+        total = np.zeros(len(pool), dtype=float)
+        best = np.zeros(len(pool), dtype=float)
+        best_detail: dict[str, np.ndarray] | None = None
+        for receptor in observed.itertuples(index=False):
+            detail = lagged_exposure(
+                lat, lon, ones, float(receptor.latitude), float(receptor.longitude), event_hour, profile,
+                wind_lag=wind_lag, max_source_km=max_source_km,
+            )
+            contribution = np.nan_to_num(detail["exposure"], nan=0.0) * int(receptor.count)
+            total += contribution
+            improve = contribution > best
+            if best_detail is None:
+                best_detail = {key: value.copy() for key, value in detail.items()}
+            else:
+                for key in best_detail:
+                    best_detail[key][improve] = detail[key][improve]
+            best[improve] = contribution[improve]
+        assert best_detail is not None
+        order = np.argsort(total)[::-1]
+        order = [int(i) for i in order if total[i] > 0][:top_n]
+        top_max = float(total[order[0]]) if order else 0.0
+        for rank, index in enumerate(order, 1):
+            source = pool.iloc[index]
+            distance = float(best_detail["distance"][index])
+            alignment = float(best_detail["alignment"][index])
+            travel = float(best_detail["travel_min"][index])
+            wind_from = float(best_detail["wind_from"][index])
+            rows.append({
+                "event_hour": event_hour, "rank": rank, "source_id": source["source_id"],
+                "source_type": source["source_type"], "name": source["name"], "city": source["city"],
+                "location_precision": source["location_precision"], "distance_km": distance,
+                "bearing_deg": float(best_detail["bearing"][index]), "travel_time_min": travel,
+                "wind_alignment": alignment, "fit_score": float(total[index] / top_max) if top_max > 0 else 0.0,
+                "evidence_text": (
+                    f"{wind_name(wind_from)} {best_detail['wind_speed'][index]:.1f} m/s 기준 상풍측, "
+                    f"{distance:.1f} km, 예상 도달 {travel:.0f}분, 방위 일치 {alignment:.2f} "
+                    f"(배출량 자료 없음: 시설 1곳=1로 위치만 반영)"
+                ),
+            })
+    return pd.DataFrame(rows, columns=NON_LIVESTOCK_COLUMNS)
+
+
 def validate_and_write(
     scores: pd.DataFrame, candidates: pd.DataFrame, context: dict,
     comparison_contexts: dict[str, dict], geocoding: dict[str, object], repetitions: int,
@@ -903,10 +1016,11 @@ def validate_and_write(
             "SPECIES_WEIGHT": SPECIES_WEIGHT, "L_km": DECAY_LENGTH_KM,
             "min_wind_speed": MIN_WIND_SPEED, "max_travel_hours": MAX_TRAVEL_HOURS,
             "wind_lag": context["wind_lag"], "max_source_km": context["max_source_km"],
+            "wind_window": dict(WIND_WINDOW),
         },
         "method_notes": {
             "wind_direction": "KMA wind-from direction converted to downwind by adding 180 degrees",
-            "fixed0": "wind-speed-weighted circular mean of event_hour and event_hour-1h wind, shared by every source-grid pair",
+            "fixed0": "circular mean of ASOS wind over WIND_WINDOW (default: event_hour only), shared by every source-grid pair",
             "lagged_wind_alignment": "emission_weight-weighted mean cosine alignment among sources within max_source_km",
             "stagnation": "ASOS hourly phase: wind speed <1 m/s only; 30-minute direction SD unavailable",
             "random_contrast": f"candidate-grid ranks recomputed for each of {repetitions} event-profile wind shuffles",
@@ -926,6 +1040,7 @@ def validate_and_write(
 
 
 def main() -> None:
+    global OUTPUT_DIR
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workers", type=int, default=6)
     parser.add_argument("--sources-only", action="store_true")
@@ -933,13 +1048,25 @@ def main() -> None:
     parser.add_argument("--shuffle-repetitions", type=int, default=100)
     parser.add_argument("--wind-lag", choices=("travel", "fixed0"), default=DEFAULT_WIND_LAG)
     parser.add_argument("--max-source-km", type=float, default=DEFAULT_MAX_SOURCE_KM)
+    parser.add_argument(
+        "--wind-window", default="0,1,speed",
+        help="fixed0 모드 참조 바람 창 'lag,window,simple|speed'. 기본 0,1,speed = Event 정시 바람(3판). 2판은 0,2,speed",
+    )
+    parser.add_argument("--skip-comparison", action="store_true", help="비교 설정(travel_10km) 재계산 생략")
+    parser.add_argument("--output-dir", default=None, help="산출물 폴더 재지정(실험용). 기본 outputs/source_backtrack")
     args = parser.parse_args()
+    WIND_WINDOW.update(parse_wind_window(args.wind_window))
+    if args.output_dir:
+        OUTPUT_DIR = Path(args.output_dir)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     if args.skip_geocoding:
-        sources = pd.read_csv(OUTPUT_DIR / "sources.csv", encoding="utf-8-sig")
-        iksan = sources[sources["city"] == "익산시"]
-        gimje = sources[sources["city"] == "김제시"]
+        sources = pd.read_csv(SOURCES_FILE, encoding="utf-8-sig")
+        if "source_type" not in sources.columns:
+            sources["source_type"] = "livestock"
+        livestock = sources[sources["source_type"] == "livestock"]
+        iksan = livestock[livestock["city"] == "익산시"]
+        gimje = livestock[livestock["city"] == "김제시"]
         geocoding = {
             "iksan_point_rate": float(iksan["location_precision"].eq("point").mean()),
             "iksan_point": int(iksan["location_precision"].eq("point").sum()), "iksan_total": len(iksan),
@@ -948,6 +1075,12 @@ def main() -> None:
             "gimje_village": int(gimje["location_precision"].eq("village").sum()),
             "gimje_village_total": int(gimje["location_precision"].ne("point").sum()),
         }
+        others = sources[sources["source_type"] != "livestock"]
+        if len(others):
+            geocoding["non_livestock"] = {
+                str(kind): {"rows": int(len(part)), "geocoded": int(part["latitude"].notna().sum())}
+                for kind, part in others.groupby("source_type")
+            }
     else:
         print("[A-1] 발생원 주소 정규화 및 VWorld 지오코딩", flush=True)
         sources, geocoding = prepare_sources(workers=args.workers)
@@ -969,6 +1102,8 @@ def main() -> None:
         if config["wind_lag"] == args.wind_lag and config["max_source_km"] == args.max_source_km:
             comparison_contexts[name] = context
             continue
+        if args.skip_comparison:
+            continue
         print(
             f"[비교 설정] wind_lag={config['wind_lag']}, max_source_km={config['max_source_km']:g}",
             flush=True,
@@ -977,6 +1112,11 @@ def main() -> None:
     validation = validate_and_write(
         scores, candidates, context, comparison_contexts, geocoding, args.shuffle_repetitions,
     )
+    if sources["source_type"].ne("livestock").any():
+        print("[A-6] 축산 외 발생원 상풍측 후보", flush=True)
+        extra = non_livestock_candidates(sources, wind_lag=args.wind_lag, max_source_km=args.max_source_km)
+        extra.to_csv(OUTPUT_DIR / "non_livestock_candidates.csv", index=False, encoding="utf-8-sig")
+        print(f"  non_livestock_candidates.csv {len(extra)}행, Event {extra['event_hour'].nunique() if len(extra) else 0}개", flush=True)
     print(json.dumps({
         "grid_rows": len(scores), "events": int(scores["event_hour"].nunique()),
         "candidate_rows": len(candidates), "validation": validation,
