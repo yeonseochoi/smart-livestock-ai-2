@@ -67,7 +67,7 @@ Track B(성능보존형 통합)는 그 점수를 기존 XGBoost 특징에 **추�
 
 | 파일 | 내용 | git |
 |---|---|---|
-| `outputs/source_backtrack/sources.csv` | 발생원 테이블: `source_id, source_type(livestock/factory/wastewater/other), city, name, species, head_count, area_m2, status, address, latitude, longitude, location_precision(point/village), geocode_method, emission_weight, weight_imputed`. 1차는 `livestock`만. 공장·하수처리시설은 2차에 같은 표에 추가하며 `grid_scores.csv` 스키마는 바꾸지 않는다 | **커밋 금지**(지오코딩 API 결과 저장 제한). `.gitignore`에 등록 |
+| `outputs/source_backtrack/sources.csv` | 발생원 테이블: `source_id, source_type(livestock/factory/wastewater/other), city, name, species, head_count, area_m2, status, address, latitude, longitude, location_precision(point/village), geocode_method, emission_weight, weight_imputed`. 1차는 `livestock`만. 공장·하수처리시설은 2차에 같은 표에 추가하며 `grid_scores.csv` 스키마는 바꾸지 않는다 | **커밋 금지**(VWorld 이용약관상 좌표 별도 저장 제한 — 로컬 캐시만, 저장소에 올리지 않음). `.gitignore`에 등록 |
 | `outputs/source_backtrack/source_candidates.csv` | Event별 "현재 민원 설명력" 상위 5 발생원: `event_hour, rank, source_id, name, city, species, location_precision, distance_km, bearing_deg, travel_time_min, wind_alignment, fit_score, evidence_text` | 커밋 |
 | `outputs/source_backtrack/validation.json` | 자체 검증 수치 (아래) | 커밋 |
 | `outputs/source_backtrack/source_map_{season}_{daypart}.csv` | 2차. PSCF형 발생원 지도 4벌 | 커밋 |
@@ -93,7 +93,7 @@ Track B(성능보존형 통합)는 그 점수를 기존 XGBoost 특징에 **추�
 
 | Track A (Codex) | Track B (Claude) | 공용(수정 시 양쪽 합의) |
 |---|---|---|
-| 신규 `build_source_backtrack.py`, `tests/test_source_backtrack.py`, `docs/track_a_report.md`, `outputs/source_backtrack/**`, `data/kakao_geocode_cache/**` | `optimize_early_prediction.py`, `compare_operational_grid_sizes.py`, `sensitivity_early_prediction.py`, 신규 `run_ablation.py`, `administrative_agent/**`, `streamlit_app.py`, `demo/**`, `PROJECT_CONTEXT.md`, `README.md` | 이 문서, `tools/validate_backtrack_output.py`, `tests/test_backtrack_contract.py`, `tests/fixtures/**`, `build_odor_ai_mvp.py`, `.gitignore` |
+| 신규 `build_source_backtrack.py`, `tests/test_source_backtrack.py`, `docs/track_a_report.md`, `outputs/source_backtrack/**`, `data/vworld_geocode_cache/**`, `data/kakao_geocode_cache/**` | `optimize_early_prediction.py`, `compare_operational_grid_sizes.py`, `sensitivity_early_prediction.py`, 신규 `run_ablation.py`, `administrative_agent/**`, `streamlit_app.py`, `demo/**`, `PROJECT_CONTEXT.md`, `README.md` | 이 문서, `tools/validate_backtrack_output.py`, `tests/test_backtrack_contract.py`, `tests/fixtures/**`, `build_odor_ai_mvp.py`, `.gitignore` |
 | `fetch_kma_weather.py`: 옵션 추가만, 기존 동작·출력 파일 불변 | | |
 
 - 브랜치: A는 `feat/source-backtrack`, B는 `feat/integration-ablation`. main 직접 커밋 금지.

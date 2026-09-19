@@ -21,3 +21,4 @@ outputs/severity_expansion.*
 # Track A 발생원 테이블 (지오코딩 API 결과 저장 제한)
 outputs/source_backtrack/sources.csv
 data/geocode_cache/
+data/vworld_geocode_cache/
