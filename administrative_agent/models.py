@@ -20,6 +20,28 @@ class RiskArea:
 
 
 @dataclass(frozen=True)
+class SourceCandidate:
+    """역추적 엔진이 낸 발생원 후보. 원인 확정이 아니라 '현재 민원을 설명하는 적합도' 순위다.
+
+    계약 문서 `docs/contracts/source_backtrack_contract.md`의 `source_candidates.csv` 한 행과 같다.
+    """
+    rank: int
+    name: str
+    city: str | None = None
+    species: str | None = None
+    location_precision: str | None = None  # point / village
+    distance_km: float | None = None
+    bearing_deg: float | None = None
+    travel_time_min: float | None = None
+    wind_alignment: float | None = None
+    fit_score: float | None = None
+    evidence_text: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class ForecastResult:
     event_id: str
     event_time: datetime
@@ -33,6 +55,10 @@ class ForecastResult:
     initial_intensity_average: float | None = None
     initial_intensity_maximum: float | None = None
     weather: dict[str, float | int | None] = field(default_factory=dict)
+    # 역추적 참고 정보. 없으면 빈 튜플·None이며 문서에서 해당 절이 생략된다.
+    source_candidates: tuple[SourceCandidate, ...] = ()
+    backtrack_uncertainty: float | None = None
+    backtrack_weather_source: str | None = None
 
     def __post_init__(self) -> None:
         if self.grid_size_m != 1000:

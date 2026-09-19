@@ -16,7 +16,10 @@ from streamlit_folium import st_folium
 from administrative_agent.documents import create_response_guide
 from administrative_agent.llm import llm_configured, provider_name, refine_with_llm
 from administrative_agent.service import build_response_package, create_completed_followup
-from generate_agent_documents import DEFAULT_METRICS, DEFAULT_PREDICTIONS, forecast_from_csv
+from generate_agent_documents import (
+    DEFAULT_GRID_SCORES, DEFAULT_METRICS, DEFAULT_PREDICTIONS, DEFAULT_SOURCE_CANDIDATES,
+    forecast_from_csv, load_source_candidates,
+)
 
 
 ROOT = Path(__file__).resolve().parent
@@ -92,6 +95,8 @@ def current_forecast(event: dict):
         ROOT / DEFAULT_METRICS,
         event_id=event["id"],
         event_time=event["hour"],
+        source_candidates_path=ROOT / DEFAULT_SOURCE_CANDIDATES,
+        grid_scores_path=ROOT / DEFAULT_GRID_SCORES,
     )
     reports = event.get("reports", [])
     grid_centers = [tuple(grid["center"]) for grid in event.get("broad", [])]
@@ -238,6 +243,21 @@ with st.sidebar:
       <div class="weather-card"><span class="weather-icon">🌧️</span><div class="weather-copy"><div class="weather-label">최근 강수</div><div class="weather-value">{rainfall}</div></div></div>
     </div>''', unsafe_allow_html=True)
     st.caption("※ 기상정보는 민원 예측 모델 입력에 사용하지 않음")
+
+    # 역추적 산출물(outputs/source_backtrack)이 있을 때만 발생원 후보를 참고 정보로 보여준다.
+    candidates = load_source_candidates(ROOT / DEFAULT_SOURCE_CANDIDATES, event["hour"]) if event.get("hour") else ()
+    if candidates:
+        st.markdown('<div class="eyebrow">발생원 후보 (참고)</div>', unsafe_allow_html=True)
+        for candidate in candidates:
+            label = candidate.name + (" · 리 단위 추정" if candidate.location_precision == "village" else "")
+            detail = " · ".join(part for part in (
+                None if candidate.distance_km is None else f"{candidate.distance_km:.1f}km",
+                None if candidate.travel_time_min is None else f"도달 약 {candidate.travel_time_min:.0f}분",
+                None if candidate.wind_alignment is None else f"풍향 일치 {candidate.wind_alignment:.2f}",
+                None if candidate.fit_score is None else f"적합도 {candidate.fit_score:.2f}",
+            ) if part)
+            st.markdown(f'<div class="priority"><b>{candidate.rank}순위 · {label}</b><br><small>{detail}</small></div>', unsafe_allow_html=True)
+        st.caption("※ 현재 민원 분포를 설명하는 정도의 순위이며 원인 시설 판정이 아님")
 
     st.markdown('<div class="eyebrow">Dispatch Priority</div>', unsafe_allow_html=True)
     for idx, grid in enumerate(grids[:3], 1):
