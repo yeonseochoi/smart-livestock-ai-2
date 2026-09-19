@@ -7,6 +7,7 @@
   M1  M0 + ASOS 시간 자료로 만든 Event 이전 3시간 바람·강수 특징
   M2  M0 + Track A 역추적 점수 (outputs/source_backtrack/grid_scores.csv)
   M3  M0 점수와 source_fit_score의 후결합(late fusion, 가중합) — 가중치는 내부검증으로 선택
+  M4  M0 + 풍향 조건부 과거 민원 지도 (Event 이전 민원만, 민원 시각 풍향 8구간별 격자 빈도)
 
 모델·가중치 선택은 학습 구간 마지막 20% Event 내부검증으로만 하고 최종 테스트는 실험군당 1회다.
 Track A 산출물이 없으면 M2·M3는 건너뛰고 M0·M1만 돌린다(컬럼 부재는 오류가 아니라 분기).
@@ -46,6 +47,10 @@ DECISION_MARGIN = 0.01
 WEATHER_FEATURES = ["asos_downwind_alignment", "asos_wind_speed_3h", "asos_rain_3h", "asos_stagnation_flag"]
 # M2: Track A 계약 컬럼 중 물리적으로 설명 가능한 5개만 쓴다.
 BACKTRACK_FEATURES = ["source_fit_score", "forward_plume_score", "lagged_wind_alignment", "rain_3h", "stagnation_flag"]
+# M4: 민원 전체 검정(test_wind_source_association.py)에서 민원 시각 풍향의 발생원 신호가 가장 강했다(시차 0h).
+# Event 하나가 아니라 과거 민원 수천 건을 풍향 구간별로 누적한 지도를 특징으로 쓴다.
+SECTOR_FEATURES = ["wind_sector_prior", "wind_sector_lift"]
+SECTOR_DEG = 45.0
 KEY = ["event_hour", "grid_x", "grid_y"]
 
 
@@ -190,6 +195,66 @@ def add_weather_features(data: pd.DataFrame, events: pd.DataFrame, weather: pd.D
         theta = bearing_deg(row.centroid_latitude, row.centroid_longitude, lat, lon)
         alignment.append(math.cos(math.radians(theta - row.asos_blowing_to_deg)))
     result["asos_downwind_alignment"] = alignment
+    return result
+
+
+# ---------------------------------------------------------------- M4: 풍향 조건부 과거 민원 지도
+
+def hourly_wind_table(asos: pd.DataFrame, center: tuple[float, float]) -> pd.DataFrame:
+    """시각별 관측소 거리 가중 평균 바람(불어오는 방향 from_deg, 풍속). 민원 중심 기준 고정 가중치."""
+    stations = asos.groupby("station_id")[["station_latitude", "station_longitude"]].first()
+    weights = {sid: 1.0 / max(haversine_km(center[0], center[1], r.station_latitude, r.station_longitude), 1.0) ** 2
+               for sid, r in stations.iterrows()}
+    work = asos.assign(w=asos["station_id"].map(weights))
+    for col in ("u", "v", "wind_speed"):
+        work[col + "_w"] = work[col] * work["w"]
+    grouped = work.groupby("datetime")[["u_w", "v_w", "wind_speed_w", "w"]].sum()
+    table = pd.DataFrame({
+        "u": grouped["u_w"] / grouped["w"], "v": grouped["v_w"] / grouped["w"], "speed": grouped["wind_speed_w"] / grouped["w"],
+    })
+    table["from_deg"] = (np.degrees(np.arctan2(-table["u"], -table["v"])) + 360.0) % 360.0
+    return table
+
+
+def add_sector_prior_features(data: pd.DataFrame, complaints: pd.DataFrame, asos: pd.DataFrame,
+                              weather: pd.DataFrame) -> pd.DataFrame:
+    """Event별로 event_hour 이전 민원(2020~, 풍속≥1)만 써서 '같은 풍향 구간일 때 격자별 민원 비율'을 만든다.
+
+    wind_sector_prior = 같은 구간 과거 민원 중 이 격자 비율, wind_sector_lift = 그 비율 ÷ 전체 과거 민원 중 이 격자 비율.
+    Event 시각 풍속<1 m/s(방향 정의 안 됨)이거나 바람 자료가 없으면 NaN.
+    """
+    gridded = sensitivity.add_grid(complaints, GRID_M)
+    gridded["hour"] = gridded["datetime"].dt.floor("h")
+    wind = hourly_wind_table(asos, (float(complaints["latitude"].median()), float(complaints["longitude"].median())))
+    gridded = gridded.join(wind[["from_deg", "speed"]], on="hour", how="inner")
+    gridded = gridded[gridded["speed"] >= 1.0].sort_values("datetime")
+    gridded["sector"] = (gridded["from_deg"] // SECTOR_DEG).astype(int) % int(360 / SECTOR_DEG)
+
+    event_wind = weather.set_index("event_hour")
+    result = data.copy()
+    result["wind_sector_prior"] = np.nan
+    result["wind_sector_lift"] = np.nan
+    for event_hour, rows in result.groupby("event_hour"):
+        if event_hour not in event_wind.index:
+            continue
+        info = event_wind.loc[event_hour]
+        if pd.isna(info["asos_blowing_to_deg"]) or info["asos_wind_speed_3h"] < 1.0:
+            continue
+        sector = int(((info["asos_blowing_to_deg"] + 180.0) % 360.0) // SECTOR_DEG) % int(360 / SECTOR_DEG)
+        history = gridded[gridded["datetime"] < event_hour]  # 누수 금지: Event 시작 전 민원만
+        if history.empty:
+            continue
+        same = history[history["sector"] == sector]
+        if same.empty:
+            continue
+        sector_counts = same.groupby(["grid_x", "grid_y"]).size()
+        all_counts = history.groupby(["grid_x", "grid_y"]).size()
+        keys = list(zip(rows["grid_x"].astype(int), rows["grid_y"].astype(int)))
+        sector_prior = np.array([sector_counts.get(k, 0) / len(same) for k in keys])
+        base_prior = np.array([all_counts.get(k, 0) / len(history) for k in keys])
+        result.loc[rows.index, "wind_sector_prior"] = sector_prior
+        with np.errstate(divide="ignore", invalid="ignore"):
+            result.loc[rows.index, "wind_sector_lift"] = np.where(base_prior > 0, sector_prior / base_prior, np.nan)
     return result
 
 
@@ -429,6 +494,8 @@ def main() -> None:
     weather = event_weather(events, asos) if asos is not None else None
     if weather is not None:
         data = add_weather_features(data, events, weather, meta)
+        complaints_all, _, _, _, _ = odor.load_inputs()
+        data = add_sector_prior_features(data, complaints_all, asos, weather)
     else:
         data["asos_source"] = "none"
 
@@ -441,6 +508,7 @@ def main() -> None:
     arms["M0"] = run_arm("M0", data, list(sensitivity.FEATURES), train_ids)
     if weather is not None:
         arms["M1"] = run_arm("M1", data, list(sensitivity.FEATURES) + WEATHER_FEATURES, train_ids)
+        arms["M4"] = run_arm("M4", data, list(sensitivity.FEATURES) + SECTOR_FEATURES, train_ids)
     if scores is not None:
         arms["M2"] = run_arm("M2", data, list(sensitivity.FEATURES) + BACKTRACK_FEATURES, train_ids)
         # M3: M0 모델은 그대로 두고 점수만 후결합. 가중치는 M0의 내부검증 구간에서 고른다.

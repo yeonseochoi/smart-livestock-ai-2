@@ -12,6 +12,7 @@ Eckmann et al. (2017)처럼 확산 모델 없이 반복 관측 × 풍향 통계�
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -165,5 +166,116 @@ def main() -> None:
     (OUTPUT_DIR / "result.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__" and not sys.argv[1:]:
     main()
+
+
+# ---------------------------------------------------------------- 거리별 시차(τ = d/u) 가설 직접 검정
+
+BANDS_KM = ((0.0, 2.0), (2.0, 4.0), (4.0, 6.0), (6.0, 8.0), (8.0, 10.0))
+MAX_LAG_H = 3
+
+
+def band_bins(complaints: pd.DataFrame, sources: pd.DataFrame) -> list[np.ndarray]:
+    """거리 구간별로 bearing_bins를 따로 만든다. 구간마다 다른 시차의 풍향을 적용하기 위해서다."""
+    global RADIUS_KM
+    saved = RADIUS_KM
+    cumulative = []
+    try:
+        for _, hi in BANDS_KM:
+            RADIUS_KM = hi
+            cumulative.append(bearing_bins(complaints, sources))
+    finally:
+        RADIUS_KM = saved
+    out, previous = [], np.zeros_like(cumulative[0])
+    for bins in cumulative:
+        out.append(bins - previous)
+        previous = bins
+    return out
+
+
+def lag_index(mode: str, lo: float, hi: float, speed0: np.ndarray) -> np.ndarray:
+    """mode='travel': 구간 중앙 거리 ÷ 민원 시각 풍속 = τ(시간, 반올림, 0~3h). 'lag0'/'lag1': 고정."""
+    if mode == "travel":
+        tau_h = ((lo + hi) / 2) * 1000.0 / np.maximum(speed0, 0.5) / 3600.0
+        return np.clip(np.rint(tau_h), 0, MAX_LAG_H).astype(int)
+    return np.full(len(speed0), int(mode[-1]))
+
+
+def statistic(bins_by_band: list[np.ndarray], bands, from_by_lag: np.ndarray, speed0: np.ndarray, mode: str) -> float:
+    total = np.zeros(len(speed0))
+    rows = np.arange(len(speed0))
+    for (lo, hi), bins in zip(bands, bins_by_band):
+        lag = lag_index(mode, lo, hi, speed0)
+        total += upwind_weight(bins, from_by_lag[rows, lag])
+    return float(total.mean())
+
+
+def stratified_permutation(strata: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+    perm = np.arange(len(strata))
+    for key in np.unique(strata):
+        idx = np.where(strata == key)[0]
+        perm[idx] = idx[rng.permutation(len(idx))]
+    return perm
+
+
+def compare_modes(bins_by_band, bands, from_by_lag, speed0, strata, modes, rng, permutations) -> dict:
+    """셔플은 민원 사이에서 '바람 이력 전체(0~3h 풍향 + 풍속)'를 통째로 바꿔 τ 계산의 내부 일관성을 지킨다."""
+    out = {}
+    perms = [stratified_permutation(strata, rng) for _ in range(permutations)]
+    for mode in modes:
+        real = statistic(bins_by_band, bands, from_by_lag, speed0, mode)
+        shuffled = np.asarray([statistic(bins_by_band, bands, from_by_lag[p], speed0[p], mode) for p in perms])
+        out[mode] = {
+            "real_mean": real, "shuffled_mean": float(shuffled.mean()),
+            "ratio_real_over_shuffled": real / max(shuffled.mean(), 1e-9),
+            "z": (real - shuffled.mean()) / max(shuffled.std(), 1e-9),
+            "p_value_one_sided": float((np.sum(shuffled >= real) + 1) / (permutations + 1)),
+        }
+    return out
+
+
+def run_travel_lag_test(complaints: pd.DataFrame, wind: pd.DataFrame, sources: pd.DataFrame,
+                        rng: np.random.Generator) -> dict:
+    frame = complaints.copy()
+    for lag in range(MAX_LAG_H + 1):
+        ref = frame["hour"] - pd.Timedelta(hours=lag)
+        frame[f"from_{lag}"] = wind["from_deg"].reindex(ref.to_numpy()).to_numpy()
+        if lag == 0:
+            frame["speed0"] = wind["speed"].reindex(ref.to_numpy()).to_numpy()
+    frame = frame.dropna(subset=[f"from_{lag}" for lag in range(MAX_LAG_H + 1)] + ["speed0"])
+    frame = frame[frame["speed0"] >= MIN_WIND]
+    bins_by_band = [b[frame.index.to_numpy()] for b in band_bins(complaints, sources)]
+    from_by_lag = frame[[f"from_{lag}" for lag in range(MAX_LAG_H + 1)]].to_numpy(float)
+    speed0 = frame["speed0"].to_numpy(float)
+    strata = (frame["hour"].dt.month.astype(str) + "-" + (frame["hour"].dt.hour // 6).astype(str)).to_numpy()
+
+    results = {"n": int(len(frame)), "bands_km": BANDS_KM}
+    results["all_bands"] = compare_modes(bins_by_band, BANDS_KM, from_by_lag, speed0, strata,
+                                         ("lag0", "lag1", "travel"), rng, PERMUTATIONS)
+    for mode, r in results["all_bands"].items():
+        print(f"all bands {mode:7s} n={len(frame)} ratio={r['ratio_real_over_shuffled']:.4f} z={r['z']:+.2f} p={r['p_value_one_sided']:.3f}")
+    results["per_band"] = {}
+    for band, bins in zip(BANDS_KM, bins_by_band):
+        r = compare_modes([bins], [band], from_by_lag, speed0, strata, ("lag0", "travel"), rng, 200)
+        results["per_band"][f"{band[0]:.0f}-{band[1]:.0f}km"] = r
+        tau = ((band[0] + band[1]) / 2) * 1000.0 / np.maximum(speed0, 0.5) / 3600.0
+        print(f"  band {band[0]:.0f}-{band[1]:.0f}km (median tau {np.median(tau):.2f}h)  lag0 ratio={r['lag0']['ratio_real_over_shuffled']:.3f} z={r['lag0']['z']:+.1f} | travel ratio={r['travel']['ratio_real_over_shuffled']:.3f} z={r['travel']['z']:+.1f}")
+    return results
+
+
+def main_travel() -> None:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    rng = np.random.default_rng(SEED)
+    complaints = load_complaints()
+    sources = pd.read_csv(SOURCES_PATH, encoding="utf-8-sig").dropna(subset=["latitude", "longitude"])
+    sources = sources[sources["emission_weight"] > 0]
+    asos = ab.load_asos()
+    center = (float(complaints["latitude"].median()), float(complaints["longitude"].median()))
+    wind = hourly_wind(asos, center)
+    results = run_travel_lag_test(complaints, wind, sources, rng)
+    (OUTPUT_DIR / "travel_lag_result.json").write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+if __name__ == "__main__" and sys.argv[1:] == ["--travel-lag"]:
+    main_travel()
