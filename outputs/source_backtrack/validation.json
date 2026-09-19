@@ -1,0 +1,87 @@
+{
+  "random_wind_contrast": {
+    "all": {
+      "real_percentile": 0.5060593945315265,
+      "shuffled_mean": 0.5015629482149865,
+      "mean_difference": 0.004496446316540004,
+      "p_value": 0.15841584158415842
+    },
+    "dry": {
+      "real_percentile": 0.5041465733263352,
+      "shuffled_mean": 0.5014752114311612,
+      "mean_difference": 0.002671361895173918,
+      "p_value": 0.32673267326732675
+    },
+    "wet": {
+      "real_percentile": 0.5237964638887558,
+      "shuffled_mean": 0.5023765074831852,
+      "mean_difference": 0.021419956405570595,
+      "p_value": 0.18811881188118812
+    }
+  },
+  "direction_sensitivity": {
+    "10": 0.8628318584070795,
+    "20": 0.7212389380530974,
+    "30": 0.6091445427728615
+  },
+  "direction_sensitivity_by_condition": {
+    "all": {
+      "10": 0.8628318584070795,
+      "20": 0.7212389380530974,
+      "30": 0.6091445427728615
+    },
+    "dry": {
+      "10": 0.8676470588235294,
+      "20": 0.7271241830065358,
+      "30": 0.6143790849673202
+    },
+    "wet": {
+      "10": 0.8181818181818182,
+      "20": 0.6666666666666665,
+      "30": 0.5606060606060606
+    }
+  },
+  "facility_lift_top10pct": 0.5256077147631371,
+  "facility_lift_top10pct_by_condition": {
+    "all": 0.5256077147631371,
+    "dry": 0.5320901145715287,
+    "wet": 0.36768208734837754
+  },
+  "geocoding": {
+    "iksan_point_rate": 0.9313338595106551,
+    "iksan_point": 1180,
+    "iksan_total": 1267,
+    "gimje_point": 184,
+    "gimje_village_rate": 0.8847023360964582,
+    "gimje_village": 1174,
+    "gimje_village_total": 1327
+  },
+  "constants": {
+    "SPECIES_WEIGHT": {
+      "돼지": 1.0,
+      "한우": 0.3,
+      "육우": 0.3,
+      "젖소": 0.4,
+      "염소": 0.1,
+      "산양": 0.1,
+      "사슴": 0.1,
+      "육계": 0.01,
+      "종계/산란계": 0.01,
+      "오리": 0.01,
+      "메추리": 0.01,
+      "부화용알생산": 0.01
+    },
+    "L_km": {
+      "fast": 1.5,
+      "moderate": 2.5,
+      "slow_or_night": 4.0
+    },
+    "min_wind_speed": 0.5,
+    "max_travel_hours": 3.0
+  },
+  "method_notes": {
+    "wind_direction": "KMA wind-from direction converted to downwind by adding 180 degrees",
+    "stagnation": "ASOS hourly phase: wind speed <1 m/s only; 30-minute direction SD unavailable",
+    "random_contrast": "candidate-grid ranks are recomputed for each of 100 event-profile wind shuffles"
+  }
+}
