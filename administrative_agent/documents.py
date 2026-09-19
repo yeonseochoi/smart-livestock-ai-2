@@ -82,6 +82,38 @@ def source_candidate_lines(forecast: ForecastResult, heading: str) -> list[str]:
     return lines
 
 
+def onset_alert_lines(forecast: ForecastResult, heading: str) -> list[str]:
+    """사전 경보 절. 발생 위험 예보(1단) 격자가 없으면 빈 목록을 돌려 절을 생략한다.
+
+    확산 예측(Top 3)과 다른 모델의 결과라는 점, 기상·발생원 노출·과거 빈도로 계산했다는 점을 밝힌다.
+    """
+    alerts = forecast.onset_alerts
+    if not alerts:
+        return []
+    reference = forecast.onset_reference_time
+    when = f"{reference:%H:%M}" if reference else "기준시각 1시간 전"
+    lines = [
+        "", heading, "",
+        f"민원이 접수되기 전인 {when} 시점에, 기상(풍향·풍속·강수·기온)·상풍측 6km 축산 발생원 노출·격자별 과거 민원 빈도로 계산한 '다음 1시간 발생 위험' 상위 격자입니다. "
+        "위 확산 예측(Top 3)과는 다른 모델(발생 위험 예보 원형)의 결과이며, 두 결과가 겹치는 격자는 우선 확인 근거가 하나 더 있는 것으로 볼 수 있습니다.", "",
+        "|순위|격자|상대위험|상풍측 축산 노출 비율|", "|---:|---|---:|---:|",
+    ]
+    top3 = {area.grid_id for area in forecast.areas}
+    for cell in alerts:
+        share = "미제공" if cell.upwind_share is None else f"{cell.upwind_share:.0%}"
+        mark = " (확산 예측 Top 3와 일치)" if cell.grid_id in top3 else ""
+        lines.append(f"|{cell.rank}|{_location(cell)}{mark}|{cell.relative_risk}/100|{share}|")
+    quiet = alerts[0].quiet_hour
+    lines += [
+        "", "- 상대위험은 같은 시각 격자 중 최고를 100으로 둔 상대값이며 발생 확률이 아닙니다.",
+        "- 상풍측 축산 노출 비율은 격자 6km 안 축산 시설 배출 가중치(EMEP/EEA NH3 계수 × 사육두수) 중 그 시각 바람이 불어오는 쪽(±30°)의 비율입니다.",
+    ]
+    if quiet is not None:
+        lines.append("- 이 시각은 직전 3시간 동안 시 전체 민원이 없던 '조용한 시각'" + ("입니다." if quiet else "이 아닙니다(이미 민원이 이어지던 상황).")
+                     + " 조용한 시각의 상위 5 격자 적중률은 검증 구간에서 0.58 수준(참고)입니다.")
+    return lines
+
+
 def _time_windows(forecast: ForecastResult) -> tuple[str, str]:
     boundary = forecast.event_time + timedelta(minutes=forecast.forecast_minutes)
     end = boundary + timedelta(minutes=forecast.forecast_minutes)
@@ -120,9 +152,17 @@ def create_briefing(forecast: ForecastResult) -> str:
         f"- 풍속: {_value(weather.get('windSpeed'), 'm/s')}",
         f"- 상대습도: {_value(weather.get('humidity'), '%')}",
         f"- 최근 1시간 강수량: {_value(weather.get('rainfall'), 'mm')}",
-        "- 기상정보는 현장 판단용 참고정보이며 현재 민원 예측모델 입력에는 사용하지 않음",
-        *source_candidate_lines(forecast, "## 4. 발생원 후보 (참고)"), "",
-        f"## {5 if forecast.source_candidates else 4}. 상황 판단", "",
+        "- 기상정보는 확산 예측(Top 3) 모델 입력에는 쓰지 않음(검증 결과 개선 없음). 아래 참고 절이 있으면 그 계산에는 사용됨",
+    ]
+    section = 4
+    if forecast.source_candidates:
+        lines += source_candidate_lines(forecast, f"## {section}. 발생원 후보 (참고)")
+        section += 1
+    if forecast.onset_alerts:
+        lines += onset_alert_lines(forecast, f"## {section}. 사전 경보 (참고)")
+        section += 1
+    lines += [
+        "", f"## {section}. 상황 판단", "",
         "현재 민원 분포와 AI 예측 결과를 고려하여 1순위 권역을 우선 확인대상으로 검토하고, 현장 상황과 기상조건에 따라 2·3순위 권역을 순차적으로 확인할 필요가 있습니다.", "",
         f"> **주의:** {DISCLAIMER}",
     ]

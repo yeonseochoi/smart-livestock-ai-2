@@ -17,8 +17,8 @@ from administrative_agent.documents import create_response_guide
 from administrative_agent.llm import llm_configured, provider_name, refine_with_llm
 from administrative_agent.service import build_response_package, create_completed_followup
 from generate_agent_documents import (
-    DEFAULT_GRID_SCORES, DEFAULT_METRICS, DEFAULT_PREDICTIONS, DEFAULT_SOURCE_CANDIDATES,
-    forecast_from_csv, load_source_candidates,
+    DEFAULT_GRID_SCORES, DEFAULT_METRICS, DEFAULT_ONSET_ALERTS, DEFAULT_PREDICTIONS, DEFAULT_SOURCE_CANDIDATES,
+    forecast_from_csv, load_onset_alerts, load_source_candidates,
 )
 
 
@@ -97,6 +97,7 @@ def current_forecast(event: dict):
         event_time=event["hour"],
         source_candidates_path=ROOT / DEFAULT_SOURCE_CANDIDATES,
         grid_scores_path=ROOT / DEFAULT_GRID_SCORES,
+        onset_alerts_path=ROOT / DEFAULT_ONSET_ALERTS,
     )
     reports = event.get("reports", [])
     grid_centers = [tuple(grid["center"]) for grid in event.get("broad", [])]
@@ -242,7 +243,18 @@ with st.sidebar:
       <div class="weather-card"><span class="weather-icon">💧</span><div class="weather-copy"><div class="weather-label">상대습도</div><div class="weather-value">{humidity}</div></div></div>
       <div class="weather-card"><span class="weather-icon">🌧️</span><div class="weather-copy"><div class="weather-label">최근 강수</div><div class="weather-value">{rainfall}</div></div></div>
     </div>''', unsafe_allow_html=True)
-    st.caption("※ 기상정보는 민원 예측 모델 입력에 사용하지 않음")
+    st.caption("※ 기상정보는 확산 예측(Top 3) 입력에는 쓰지 않음(검증 결과 개선 없음). 사전 경보·발생원 후보 계산에만 사용")
+
+    # 발생 위험 예보(1단 원형) 산출물(outputs/onset_risk/onset_alerts.csv)이 있을 때만 기준시각 1시간 전 위험 상위 격자를 보여준다.
+    alerts, alert_reference = load_onset_alerts(ROOT / DEFAULT_ONSET_ALERTS, event["hour"]) if event.get("hour") else ((), None)
+    if alerts:
+        st.markdown('<div class="eyebrow">사전 경보 (참고)</div>', unsafe_allow_html=True)
+        st.caption(f"{alert_reference:%H:%M} 시점 기상·발생원 노출·과거 빈도 기준 '다음 1시간 발생 위험' 상위 격자")
+        top3 = {f"G{int(grid['grid_x']):+d}:{int(grid['grid_y']):+d}" for grid in grids[:3] if "grid_x" in grid}
+        for cell in alerts:
+            share = "" if cell.upwind_share is None else f" · 상풍측 축산 노출 {cell.upwind_share:.0%}"
+            mark = " · 확산 예측 Top 3와 일치" if cell.grid_id in top3 else ""
+            st.markdown(f'<div class="priority"><b>{cell.rank}순위 · {cell.grid_id}</b><br><small>상대위험 {cell.relative_risk}/100{share}{mark}</small></div>', unsafe_allow_html=True)
 
     # 역추적 산출물(outputs/source_backtrack)이 있을 때만 발생원 후보를 참고 정보로 보여준다.
     candidates = load_source_candidates(ROOT / DEFAULT_SOURCE_CANDIDATES, event["hour"]) if event.get("hour") else ()

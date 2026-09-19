@@ -9,13 +9,17 @@
   R1  R0 + 기상(풍속·풍향 sin/cos·강수 1h/3h·기온·습도·정체·야간)
   R2  R1 + 발생원 노출(상풍측 6km 가중치 합, 전방위 6km 가중치 합, 그 비율) — 계수 세트 2벌(EEA NH3, 시설 수)
   R3  R2 + 건물 밀도(outputs/grid_buildings/grid_buildings_1km.csv, 있을 때만)
+  R2s R2 + 축산 외 발생원(공장·하수처리, 시설 수) 상풍측/전방위 6km 수
+  R2w R2 + 대기안정도(Pasquill-Gifford 등급, ASOS 산정; outputs/weather_integration/asos_hourly_stability_2020_2026.csv 있을 때만)
+  R4  R3 + 축산 외 발생원 + 대기안정도
 
 분할: 시간순. 학습 2020-01~2024-12, 테스트 2025-01~2026-07. 음성(민원 없음) 행은 학습에서 3% 표본 추출.
 평가: (1) 테스트(민원 있던 시각 전 격자) PR-AUC, (2) 민원이 1건 이상 있던 시각마다 위험 상위 K 격자 적중률(Hit@K, K=5·10),
       (3) 선행 시간: 공통 Event 160개 중 테스트 구간 Event의 첫 민원 격자가 event_hour-1h 시점 상위 10위 안에 있던 비율.
 누수 금지: 모든 특징은 t 이전 정보만. 과거 빈도는 t 미만 민원, 기상은 t 정시 관측(t 이후 값 없음).
 
-실행: python run_onset_risk.py [--neg-rate 0.03] [--radius-km 6]
+실행: python run_onset_risk.py [--neg-rate 0.03] [--radius-km 6] [--wind-window lag,window,simple|speed] [--tag 이름]
+  --wind-window 은 발생원 노출 계산에 쓰는 참조 풍향만 바꾼다(기본 0,1,speed = t 정시 바람). 기상 특징 자체는 t 정시 그대로.
 """
 from __future__ import annotations
 
@@ -47,15 +51,40 @@ PRIOR_FEATURES = ["cell_rate_365d", "cell_rate_30d", "cell_recent_24h", "city_ra
 WEATHER_FEATURES = ["wind_speed", "wind_from_sin", "wind_from_cos", "rain_1h", "rain_3h", "temperature", "humidity", "stagnation"]
 SOURCE_FEATURES = ["upwind_eea_6km", "total_eea_6km", "upwind_share_eea", "upwind_count_6km", "total_count_6km", "upwind_share_count"]
 BUILDING_FEATURES = ["building_count", "residential_count", "commercial_count"]
+NON_LIVESTOCK_FEATURES = ["upwind_factory_6km", "total_factory_6km", "upwind_wastewater_6km", "total_wastewater_6km"]
+STABILITY_FEATURES = ["stability_pg", "stable_flag"]
+STABILITY = Path("outputs/weather_integration/asos_hourly_stability_2020_2026.csv")
+STABILITY_CODE = {"A": 1, "B": 2, "C": 3, "D": 4, "E": 5, "F": 6}
 ARMS = {
     "R0": TIME_FEATURES + PRIOR_FEATURES,
     "R1": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES,
     "R2": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES,
     "R3": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + BUILDING_FEATURES,
+    "R2s": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + NON_LIVESTOCK_FEATURES,
+    "R2w": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + STABILITY_FEATURES,
+    "R4": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + BUILDING_FEATURES + NON_LIVESTOCK_FEATURES + STABILITY_FEATURES,
 }
 
 
-def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+def reference_wind(wind: pd.DataFrame, spec: dict | None) -> pd.DataFrame:
+    """발생원 노출용 참조 풍향. spec 없으면 t 정시 바람. 있으면 wind_window_sweep.window_reference(lag, window, weighting)."""
+    if not spec or (spec["lag"] == 0 and spec["window"] == 1):
+        return wind[["from_deg", "speed"]]
+    import wind_window_sweep as wws
+    base = wind.rename(columns={"rainfall_hour": "rain"})[["u", "v", "speed", "from_deg", "rain"]]
+    return wws.window_reference(base, spec["lag"], spec["window"], spec["weighting"])[["from_deg", "speed"]]
+
+
+def load_stability_series() -> pd.Series:
+    if not STABILITY.exists():
+        return pd.Series(dtype=object)
+    frame = pd.read_csv(STABILITY, parse_dates=["datetime"]).dropna(subset=["stability_class"])
+    frame["priority"] = np.where(frame["station_id"] == 146, 0, 1)  # 전주 우선, 없으면 군산
+    frame = frame.sort_values(["datetime", "priority"]).drop_duplicates("datetime")
+    return frame.set_index("datetime")["stability_class"]
+
+
+def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, wind_spec: dict | None = None) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     complaints, _, _, _, _ = odor.load_inputs()
     meta = {"lat0": float(complaints["latitude"].median()), "lon0": float(complaints["longitude"].median()), "grid_m": GRID_M}
     gridded = sensitivity.add_grid(complaints, GRID_M)
@@ -127,24 +156,48 @@ def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator) -> 
     panel["humidity"] = w["humidity"].to_numpy()
     panel["stagnation"] = (w["speed"].to_numpy() < 1.0).astype(int)
     panel["wind_from_deg"] = w["from_deg"].to_numpy()
+    ref = reference_wind(wind, wind_spec).reindex(panel["hour"].to_numpy())
+    panel["ref_from_deg"] = ref["from_deg"].to_numpy()
+    panel["ref_speed"] = ref["speed"].to_numpy()
+
+    # 대기안정도(Pasquill-Gifford A~F → 1~6, 안정 E·F 플래그). 파일 없으면 NaN.
+    stability = load_stability_series()
+    panel["stability_pg"] = panel["hour"].map(stability).map(STABILITY_CODE) if len(stability) else np.nan
+    panel["stable_flag"] = np.where(panel["stability_pg"].isna(), np.nan, (panel["stability_pg"] >= 5).astype(float))
 
     # 발생원 노출: 격자 중심 기준 방위 구간별 가중치(계수 2벌) → t의 풍향으로 상풍측 합
     raw_sources = pd.read_csv(assoc.SOURCES_PATH, encoding="utf-8-sig").dropna(subset=["latitude", "longitude"])
+    if "source_type" not in raw_sources.columns:
+        raw_sources["source_type"] = "livestock"
+    livestock = raw_sources[raw_sources["source_type"] == "livestock"]
     assoc.RADIUS_KM = radius_km
     cell_frame = cells.rename(columns={"center_latitude": "latitude", "center_longitude": "longitude"})
-    for tag, set_name in (("eea", "eea_nh3"), ("count", "count")):
-        src = sw.apply_weight_set(raw_sources, set_name)
-        src = src[src["emission_weight"] > 0]
+    from_deg = np.nan_to_num(panel["ref_from_deg"].to_numpy(), nan=0.0)
+    has_direction = panel["ref_speed"].to_numpy() >= 1.0  # 정체 시 방향 없음
+
+    def exposure(src: pd.DataFrame, tag: str, share: bool) -> None:
         bins = assoc.bearing_bins(cell_frame, src)
         cell_bins = bins[panel["cell_id"].to_numpy()]
-        from_deg = np.nan_to_num(panel["wind_from_deg"].to_numpy(), nan=0.0)
-        upwind = assoc.upwind_weight(cell_bins, from_deg)
-        upwind = np.where(panel["wind_speed"].to_numpy() >= 1.0, upwind, np.nan)  # 정체 시 방향 없음
+        upwind = np.where(has_direction, assoc.upwind_weight(cell_bins, from_deg), np.nan)
         total = bins.sum(axis=1)[panel["cell_id"].to_numpy()]
         panel[f"upwind_{tag}_6km"] = upwind
         panel[f"total_{tag}_6km"] = total
-        with np.errstate(divide="ignore", invalid="ignore"):
-            panel[f"upwind_share_{tag}"] = np.where(total > 0, upwind / total, np.nan)
+        if share:
+            with np.errstate(divide="ignore", invalid="ignore"):
+                panel[f"upwind_share_{tag}"] = np.where(total > 0, upwind / total, np.nan)
+
+    for tag, set_name in (("eea", "eea_nh3"), ("count", "count")):
+        src = sw.apply_weight_set(livestock, set_name)
+        exposure(src[src["emission_weight"] > 0], tag, share=True)
+    # 축산 외 발생원: 배출 대리량 없음 → 시설 1곳 = 1
+    for kind in ("factory", "wastewater"):
+        src = raw_sources[raw_sources["source_type"] == kind].copy()
+        src["emission_weight"] = 1.0
+        if len(src):
+            exposure(src, kind, share=False)
+        else:
+            panel[f"upwind_{kind}_6km"] = np.nan
+            panel[f"total_{kind}_6km"] = np.nan
 
     # 건물 밀도(있을 때만)
     if BUILDINGS.exists():
@@ -251,10 +304,15 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--neg-rate", type=float, default=0.03)
     parser.add_argument("--radius-km", type=float, default=6.0)
+    parser.add_argument("--wind-window", default="0,1,speed", help="발생원 노출용 참조 풍향 창 'lag,window,simple|speed'")
+    parser.add_argument("--tag", default="", help="산출물 파일 이름 접미사(실험 구분용)")
+    parser.add_argument("--arms", default="", help="실행할 실험군 쉼표 목록(기본 전체)")
     args = parser.parse_args()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(0)
-    panel, cells, meta = build_panel(args.neg_rate, args.radius_km, rng)
+    lag, window, weighting = args.wind_window.split(",")
+    wind_spec = {"lag": int(lag), "window": int(window), "weighting": weighting}
+    panel, cells, meta = build_panel(args.neg_rate, args.radius_km, rng, wind_spec)
     train, test = panel[panel["is_train"]], panel[~panel["is_train"]]
     events = first_cells_of_events(cells)
     summary = {
@@ -262,9 +320,17 @@ def main() -> None:
         "test_rows": int(len(test)), "test_positives": int(test["target"].sum()),
         "test_hours_with_complaints": int(test.loc[test["target"] == 1, "hour"].nunique()),
         "test_quiet_hours_with_complaints": int(test.loc[(test["target"] == 1) & (test["city_quiet_3h"] == 1), "hour"].nunique()),
-        "neg_rate": args.neg_rate, "radius_km": args.radius_km, "buildings_available": bool(BUILDINGS.exists()), "arms": {},
+        "neg_rate": args.neg_rate, "radius_km": args.radius_km, "buildings_available": bool(BUILDINGS.exists()),
+        "stability_available": bool(STABILITY.exists()), "wind_window": wind_spec, "arms": {},
     }
-    arms = ARMS if BUILDINGS.exists() else {k: v for k, v in ARMS.items() if k != "R3"}
+    arms = dict(ARMS)
+    if not BUILDINGS.exists():
+        arms = {k: v for k, v in arms.items() if k not in ("R3", "R4")}
+    if not STABILITY.exists():
+        arms = {k: v for k, v in arms.items() if k not in ("R2w", "R4")}
+    if args.arms:
+        wanted = [a.strip() for a in args.arms.split(",")]
+        arms = {k: v for k, v in arms.items() if k in wanted}
     for name, features in arms.items():
         per_seed, importances, scores = [], [], []
         for seed in SEEDS:
@@ -287,8 +353,25 @@ def main() -> None:
         print(f"{name}: PR-AUC {result['pr_auc']:.4f} | Hit@5 {result['hit_at_5']:.3f} Hit@10 {result['hit_at_10']:.3f} | quiet Hit@5 {result['quiet_hit_at_5']:.3f} Hit@10 {result['quiet_hit_at_10']:.3f}")
     baseline = summary["test_positives"] / max(summary["test_rows"], 1)
     summary["test_positive_rate"] = baseline
-    (OUTPUT_DIR / "metrics.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    # 서비스 연결용: 채택 실험군(R2, 없으면 마지막)의 테스트 시각별 위험 상위 10 격자. 격자 중심 좌표는 민원 격자 기준(발생원 좌표 아님).
+    export_arm = "R2" if "R2" in summary["arms"] else list(summary["arms"])[-1]
+    export_features = summary["arms"][export_arm]["features"]
+    export_scores = np.mean([fit(train, export_features, seed).predict_proba(test[export_features])[:, 1] for seed in SEEDS], axis=0)
+    alerts = test[["hour", "grid_x", "grid_y", "center_latitude", "center_longitude", "city_quiet_3h",
+                   "wind_from_deg", "wind_speed", "upwind_share_eea", "upwind_eea_6km", "target"]].copy()
+    alerts["risk_score"] = export_scores
+    alerts["rank"] = alerts.groupby("hour")["risk_score"].rank(ascending=False, method="first").astype(int)
+    alerts = alerts[alerts["rank"] <= 10].sort_values(["hour", "rank"])
+    hour_max = alerts.groupby("hour")["risk_score"].transform("max")
+    alerts["relative_risk"] = (100 * alerts["risk_score"] / hour_max).round().astype(int)
+    alerts["arm"] = export_arm
+    alerts.to_csv(OUTPUT_DIR / f"onset_alerts{'_' + args.tag if args.tag else ''}.csv", index=False, encoding="utf-8-sig")
+    summary["alerts_export"] = {"arm": export_arm, "hours": int(alerts["hour"].nunique()), "rows": int(len(alerts))}
+    suffix = f"_{args.tag}" if args.tag else ""
+    (OUTPUT_DIR / f"metrics{suffix}.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     lines = ["# 발생 위험 예보 원형 (1단) 소거 실험", "",
+             f"- 발생원 노출 참조 풍향 창: lag {wind_spec['lag']}h · window {wind_spec['window']}h · {wind_spec['weighting']}"
+             + (f" · 대기안정도 {'있음' if STABILITY.exists() else '없음'}"),
              f"- 격자 {summary['cells']}개, 학습 {summary['train_rows']:,}행(양성 {summary['train_positives']:,}), 테스트 {summary['test_rows']:,}행(양성 {summary['test_positives']:,}, 양성률 {baseline:.4f})",
              f"- 테스트 구간 민원 있던 시각 {summary['test_hours_with_complaints']:,}개, 그중 직전 3시간 시 전체 민원 없던 '조용한 시각' {summary['test_quiet_hours_with_complaints']:,}개. seed {list(SEEDS)} 평균.", "",
              "| 실험군 | 특징 수 | PR-AUC | Hit@5 | Hit@10 | 조용한 시각 Hit@5 | 조용한 시각 Hit@10 | Event 첫 격자 1h 전 top10 |", "|---|---:|---:|---:|---:|---:|---:|---:|"]
@@ -299,7 +382,7 @@ def main() -> None:
     lines += ["", "## 특징 중요도 상위(마지막 실험군)", ""]
     last = list(summary["arms"].values())[-1]
     lines += [f"- {k}: {v:.3f}" for k, v in last["feature_importance"].items()]
-    (OUTPUT_DIR / "onset_risk_table.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (OUTPUT_DIR / f"onset_risk_table{suffix}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
 
 

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from administrative_agent.models import ForecastResult, RiskArea, SourceCandidate
+from administrative_agent.models import ForecastResult, OnsetAlertCell, RiskArea, SourceCandidate
 from administrative_agent.service import build_response_package, write_response_package
 
 DEFAULT_PREDICTIONS = Path("outputs/operational_grid_comparison/test_predictions.csv")
@@ -16,6 +16,7 @@ DEFAULT_METRICS = Path("outputs/operational_grid_comparison/metrics.json")
 DEFAULT_OUTPUT = Path("outputs/administrative_agent")
 DEFAULT_SOURCE_CANDIDATES = Path("outputs/source_backtrack/source_candidates.csv")
 DEFAULT_GRID_SCORES = Path("outputs/source_backtrack/grid_scores.csv")
+DEFAULT_ONSET_ALERTS = Path("outputs/onset_risk/onset_alerts.csv")
 
 
 def _relative_scores(scores: pd.Series) -> list[int]:
@@ -74,9 +75,34 @@ def load_backtrack_context(path: Path | None, event_hour: pd.Timestamp) -> tuple
     return _optional_float(rows["backtrack_uncertainty"].mean()), (None if source.empty else str(source.iloc[0]))
 
 
+def load_onset_alerts(path: Path | None, event_hour: pd.Timestamp, limit: int = 5,
+                      lead_hours: int = 1) -> tuple[tuple[OnsetAlertCell, ...], pd.Timestamp | None]:
+    """`onset_alerts.csv`(run_onset_risk.py)에서 event_hour-lead_hours 시각의 위험 상위 격자를 읽는다. 없으면 빈 튜플."""
+    if path is None or not path.exists():
+        return (), None
+    table = pd.read_csv(path, encoding="utf-8-sig")
+    table["hour"] = pd.to_datetime(table["hour"])
+    reference = pd.Timestamp(event_hour) - pd.Timedelta(hours=lead_hours)
+    rows = table[table["hour"] == reference].sort_values("rank").head(limit)
+    if rows.empty:
+        return (), None
+    cells = tuple(
+        OnsetAlertCell(
+            rank=int(row["rank"]), grid_id=f"G{int(row['grid_x']):+d}:{int(row['grid_y']):+d}",
+            relative_risk=int(row["relative_risk"]),
+            center_latitude=_optional_float(row.get("center_latitude")), center_longitude=_optional_float(row.get("center_longitude")),
+            upwind_share=_optional_float(row.get("upwind_share_eea")),
+            quiet_hour=None if pd.isna(row.get("city_quiet_3h")) else bool(int(row["city_quiet_3h"])),
+        )
+        for _, row in rows.iterrows()
+    )
+    return cells, reference
+
+
 def forecast_from_csv(
     path: Path, metrics_path: Path, event_id: str | None = None, event_time: str | None = None,
     source_candidates_path: Path | None = DEFAULT_SOURCE_CANDIDATES, grid_scores_path: Path | None = DEFAULT_GRID_SCORES,
+    onset_alerts_path: Path | None = DEFAULT_ONSET_ALERTS,
 ) -> ForecastResult:
     predictions = pd.read_csv(path)
     required = {"event_id", "event_hour", "grid_x", "grid_y", "score", "grid_m"}
@@ -116,6 +142,7 @@ def forecast_from_csv(
     )
     event_hour = event.iloc[0]["event_hour"]
     uncertainty, weather_source = load_backtrack_context(grid_scores_path, event_hour)
+    onset_alerts, onset_reference = load_onset_alerts(onset_alerts_path, event_hour)
     return ForecastResult(
         event_id=str(selected_id), event_time=event_hour.to_pydatetime(),
         forecast_minutes=30, grid_size_m=1000, areas=areas,
@@ -123,6 +150,7 @@ def forecast_from_csv(
         generated_at=datetime.now(),
         source_candidates=load_source_candidates(source_candidates_path, event_hour),
         backtrack_uncertainty=uncertainty, backtrack_weather_source=weather_source,
+        onset_alerts=onset_alerts, onset_reference_time=None if onset_reference is None else onset_reference.to_pydatetime(),
     )
 
 
@@ -135,10 +163,13 @@ def main() -> None:
     parser.add_argument("--source-candidates", type=Path, default=DEFAULT_SOURCE_CANDIDATES,
                         help="Track A source_candidates.csv. 없으면 발생원 후보 절을 생략한다")
     parser.add_argument("--grid-scores", type=Path, default=DEFAULT_GRID_SCORES)
+    parser.add_argument("--onset-alerts", type=Path, default=DEFAULT_ONSET_ALERTS,
+                        help="run_onset_risk.py의 onset_alerts.csv. 없으면 사전 경보 절을 생략한다")
     args = parser.parse_args()
     package = build_response_package(forecast_from_csv(
         args.predictions, args.metrics, args.event_id,
         source_candidates_path=args.source_candidates, grid_scores_path=args.grid_scores,
+        onset_alerts_path=args.onset_alerts,
     ))
     write_response_package(package, args.output)
     print(f"행정 대응 문서 생성 완료: {args.output.resolve()}")

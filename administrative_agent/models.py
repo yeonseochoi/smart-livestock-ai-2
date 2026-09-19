@@ -42,6 +42,25 @@ class SourceCandidate:
 
 
 @dataclass(frozen=True)
+class OnsetAlertCell:
+    """발생 위험 예보(1단 원형, run_onset_risk.py)의 기준시각 1시간 전 위험 상위 격자 한 칸.
+
+    `outputs/onset_risk/onset_alerts.csv` 한 행과 같다. 확산 예측(Top 3)과 별개의 참고 정보다.
+    """
+    rank: int
+    grid_id: str
+    relative_risk: int  # 같은 시각 최고 위험 = 100
+    center_latitude: float | None = None
+    center_longitude: float | None = None
+    region_name: str | None = None
+    upwind_share: float | None = None  # 6km 안 축산 배출 가중치 중 상풍측 비율(0~1)
+    quiet_hour: bool | None = None  # 직전 3시간 시 전체 민원 없음
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class ForecastResult:
     event_id: str
     event_time: datetime
@@ -59,6 +78,9 @@ class ForecastResult:
     source_candidates: tuple[SourceCandidate, ...] = ()
     backtrack_uncertainty: float | None = None
     backtrack_weather_source: str | None = None
+    # 발생 위험 예보(1단) 참고 정보. 없으면 빈 튜플이며 문서에서 해당 절이 생략된다.
+    onset_alerts: tuple[OnsetAlertCell, ...] = ()
+    onset_reference_time: datetime | None = None
 
     def __post_init__(self) -> None:
         if self.grid_size_m != 1000:
@@ -72,6 +94,8 @@ class ForecastResult:
         result = asdict(self)
         result["event_time"] = self.event_time.isoformat()
         result["generated_at"] = self.generated_at.isoformat()
+        if self.onset_reference_time is not None:
+            result["onset_reference_time"] = self.onset_reference_time.isoformat()
         return result
 
 
