@@ -25,8 +25,12 @@
   --wind-window 은 발생원 노출 계산에 쓰는 참조 풍향만 바꾼다(기본 0,1,speed = t 정시 바람). 기상 특징 자체는 t 정시 그대로.
   --label-type all|livestock|factory|sewage : 양성 라벨을 그 악취종류 민원으로 제한(음성·과거 빈도 특징은 전체 민원 그대로).
   --seeds N : seed 수(기본 3, 순서 42,7,123,0,1,2,...).
-  --wind-source asos|aws|both : 바람 관측 자료원(wind_sources.py). 기본 asos(전주·군산). aws = 익산·함라·여산·김제·진봉 5지점.
-  --wind-mode center|local : center = 민원 중심점 한 곳의 거리 가중(현행), local = 격자 중심마다 거리 가중(IDW). 기온·습도·강수는 항상 center.
+  --wind-source asos|aws|both : 바람 관측 자료원(wind_sources.py). 기본 both(전주·군산 ASOS + 익산·함라·여산·김제·진봉 AWS).
+  --wind-mode center|local : center = 민원 중심점 한 곳의 거리 가중(구 방식), local(기본) = 격자 중심마다 거리 가중(IDW). 기온·습도·강수는 항상 center.
+  --stations 146,140,702,... : 쓸 관측 지점만 남김(품질 의심 지점 제외 실험용).
+  --calm-fill none|persist : 정체(풍속<1 m/s) 시각의 발생원 노출 참조 풍향. none(기본) = 방향 없음(노출 NaN),
+                              persist = 그 격자에서 직전 3시간 안 마지막 비정체 풍향을 씀(냄새가 머문다는 가정).
+  바람 자료원 비교(2026-09-20, 조용한 시각 Hit@5 R5): asos/center 0.581, asos/local 0.578, aws/local 0.598, both/local 0.599, both/center 0.593.
 풍향 조건부 지도(CPF형)는 수용체 모델의 조건부 확률 함수(conditional probability function)를 격자 단위로 옮긴 것이다.
   cpf_<type>_365d = [t-365d, t) 동안 격자 g에 생긴 <type> 민원 중 그 시각 풍향 구간(30°, 정체는 별도 구간)이 지금과 같은 것의 수
                     ÷ 같은 기간 그 풍향 구간이었던 시간 수. 모두 t 미만 정보만 쓴다.
@@ -107,7 +111,8 @@ LABEL_PREFIX = {"all": None, "livestock": "가축", "factory": "공장", "sewage
 
 
 def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, wind_spec: dict | None = None,
-                label_type: str = "all", wind_source: str = "asos", wind_mode: str = "center") -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+                label_type: str = "all", wind_source: str = "asos", wind_mode: str = "center",
+                stations: tuple[int, ...] = (), calm_fill: str = "none") -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     complaints, _, _, _, _ = odor.load_inputs()
     meta = {"lat0": float(complaints["latitude"].median()), "lon0": float(complaints["longitude"].median()), "grid_m": GRID_M}
     gridded = sensitivity.add_grid(complaints, GRID_M)
@@ -122,7 +127,10 @@ def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, win
 
     # 시각 축: 관측이 있는 2020-01 ~ 마지막 관측 시각. 바람 자료원·보간 방식은 wind_sources.WindField
     import wind_sources as ws
-    field = ws.WindField(ws.load_wind_stations(wind_source))
+    station_table = ws.load_wind_stations(wind_source)
+    if stations:
+        station_table = station_table[station_table["station_id"].isin(stations)]
+    field = ws.WindField(station_table)
     center_table = field.center_table((meta["lat0"], meta["lon0"]))
     wind = center_table[["u", "v", "speed", "from_deg"]].copy()
     asos = ab.load_asos()
@@ -179,6 +187,14 @@ def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, win
     # 기상(t 정시). local 이면 풍향·풍속은 격자 중심별 IDW 값으로 덮어쓴다(기온·습도·강수는 center 그대로).
     w = wind.reindex(panel["hour"].to_numpy())
     local_from, local_speed = w["from_deg"].to_numpy().copy(), w["speed"].to_numpy().copy()
+    filled_from = local_from.copy()  # calm_fill=persist 용: 정체 시각에 직전 비정체 풍향
+
+    def persisted(table: pd.DataFrame) -> np.ndarray:
+        direction = table["from_deg"].where(table["speed"] >= 1.0)
+        return direction.ffill(limit=3).to_numpy()
+
+    if wind_mode == "center" and calm_fill == "persist":
+        filled_from = pd.Series(persisted(wind), index=wind.index).reindex(panel["hour"].to_numpy()).to_numpy()
     if wind_mode == "local":
         hour_pos = field.hours.get_indexer(panel["hour"])
         cell_ids_arr = panel["cell_id"].to_numpy()
@@ -189,6 +205,8 @@ def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, win
             ok = pos >= 0
             local_from[idx[ok]] = table["from_deg"].to_numpy()[pos[ok]]
             local_speed[idx[ok]] = table["speed"].to_numpy()[pos[ok]]
+            if calm_fill == "persist":
+                filled_from[idx[ok]] = persisted(table)[pos[ok]]
     w = w.assign(from_deg=local_from, speed=local_speed)
     panel["wind_speed"] = w["speed"].to_numpy()
     panel["wind_from_sin"] = np.sin(np.radians(w["from_deg"].to_numpy()))
@@ -219,8 +237,13 @@ def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, win
     livestock = raw_sources[raw_sources["source_type"] == "livestock"]
     assoc.RADIUS_KM = radius_km
     cell_frame = cells.rename(columns={"center_latitude": "latitude", "center_longitude": "longitude"})
-    from_deg = np.nan_to_num(panel["ref_from_deg"].to_numpy(), nan=0.0)
-    has_direction = panel["ref_speed"].to_numpy() >= 1.0  # 정체 시 방향 없음
+    if calm_fill == "persist":
+        ref_dir = np.where(panel["ref_speed"].to_numpy() >= 1.0, panel["ref_from_deg"].to_numpy(), filled_from)
+        from_deg = np.nan_to_num(ref_dir, nan=0.0)
+        has_direction = ~np.isnan(ref_dir)  # 정체여도 직전 3시간 비정체 풍향이 있으면 방향 있음
+    else:
+        from_deg = np.nan_to_num(panel["ref_from_deg"].to_numpy(), nan=0.0)
+        has_direction = panel["ref_speed"].to_numpy() >= 1.0  # 정체 시 방향 없음
 
     def exposure(src: pd.DataFrame, tag: str, share: bool) -> None:
         bins = assoc.bearing_bins(cell_frame, src)
@@ -446,15 +469,19 @@ def main() -> None:
     parser.add_argument("--arms", default="", help="실행할 실험군 쉼표 목록(기본 전체)")
     parser.add_argument("--label-type", default="all", choices=list(LABEL_PREFIX), help="양성 라벨로 쓸 악취종류")
     parser.add_argument("--seeds", type=int, default=len(SEEDS), help="seed 수(최대 12)")
-    parser.add_argument("--wind-source", default="asos", choices=["asos", "aws", "both"])
-    parser.add_argument("--wind-mode", default="center", choices=["center", "local"])
+    parser.add_argument("--wind-source", default="both", choices=["asos", "aws", "both", "both_hm"])
+    parser.add_argument("--wind-mode", default="local", choices=["center", "local"])
+    parser.add_argument("--stations", default="", help="쓸 지점 번호 쉼표 목록(비우면 자료원 전체)")
+    parser.add_argument("--calm-fill", default="none", choices=["none", "persist"])
     args = parser.parse_args()
     seeds = SEED_POOL[: args.seeds]
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(0)
     lag, window, weighting = args.wind_window.split(",")
     wind_spec = {"lag": int(lag), "window": int(window), "weighting": weighting}
-    panel, cells, meta = build_panel(args.neg_rate, args.radius_km, rng, wind_spec, args.label_type, args.wind_source, args.wind_mode)
+    station_ids = tuple(int(x) for x in args.stations.split(",")) if args.stations else ()
+    panel, cells, meta = build_panel(args.neg_rate, args.radius_km, rng, wind_spec, args.label_type, args.wind_source, args.wind_mode,
+                                     station_ids, args.calm_fill)
     train, test = panel[panel["is_train"]], panel[~panel["is_train"]]
     events = first_cells_of_events(cells)
     summary = {
@@ -464,7 +491,7 @@ def main() -> None:
         "test_quiet_hours_with_complaints": int(test.loc[(test["target"] == 1) & (test["city_quiet_3h"] == 1), "hour"].nunique()),
         "neg_rate": args.neg_rate, "radius_km": args.radius_km, "buildings_available": bool(BUILDINGS.exists()),
         "stability_available": bool(STABILITY.exists()), "wind_window": wind_spec, "label_type": args.label_type,
-        "wind_source": args.wind_source, "wind_mode": args.wind_mode,
+        "wind_source": args.wind_source, "wind_mode": args.wind_mode, "stations": list(station_ids), "calm_fill": args.calm_fill,
         "seeds": list(seeds), "arms": {},
     }
     arms = dict(ARMS)
@@ -497,8 +524,8 @@ def main() -> None:
         print(f"{name}: PR-AUC {result['pr_auc']:.4f} | Hit@5 {result['hit_at_5']:.3f} Hit@10 {result['hit_at_10']:.3f} | quiet Hit@5 {result['quiet_hit_at_5']:.3f} Hit@10 {result['quiet_hit_at_10']:.3f}")
     baseline = summary["test_positives"] / max(summary["test_rows"], 1)
     summary["test_positive_rate"] = baseline
-    # 서비스 연결용: 채택 실험군(R2, 없으면 마지막)의 테스트 시각별 위험 상위 10 격자. 격자 중심 좌표는 민원 격자 기준(발생원 좌표 아님).
-    export_arm = "R2" if "R2" in summary["arms"] else list(summary["arms"])[-1]
+    # 서비스 연결용: 채택 실험군(R5 = R2 + 풍향 조건부 민원 지도, 없으면 R2)의 테스트 시각별 위험 상위 10 격자. 격자 중심 좌표는 민원 격자 기준(발생원 좌표 아님).
+    export_arm = "R5" if "R5" in summary["arms"] else ("R2" if "R2" in summary["arms"] else list(summary["arms"])[-1])
     export_features = summary["arms"][export_arm]["features"]
     export_scores = np.mean([fit(train, export_features, seed).predict_proba(test[export_features])[:, 1] for seed in seeds], axis=0)
     alerts = test[["hour", "grid_x", "grid_y", "center_latitude", "center_longitude", "city_quiet_3h",

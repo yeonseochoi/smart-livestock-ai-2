@@ -23,3 +23,4 @@ outputs/source_backtrack/sources.csv
 data/geocode_cache/
 data/vworld_geocode_cache/
 data/public_source_cache/
+outputs/weather_integration/aws702_minute_2020_2026.csv

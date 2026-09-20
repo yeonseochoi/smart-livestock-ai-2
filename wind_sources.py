@@ -97,8 +97,15 @@ def load_wind_stations(source: str = "both") -> pd.DataFrame:
         aws = pd.read_csv(AWS_PATH, parse_dates=["datetime"], encoding="utf-8-sig")
         aws["station_type"] = "AWS"
         frames.append(aws)
+    if source == "both_hm":  # both + 익산 702 시간값을 직전 60분 평균(분 자료)으로 대체
+        frames = []
+        asos = pd.read_csv(ASOS_PATH, parse_dates=["datetime"], encoding="utf-8-sig"); asos["station_type"] = "ASOS"; frames.append(asos)
+        aws = pd.read_csv(AWS_PATH, parse_dates=["datetime"], encoding="utf-8-sig"); aws["station_type"] = "AWS"
+        hm = pd.read_csv(AWS_PATH.parent / "aws702_hourmean_2020_2026.csv", parse_dates=["datetime"], encoding="utf-8-sig")
+        hm["station_type"] = "AWS"
+        frames.append(pd.concat([aws[aws["station_id"] != 702], hm], ignore_index=True))
     if not frames:
-        raise ValueError("source 는 asos | aws | both")
+        raise ValueError("source 는 asos | aws | both | both_hm")
     wind = pd.concat(frames, ignore_index=True)
     rad = np.radians(wind["wind_direction"])
     wind["u"] = -wind["wind_speed"] * np.sin(rad)
