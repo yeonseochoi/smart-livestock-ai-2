@@ -73,7 +73,7 @@ GRID_COLUMNS = [
     "weather_source", "history_cutoff",
 ]
 SOURCE_COLUMNS = [
-    "source_id", "source_type", "city", "name", "species", "head_count", "area_m2", "status",
+    "source_id", "source_type", "odor_relevant", "city", "name", "species", "head_count", "area_m2", "status",
     "address", "latitude", "longitude", "location_precision", "geocode_method", "emission_weight",
     "weight_imputed", "extra_json",
 ]
@@ -243,7 +243,8 @@ def prepare_sources(workers: int = 6) -> tuple[pd.DataFrame, dict[str, object]]:
     iksan_weight = iksan_weight.where(iksan["영업상태"].ne("휴업"), 0.0)
     iksan_out = pd.DataFrame({
         "source_id": [f"IKSAN-{i:04d}" for i in range(1, len(iksan) + 1)],
-        "source_type": "livestock", "city": "익산시", "name": iksan["업체명"],
+        "source_type": "livestock", "odor_relevant": True,
+        "city": "익산시", "name": iksan["업체명"],
         "species": iksan["사육업종"], "head_count": iksan_heads,
         "area_m2": iksan_area, "status": iksan["영업상태"], "address": iksan["소재지"],
         "latitude": iksan_lat, "longitude": iksan_lon,
@@ -277,7 +278,8 @@ def prepare_sources(workers: int = 6) -> tuple[pd.DataFrame, dict[str, object]]:
     )
     gimje_out = pd.DataFrame({
         "source_id": [f"GIMJE-{i:04d}" for i in range(1, len(gimje) + 1)],
-        "source_type": "livestock", "city": "김제시", "name": gimje["업체명"],
+        "source_type": "livestock", "odor_relevant": True,
+        "city": "김제시", "name": gimje["업체명"],
         "species": gimje["사육업종"], "head_count": gimje_heads,
         "area_m2": np.nan, "status": np.nan, "address": gimje["소재지"],
         "latitude": gimje_lat, "longitude": gimje_lon,
@@ -1064,6 +1066,8 @@ def main() -> None:
         sources = pd.read_csv(SOURCES_FILE, encoding="utf-8-sig")
         if "source_type" not in sources.columns:
             sources["source_type"] = "livestock"
+        if "odor_relevant" not in sources.columns:
+            sources["odor_relevant"] = True
         livestock = sources[sources["source_type"] == "livestock"]
         iksan = livestock[livestock["city"] == "익산시"]
         gimje = livestock[livestock["city"] == "김제시"]

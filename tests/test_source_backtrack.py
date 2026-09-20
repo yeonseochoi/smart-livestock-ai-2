@@ -120,7 +120,9 @@ class SourceBacktrackOutputSchemaTest(unittest.TestCase):
         self.assertEqual(list(candidates.columns), EXPECTED_NON_LIVESTOCK_COLUMNS)
         self.assertEqual(backtrack.NON_LIVESTOCK_COLUMNS, EXPECTED_NON_LIVESTOCK_COLUMNS)
         self.assertFalse(pd.to_datetime(candidates["event_hour"], errors="coerce").isna().any())
-        self.assertTrue(set(candidates["source_type"]).issubset({"factory", "wastewater", "other"}))
+        self.assertTrue(set(candidates["source_type"]).issubset({
+            "factory", "wastewater", "industrial_zone", "manure_plant", "waste_facility",
+        }))
         self.assertTrue(pd.api.types.is_integer_dtype(candidates["rank"]))
         self.assertTrue((candidates["rank"] >= 1).all())
 
