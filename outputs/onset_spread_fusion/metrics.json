@@ -4,11 +4,11 @@
     "grid_m": 1000,
     "pool": 3,
     "onset_files": [
-      "outputs/onset_risk\\onset_event_scores.csv",
-      "outputs/onset_risk\\onset_event_scores_fold2021.csv",
-      "outputs/onset_risk\\onset_event_scores_fold2022.csv",
-      "outputs/onset_risk\\onset_event_scores_fold2023.csv",
-      "outputs/onset_risk\\onset_event_scores_fold2024.csv"
+      "outputs/onset_risk/onset_event_scores.csv",
+      "outputs/onset_risk/onset_event_scores_fold2021.csv",
+      "outputs/onset_risk/onset_event_scores_fold2022.csv",
+      "outputs/onset_risk/onset_event_scores_fold2023.csv",
+      "outputs/onset_risk/onset_event_scores_fold2024.csv"
     ],
     "rule": "2단 Top pool 중 1단(event_hour-1h) 순위 최상을 1순위로",
     "events_total": 47,

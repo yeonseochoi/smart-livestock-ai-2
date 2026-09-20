@@ -7,12 +7,13 @@ Eckmann et al. (2017)처럼 확산 모델 없이 반복 관측 × 풍향 통계�
         실제 풍향 vs 풍향을 (월·시간대 층 안에서) 뒤섞은 것 N회의 평균을 비교해 경험적 p값을 낸다.
 층화 셔플을 쓰는 이유: 계절·시간대별 주풍이 있어 단순 셔플은 기후 신호를 발생원 신호로 오인할 수 있다.
 
-실행: python test_wind_source_association.py  →  outputs/wind_source_association/result.json, result.md
+실행: python test_wind_source_association.py               →  outputs/wind_source_association/result.json, result.md
+      python test_wind_source_association.py --travel-lag  →  travel_lag_result.json (거리별 시차 τ = d/u 가설 검정)
 """
 from __future__ import annotations
 
+import argparse
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -59,8 +60,9 @@ BIN_DEG = 5.0
 N_BINS = int(360 / BIN_DEG)
 
 
-def bearing_bins(complaints: pd.DataFrame, sources: pd.DataFrame) -> np.ndarray:
+def bearing_bins(complaints: pd.DataFrame, sources: pd.DataFrame, radius_km: float | None = None) -> np.ndarray:
     """민원별 × 5° 방위 구간별, 반경 R 안 발생원 배출 가중치 합. 한 번만 계산해 셔플마다 재사용한다."""
+    radius = RADIUS_KM if radius_km is None else radius_km
     lat_c = np.radians(complaints["latitude"].to_numpy()); lon_c = np.radians(complaints["longitude"].to_numpy())
     lat_s = np.radians(sources["latitude"].to_numpy()); lon_s = np.radians(sources["longitude"].to_numpy())
     w_s = sources["emission_weight"].to_numpy(float)
@@ -76,7 +78,7 @@ def bearing_bins(complaints: pd.DataFrame, sources: pd.DataFrame) -> np.ndarray:
         y = np.cos(lat_c[sl, None]) * np.sin(lat_s[None, :]) - np.sin(lat_c[sl, None]) * np.cos(lat_s[None, :]) * np.cos(dlon)
         bearing = (np.degrees(np.arctan2(x, y)) + 360.0) % 360.0  # 민원 → 발생원 방위
         b = (bearing // BIN_DEG).astype(int) % N_BINS
-        weight = np.where((dist <= RADIUS_KM) & (dist > 0.05), w_s[None, :], 0.0)
+        weight = np.where((dist <= radius) & (dist > 0.05), w_s[None, :], 0.0)
         rows = np.repeat(np.arange(b.shape[0]), b.shape[1])
         np.add.at(bins[sl], (rows, b.ravel()), weight.ravel())
     return bins
@@ -114,15 +116,12 @@ def run_test(sub: pd.DataFrame, bins: np.ndarray, rng: np.random.Generator) -> d
     }
 
 
-def main() -> None:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    rng = np.random.default_rng(SEED)
-    complaints = load_complaints()
+def load_sources() -> pd.DataFrame:
     sources = pd.read_csv(SOURCES_PATH, encoding="utf-8-sig").dropna(subset=["latitude", "longitude"])
-    sources = sources[sources["emission_weight"] > 0]
-    asos = ab.load_asos()
-    center = (float(complaints["latitude"].median()), float(complaints["longitude"].median()))
-    wind = hourly_wind(asos, center)
+    return sources[sources["emission_weight"] > 0]
+
+
+def main_association(complaints: pd.DataFrame, sources: pd.DataFrame, wind: pd.DataFrame, rng: np.random.Generator) -> None:
     bins_all = bearing_bins(complaints, sources)
     bins_pigs = bearing_bins(complaints, sources[sources["species"] == "돼지"])
 
@@ -166,10 +165,6 @@ def main() -> None:
     (OUTPUT_DIR / "result.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-if __name__ == "__main__" and not sys.argv[1:]:
-    main()
-
-
 # ---------------------------------------------------------------- 거리별 시차(τ = d/u) 가설 직접 검정
 
 BANDS_KM = ((0.0, 2.0), (2.0, 4.0), (4.0, 6.0), (6.0, 8.0), (8.0, 10.0))
@@ -178,15 +173,7 @@ MAX_LAG_H = 3
 
 def band_bins(complaints: pd.DataFrame, sources: pd.DataFrame) -> list[np.ndarray]:
     """거리 구간별로 bearing_bins를 따로 만든다. 구간마다 다른 시차의 풍향을 적용하기 위해서다."""
-    global RADIUS_KM
-    saved = RADIUS_KM
-    cumulative = []
-    try:
-        for _, hi in BANDS_KM:
-            RADIUS_KM = hi
-            cumulative.append(bearing_bins(complaints, sources))
-    finally:
-        RADIUS_KM = saved
+    cumulative = [bearing_bins(complaints, sources, hi) for _, hi in BANDS_KM]
     out, previous = [], np.zeros_like(cumulative[0])
     for bins in cumulative:
         out.append(bins - previous)
@@ -264,18 +251,22 @@ def run_travel_lag_test(complaints: pd.DataFrame, wind: pd.DataFrame, sources: p
     return results
 
 
-def main_travel() -> None:
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--travel-lag", action="store_true", help="거리별 시차(τ = d/u) 가설 검정만 실행")
+    args = parser.parse_args()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(SEED)
     complaints = load_complaints()
-    sources = pd.read_csv(SOURCES_PATH, encoding="utf-8-sig").dropna(subset=["latitude", "longitude"])
-    sources = sources[sources["emission_weight"] > 0]
-    asos = ab.load_asos()
+    sources = load_sources()
     center = (float(complaints["latitude"].median()), float(complaints["longitude"].median()))
-    wind = hourly_wind(asos, center)
-    results = run_travel_lag_test(complaints, wind, sources, rng)
-    (OUTPUT_DIR / "travel_lag_result.json").write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+    wind = hourly_wind(ab.load_asos(), center)
+    if args.travel_lag:
+        results = run_travel_lag_test(complaints, wind, sources, rng)
+        (OUTPUT_DIR / "travel_lag_result.json").write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
+    else:
+        main_association(complaints, sources, wind, rng)
 
 
-if __name__ == "__main__" and sys.argv[1:] == ["--travel-lag"]:
-    main_travel()
+if __name__ == "__main__":
+    main()

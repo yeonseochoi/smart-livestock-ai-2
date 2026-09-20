@@ -1,6 +1,8 @@
 # 1단 발생 위험 예보 실험 요약 (run_onset_risk.py 변형 실행 기록)
 
-2026-09-20 정리. 아래 변형 실행의 원본 `metrics_<tag>.json`·`onset_risk_table_<tag>.md`는 이 표로 통합한 뒤 삭제했다(재현: README의 명령에 표의 설정을 옵션으로 지정). 유지 파일: `metrics.json`(default), `metrics_{livestock,factory,sewage}.json`, `onset_alerts*.csv`, `onset_event_scores*.csv`.
+2026-09-20 정리. 아래 변형 실행의 원본 `metrics_<tag>.json`·`onset_risk_table_<tag>.md`는 이 표로 통합한 뒤 삭제했다. 유지 파일: `metrics.json`(default), `metrics_{livestock,factory,sewage}.json`, `onset_alerts*.csv`, `onset_event_scores*.csv`.
+
+같은 날 리팩토링으로 `run_onset_risk.py`에서 기여 없던 실험군 R3(건물 밀도)·R2s(외부 시설)·R2z(산단 경계)·R2w(대기안정도)·R4와 실험 옵션(`--wind-window`·`--wind-mode`·`--stations`·`--calm-fill`)을 제거했다. 현재 코드는 R0·R1·R2·R5·R5o만 돌리며 그 수치는 아래 default 행과 같다(재실행으로 확인). 제거된 실험군·옵션을 다시 돌리려면 git 태그 `pre-refactor-2026-09-20`의 코드를 쓴다: `git show pre-refactor-2026-09-20:run_onset_risk.py > run_onset_risk_old.py` (건물 밀도 R3는 같은 태그의 `fetch_grid_buildings.py`·`outputs/grid_buildings/`도 필요).
 
 조용한 시각 Hit@5 = 직전 3시간 시 전체 민원이 없던 시각에 위험 상위 5 격자(186개 중) 안에 실제 민원 격자가 든 비율. 마지막 열의 PR-AUC·Hit@5·Hit@10은 채택 실험군(R5, 없으면 마지막 실험군)의 전체 시각 값.
 

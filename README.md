@@ -195,18 +195,48 @@ Streamlit Community Cloud에서는 실행 파일을 `streamlit_app.py`로 지정
 ## 6. 🗂️ 프로젝트 구조
 
 ```text
-administrative_agent/              행정 대응 문서 모델·템플릿·LLM 연동
-data/                              원본 및 가공 데이터
-demo/                              브라우저 데모와 로컬 API 서버
-docs/screenshots/                  README 데모 스크린샷
-outputs/                           모델 평가 및 생성 문서
-tests/                             행정 대응 Agent와 Streamlit 테스트
-streamlit_app.py                   Streamlit Community Cloud 실행 파일
-compare_operational_grid_sizes.py  격자 크기 비교와 최종 성능 재현
-generate_agent_documents.py        예측 결과 기반 문서 생성
-optimize_early_prediction.py       후보 모델 학습·평가
+[서비스]
+streamlit_app.py                   Streamlit 화면 (Top 3 + 사전 경보 카드)
+generate_agent_documents.py        예측 결과 → 행정 대응 문서 4종 + agent_output.json
+administrative_agent/              문서 모델(models)·rule-base 대응 단계(policy)·문서 생성(documents)·LLM 연동(llm)
+demo/                              브라우저 데모(index.html, demo-data.js)와 로컬 API 서버(server.py)
+
+[2단 확산 예측: 민원 30분 뒤 어디로 번지나]
+analyze_spatiotemporal_complaints.py  민원 엑셀 읽기·열 매핑·익산 필터 (모든 스크립트의 입력 단계)
+build_odor_ai_mvp.py               Event 구성·격자·후보 격자 특징 공용 함수
+compare_operational_grid_sizes.py  1km·1.5km·2km 공통 검증과 최종 성능 재현 (운영 모델 xgb_d3)
+optimize_early_prediction.py       후보 모델 학습·평가 라이브러리
 sensitivity_early_prediction.py    격자·시간창 후보 비교(설계 근거, 제품 입력 아님)
-fetch_kma_weather.py               현장 참고용 기상자료 수집
+run_ablation.py                    기상·발생원 역추적을 넣는 소거 실험 M0~M4 (개선 없음 → 미채택)
+
+[1단 발생 위험 예보: 민원 없는 지금, 다음 1시간 어디서 나나]
+run_onset_risk.py                  1단 학습·평가(R0·R1·R2·R5·R5o)와 onset_alerts*.csv 생성
+wind_sources.py                    ASOS+AWS 시간자료 통합, 격자별 역거리 가중(IDW) 바람
+species_weight_sets.py             축종 배출계수 세트(EMEP/EEA NH3 등)
+fetch_kma_weather.py               기상청 API 허브 ASOS 수집(+대기안정도 재료, Track A 옵션)
+fuse_onset_spread.py               1단·2단 결합(권역 1곳) 평가 — 효과 없음, 미채택
+
+[근거 검정: 바람·발생원 연관 (결론은 outputs/wind_lag_sweep, outputs/wind_source_association)]
+test_wind_source_association.py    민원 시각 풍향 ↔ 축산 발생원 층화 셔플 검정, --travel-lag 로 거리별 시차 가설
+wind_window_sweep.py               참조 바람 창 24조합(시차×평균 창×가중) 비교
+minute_wind_test.py                익산 AWS 분 자료로 신고 직전 창 19종 비교
+compare_wind_sources.py            바람 자료원 5종(ASOS 중심/격자별, AWS, 결합) 비교
+sensitivity_species_weights.py     배출계수 세트 4벌 × 반경 2종 민감도
+test_factory_source_filters.py     대기배출시설 업종 필터 전후 연관 (무효)
+
+[Track A 발생원 역추적 (Codex 담당, 참고 정보)]
+build_source_backtrack.py          Event별 발생원 후보·격자 점수 (outputs/source_backtrack)
+extend_source_catalog.py           축산 외 시설 목록 확장,  analyze_source_type_association.py  유형별 연관 분석
+tools/                             역추적 산출물 검증기, 산단 경계·공장 목록 수집
+docs/contracts/                    Track A/B 인터페이스 계약
+
+[문서·데이터·테스트]
+작업 최종 아키텍쳐.md              전체 구조 설명(입력→2단·1단→결합→Agent), 멘토 피드백 대응표
+PROJECT_CONTEXT.md                 현재 상태·성능·한계 (기획 기준 문서)
+docs/kma_api_availability.md       기상청 API 실시간 조건 확인
+data/                              민원 원본, 축산농가 현황, AWS 파일셋, 외부 시설 캐시
+outputs/                           실험 산출물(metrics.json 등)과 생성 문서
+tests/                             행정 Agent·Streamlit·소거 실험·계약 테스트 (35건)
 ```
 
 ### 예측 및 문서 재생성
@@ -221,7 +251,7 @@ fetch_kma_weather.py               현장 참고용 기상자료 수집
 # 특정 Event 행정문서 생성
 .venv\Scripts\python.exe generate_agent_documents.py --event-id EVT-0175
 
-# 발생 위험 예보(1단) 재실행: 전체 + 유형별
+# 발생 위험 예보(1단) 재실행: 전체(R0·R1·R2·R5·R5o) + 유형별
 python run_onset_risk.py
 python run_onset_risk.py --label-type factory --tag factory --arms R0,R2,R5
 

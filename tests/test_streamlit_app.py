@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-import tomllib
 import unittest
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10: streamlit이 함께 설치하는 toml로 대체
+    import toml as tomllib
 
 from streamlit.testing.v1 import AppTest
 

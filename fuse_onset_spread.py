@@ -5,8 +5,8 @@
 
 입력
   outputs/operational_grid_comparison/test_predictions.csv (grid_m=1000, 2단 테스트 Event의 후보 격자 점수)
-  outputs/onset_risk/onset_event_scores*.csv (run_onset_risk.py --train-end … 산출. Event마다 event_hour 이전 자료로만 학습한
-      분할 중 가장 늦은 것을 쓴다: 2021년 Event는 2021-01-01 분할, 2022년은 2022-01-01, … 누수 없음)
+  outputs/onset_risk/onset_event_scores.csv + onset_event_scores_fold*.csv (run_onset_risk.py [--train-end …] 산출, 전체 라벨.
+      Event마다 event_hour 이전 자료로만 학습한 분할 중 가장 늦은 것을 쓴다: 2021년 Event는 2021-01-01 분할, 2022년은 2022-01-01, … 누수 없음)
 평가: 2단 단독 Hit@1/2/3 vs 결합 Hit@1. 결합이 고친 Event 수·망친 Event 수(부호 검정).
       2021년 Event는 1단 학습 자료가 2020년 1년뿐이라 2022년 이후 Event만 따로도 본다.
 실행: python fuse_onset_spread.py [--pool 3] → outputs/onset_spread_fusion/{metrics.json, fusion_table.md, event_table.csv}
@@ -14,7 +14,6 @@
 from __future__ import annotations
 
 import argparse
-import glob
 import json
 from math import comb
 from pathlib import Path
@@ -23,7 +22,8 @@ import numpy as np
 import pandas as pd
 
 SPREAD_PATH = Path("outputs/operational_grid_comparison/test_predictions.csv")
-ONSET_GLOB = "outputs/onset_risk/onset_event_scores*.csv"
+ONSET_DIR = Path("outputs/onset_risk")
+ONSET_PATTERNS = ("onset_event_scores.csv", "onset_event_scores_fold*.csv")  # 유형별(_livestock 등) 파일은 제외
 OUTPUT_DIR = Path("outputs/onset_spread_fusion")
 GRID_M = 1000
 LATE_START = pd.Timestamp("2022-01-01")
@@ -39,15 +39,21 @@ def sign_test_p(wins: int, losses: int) -> float:
     return float(min(1.0, 2 * tail))
 
 
+def load_onset_files() -> list[str]:
+    return sorted(p.as_posix() for pattern in ONSET_PATTERNS for p in ONSET_DIR.glob(pattern))
+
+
 def load_onset_scores() -> pd.DataFrame:
-    files = sorted(glob.glob(ONSET_GLOB))
+    files = load_onset_files()
     if not files:
-        raise SystemExit(f"1단 Event 점수 파일 없음: {ONSET_GLOB} (run_onset_risk.py 를 먼저 실행)")
+        raise SystemExit(f"1단 Event 점수 파일 없음: {ONSET_DIR}/{ONSET_PATTERNS} (run_onset_risk.py 를 먼저 실행)")
     onset = pd.concat([pd.read_csv(f, parse_dates=["event_hour", "hour"]) for f in files], ignore_index=True)
     onset["train_end"] = pd.to_datetime(onset["train_end"])
     onset = onset[onset["train_end"] <= onset["event_hour"]]  # event 이전 자료로만 학습한 분할만
     latest = onset.groupby("event_hour")["train_end"].transform("max")
     onset = onset[onset["train_end"] == latest]
+    if onset.duplicated(["event_hour", "grid_x", "grid_y"]).any():
+        raise SystemExit("같은 Event·격자에 1단 점수가 둘 이상 (분할 파일이 겹침)")
     return onset.rename(columns={"risk_score": "onset_score", "rank": "onset_rank"})[
         ["event_hour", "grid_x", "grid_y", "onset_score", "onset_rank", "train_end"]]
 
@@ -115,7 +121,7 @@ def main() -> None:
             "median_onset_rank_true": float(covered["onset_rank_true_min"].median()),
             "median_onset_rank_false": float(covered["onset_rank_false_min"].median())}
     result = {"protocol": {"spread_source": str(SPREAD_PATH), "grid_m": GRID_M, "pool": args.pool,
-                           "onset_files": sorted(glob.glob(ONSET_GLOB)), "rule": "2단 Top pool 중 1단(event_hour-1h) 순위 최상을 1순위로",
+                           "onset_files": load_onset_files(), "rule": "2단 Top pool 중 1단(event_hour-1h) 순위 최상을 1순위로",
                            "events_total": int(len(table)), "events_without_onset_scores": uncovered_events,
                            "candidate_coverage": float(covered["onset_covered"].sum() / covered["candidates"].sum())},
               "summaries": summaries, "by_year": by_year, "onset_signal": diag}

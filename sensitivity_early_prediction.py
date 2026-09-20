@@ -7,7 +7,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import average_precision_score
 
 import build_odor_ai_mvp as odor
 import optimize_early_prediction as optimize
@@ -96,9 +95,8 @@ def prepare_prior(
     return fit, validation
 
 
-def validate_configuration(
-    data: pd.DataFrame, events: pd.DataFrame, train_ids: set[str], input_minutes: int,
-) -> dict[str, dict[str, float]]:
+def validate_configuration(data: pd.DataFrame) -> dict[str, dict[str, float]]:
+    """학습 Event의 앞 80%로 학습, 뒤 20%로 내부 검증한 모델별 지표."""
     train = data[data["is_train"]].copy()
     ordered = (train[["event_id", "event_hour"]].drop_duplicates().sort_values("event_hour")["event_id"].tolist())
     cut = max(1, int(len(ordered) * 0.8))
@@ -133,7 +131,7 @@ def main() -> None:
             complaints, selected_hours, grid_m, input_minutes, forecast_minutes
         )
         cached[name] = (data, train_ids, test_ids)
-        results = validate_configuration(data, data, train_ids, input_minutes)
+        results = validate_configuration(data)
         validation_results[name] = {
             "grid_m": grid_m, "input_minutes": input_minutes,
             "forecast_minutes": forecast_minutes, "train_events": len(train_ids),
@@ -147,7 +145,6 @@ def main() -> None:
 
     _, _, selected_name, selected_model = max(choices)
     data, train_ids, test_ids = cached[selected_name]
-    config = validation_results[selected_name]
     train = data[data["is_train"]].copy()
     test = data[~data["is_train"]].copy()
     train, test = prepare_prior(train, test, train_ids)

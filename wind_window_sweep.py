@@ -24,13 +24,13 @@ import pandas as pd
 import run_ablation as ab
 import species_weight_sets as sw
 import test_wind_source_association as t
+import wind_sources as ws
 
 OUTPUT_DIR = Path("outputs/wind_lag_sweep")
 STABILITY_CANDIDATES = (Path("outputs/weather_integration/asos_hourly_stability_2020_2026.csv"),)
 LAGS = (0, 1, 2, 3)
 WINDOWS = (1, 2, 3)
 WEIGHTINGS = ("simple", "speed")
-GROUPS = ("all", "livestock", "factory", "dry", "wet", "night_21_06")
 STABILITY_GROUPS = {"stable_EF": ("E", "F"), "neutral_D": ("D",), "unstable_ABC": ("A", "B", "C")}
 
 
@@ -89,7 +89,6 @@ def main() -> None:
         asos = ab.load_asos()
         wind = t.hourly_wind(asos, center)
     else:
-        import wind_sources as ws
         stations = ws.load_wind_stations(args.wind_source)
         if args.stations:
             keep = [int(x) for x in args.stations.split(",")]

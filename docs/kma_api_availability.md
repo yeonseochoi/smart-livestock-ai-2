@@ -28,7 +28,7 @@
 ## 대기안정도
 
 ASOS 시간자료의 총운량·일조·일사·지면온도로 Pasquill-Gifford 안정도 등급(A 매우 불안정 ~ F 안정)을 산정했다(`fetch_kma_weather.parse_asos_stability`, `pasquill_gifford_class`). 등급 분포(2020~2026, 두 지점 합): E 35,588 / B 29,305 / F 22,837 / C 17,457 / D 8,297 / A 3,682.
-민원 풍향–발생원 연관 검정을 안정도 층별로 나눈 결과와 발생 위험 모델에 안정도를 넣은 결과는 Track B `outputs/wind_lag_sweep/association_sweep.md`, `outputs/onset_risk/onset_risk_table.md`에 있다.
+민원 풍향–발생원 연관 검정을 안정도 층별로 나눈 결과는 `outputs/wind_lag_sweep/association_sweep.md`에, 발생 위험 모델에 안정도를 넣은 결과(R2w 0.591, R2와 같음 → 미채택)는 `outputs/onset_risk/experiment_summary.md`에 있다.
 
 ## 확인에 쓴 호출
 

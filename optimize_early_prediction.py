@@ -1,15 +1,9 @@
 """향후 30분 신고 Grid 예측에 사용하는 모델 라이브러리.
 
-`compare_operational_grid_sizes.py`와 `sensitivity_early_prediction.py`가
+`compare_operational_grid_sizes.py`, `sensitivity_early_prediction.py`, `run_ablation.py`가
 `fit_predict`와 `score_prediction`을 가져다 쓴다. 단독 실행 대상이 아니다.
-
-기상 자료로 후보를 구성하던 최적화 실험은 현재 기획(민원 데이터만 사용)에서
-제외되었고 필요한 모듈도 남아 있지 않아 제거했다.
 """
 from __future__ import annotations
-
-import math
-from collections import Counter, defaultdict
 
 import numpy as np
 import pandas as pd
@@ -17,104 +11,6 @@ from sklearn.metrics import average_precision_score
 from xgboost import XGBClassifier, XGBRanker
 
 import build_odor_ai_mvp as odor
-
-
-ADVANCED_FEATURES = [
-    "spatial_smooth_prior", "hour_prior", "season_prior", "weekend_prior",
-    "odor_prior", "recent_prior", "wind_sector_prior_advanced",
-]
-
-
-def count_maps(
-    reference_ids: set[str], context: dict[str, dict[str, object]],
-) -> tuple[Counter, dict[str, defaultdict[object, Counter]], dict[str, Counter]]:
-    global_counts: Counter = Counter()
-    conditional = {
-        "hour_bin": defaultdict(Counter), "season": defaultdict(Counter),
-        "weekend": defaultdict(Counter), "odor_type": defaultdict(Counter),
-        "wind_sector": defaultdict(Counter),
-    }
-    denominators = {name: Counter() for name in conditional}
-    for event_id in reference_ids:
-        meta = context[event_id]
-        cells = meta["future_cells"]
-        global_counts.update(cells)
-        for name in conditional:
-            value = meta[name]
-            conditional[name][value].update(cells)
-            denominators[name][value] += 1
-    return global_counts, conditional, denominators
-
-
-def recent_prior_maps(
-    target_ids: set[str], reference_ids: set[str], context: dict[str, dict[str, object]],
-) -> dict[str, dict[tuple[int, int], float]]:
-    result: dict[str, dict[tuple[int, int], float]] = {}
-    for target_id in target_ids:
-        target_time = context[target_id]["hour"]
-        weighted: defaultdict[tuple[int, int], float] = defaultdict(float)
-        total_weight = 0.0
-        for reference_id in reference_ids:
-            reference_time = context[reference_id]["hour"]
-            if reference_id == target_id or reference_time >= target_time:
-                continue
-            age_days = max((target_time - reference_time).total_seconds() / 86400, 0.0)
-            weight = math.exp(-age_days / 730.0)
-            total_weight += weight
-            for cell in context[reference_id]["future_cells"]:
-                weighted[cell] += weight
-        result[target_id] = {
-            cell: value / total_weight for cell, value in weighted.items()
-        } if total_weight else {}
-    return result
-
-
-def apply_advanced_priors(
-    frame: pd.DataFrame, reference_ids: set[str], context: dict[str, dict[str, object]],
-    leave_one_out: bool,
-) -> pd.DataFrame:
-    result = frame.copy()
-    global_counts, conditional, denominators = count_maps(reference_ids, context)
-    reference_n = len(reference_ids)
-    recent = recent_prior_maps(set(result["event_id"]), reference_ids, context)
-    rows: list[list[float]] = []
-    smoothing = 8.0
-    for row in result.itertuples(index=False):
-        event_id = row.event_id
-        cell = (int(row.grid_x), int(row.grid_y))
-        meta = context[event_id]
-        self_active = int(leave_one_out and event_id in reference_ids and cell in meta["future_cells"])
-        denominator = reference_n - int(leave_one_out and event_id in reference_ids)
-        global_prior = (global_counts[cell] - self_active) / max(denominator, 1)
-
-        smooth_values = []
-        smooth_weights = []
-        for dx in range(-2, 3):
-            for dy in range(-2, 3):
-                distance = math.hypot(dx, dy)
-                if distance > 2:
-                    continue
-                neighbor = (cell[0] + dx, cell[1] + dy)
-                neighbor_self = int(
-                    leave_one_out and event_id in reference_ids and neighbor in meta["future_cells"]
-                )
-                smooth_values.append((global_counts[neighbor] - neighbor_self) / max(denominator, 1))
-                smooth_weights.append(1 / (1 + distance))
-        spatial_prior = float(np.average(smooth_values, weights=smooth_weights))
-
-        conditional_values = []
-        for name in ("hour_bin", "season", "weekend", "odor_type", "wind_sector"):
-            value = meta[name]
-            group_n = denominators[name][value] - int(leave_one_out and event_id in reference_ids)
-            count = conditional[name][value][cell] - self_active
-            conditional_values.append((count + smoothing * global_prior) / max(group_n + smoothing, 1))
-        rows.append([
-            global_prior, spatial_prior, *conditional_values[:4],
-            recent[event_id].get(cell, global_prior), conditional_values[4],
-        ])
-    columns = ["prior", *ADVANCED_FEATURES]
-    result.loc[:, columns] = np.asarray(rows, dtype=float)
-    return result
 
 
 def make_ranker(name: str, final: bool = False) -> XGBRanker:
@@ -187,11 +83,4 @@ def score_prediction(frame: pd.DataFrame, score: np.ndarray) -> dict[str, float]
         "topk_recall": odor._topk_recall(probe, "score"),
         "roc_auc": odor._safe_metrics(probe["target"].to_numpy(), score)["roc_auc"],
     }
-
-
-def candidate_models() -> list[str]:
-    return [
-        "extra_leaf2", "extra_leaf4", "rf_leaf2", "rf_leaf4",
-        "xgb_d2", "xgb_d3", "xgb_d4", "rank_d2", "rank_d3", "rank_d4",
-    ]
 

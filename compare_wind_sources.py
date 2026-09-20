@@ -19,6 +19,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+import build_odor_ai_mvp as odor
 import sensitivity_early_prediction as sensitivity
 import species_weight_sets as sw
 import test_wind_source_association as t
@@ -29,11 +30,10 @@ RADIUS_KM = 6.0
 GRID_M = 1000
 
 
-def per_cell_wind(complaints: pd.DataFrame, field: ws.WindField, station_filter=None) -> pd.DataFrame:
+def per_cell_wind(complaints: pd.DataFrame, field: ws.WindField) -> pd.DataFrame:
     """민원 격자(1 km) 중심마다 field.at(...) 을 구해 민원 행에 from_deg·speed 를 붙인다."""
     gridded = sensitivity.add_grid(complaints, GRID_M)
     meta = {"lat0": float(complaints["latitude"].median()), "lon0": float(complaints["longitude"].median()), "grid_m": GRID_M}
-    import build_odor_ai_mvp as odor
     cells = gridded[["grid_x", "grid_y"]].drop_duplicates()
     out = np.full((len(gridded), 2), np.nan)
     hour_pos = field.hours.get_indexer(gridded["hour"])

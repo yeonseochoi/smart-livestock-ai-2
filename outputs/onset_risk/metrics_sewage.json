@@ -6,18 +6,12 @@
   "test_positives": 40,
   "test_hours_with_complaints": 38,
   "test_quiet_hours_with_complaints": 18,
+  "test_positive_rate": 0.005120327700972862,
   "neg_rate": 0.03,
   "radius_km": 6.0,
-  "buildings_available": true,
-  "stability_available": true,
-  "wind_window": {
-    "lag": 0,
-    "window": 1,
-    "weighting": "speed"
-  },
   "label_type": "sewage",
   "wind_source": "both",
-  "wind_mode": "local",
+  "train_end": "2025-01-01",
   "seeds": [
     42,
     7,
@@ -180,7 +174,6 @@
       ]
     }
   },
-  "test_positive_rate": 0.005120327700972862,
   "alerts_export": {
     "arm": "R5",
     "hours": 42,

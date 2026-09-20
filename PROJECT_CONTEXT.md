@@ -87,13 +87,14 @@ Agent는 시설을 원인으로 단정하거나 자동으로 행정조치를 내
 - `sensitivity_early_prediction.py`: 격자·시간창 후보를 내부검증으로 비교한 설계 근거. 제품 파이프라인의 입력은 아니다
 - `optimize_early_prediction.py`: 후보 모델 학습·평가
 - `build_odor_ai_mvp.py`: 민원 전처리와 Event 구성 공용 함수
-- `fetch_kma_weather.py`: ASOS 시간자료·대기안정도 재료 수집
+- `fetch_kma_weather.py`: ASOS 시간자료 수집(대기안정도 재료 옵션은 Track A 추가분)
 - `wind_sources.py`: ASOS+AWS 통합, 격자별 IDW 바람(`WindField`)
-- `run_onset_risk.py`: 1단 발생 위험 예보 소거 실험과 `onset_alerts*.csv` 생성(`--train-end`로 분할 시점 변경, `onset_event_scores*.csv`는 결합 평가 입력)
+- `species_weight_sets.py`: 축종 배출계수 세트(채택 EMEP/EEA NH3, 대조 시설 수). 선택 근거는 `sensitivity_species_weights.py` → `outputs/wind_source_association/species_weight_sensitivity.md`
+- `run_onset_risk.py`: 1단 발생 위험 예보 학습·평가(R0·R1·R2·R5·R5o)와 `onset_alerts*.csv` 생성(`--train-end`로 분할 시점 변경, `onset_event_scores*.csv`는 결합 평가 입력). 기여 없던 실험군(건물 밀도 R3·외부 시설 R2s·산단 경계 R2z·대기안정도 R2w·R4)과 실험 옵션(참조 풍향 창·중심점 모드·지점 선택·정체 처리)은 2026-09-20 리팩토링에서 제거했다. 결과는 `experiment_summary.md`, 코드는 git 태그 `pre-refactor-2026-09-20`
 - `fuse_onset_spread.py`: 1단·2단 결합(2단 Top 3 중 1단 순위로 1순위 선택) 평가 → `outputs/onset_spread_fusion/`
 - `작업 최종 아키텍쳐.md`: 최종 구조 설명(입력·2단·1단·결합·Agent·실행·피드백 대응). `outputs/onset_risk/experiment_summary.md`: 1단 변형 실행 25건 요약(원본 json은 정리 시 삭제, git 이력에 있음)
 - `run_ablation.py`: 2단 확산 예측에 기상·발생원을 넣는 소거 실험(M0~M4)
-- `wind_window_sweep.py`, `compare_wind_sources.py`, `test_wind_source_association.py`: 풍향–발생원 연관 검정(참조 바람 창 24조합, 바람 자료원 5종)
+- `test_wind_source_association.py`, `wind_window_sweep.py`, `minute_wind_test.py`, `compare_wind_sources.py`, `test_factory_source_filters.py`: 풍향–발생원 연관 검정(층화 셔플, 참조 바람 창 24조합, 분 자료 창 19종, 바람 자료원 5종, 공장 필터). 결론 표는 `outputs/wind_lag_sweep/*.md`
 - `build_source_backtrack.py`(Track A): Event별 발생원 역추적 후보와 격자 점수
 - `demo/index.html`: 운영 화면 데모
 - `demo/build_demo_data.py`: `compare_operational_grid_sizes.py`의 1km 결과로 데모 데이터 생성
@@ -138,8 +139,8 @@ API 키는 브라우저나 `demo/index.html`에 입력하지 않는다. 현장 �
 
 ## 최종 확인 상태
 
-- Git: 2026-09-20 기준 Track A(`feat/source-backtrack`)와 Track B(`feat/integration-ablation`)를 `main`에 병합했다(`fb6d597`). 원격 push는 하지 않았다.
-- 테스트: `python -m unittest discover -s tests` 32건 중 31건 통과. `tests/test_streamlit_app.py`는 Python 3.10에 `tomllib`이 없어 import 실패(3.11 이상 필요).
+- Git: 2026-09-20 기준 Track A(`feat/source-backtrack`)와 Track B(`feat/integration-ablation`)를 `main`에 병합했다(`fb6d597`). 이후 main에서 결합 평가·정리·리팩토링을 커밋했고 원격 push는 하지 않았다. 워크트리 `_trackB`는 삭제했다.
+- 테스트: `python -m unittest discover -s tests` 35건 전부 통과(Python 3.10, `tests/test_streamlit_app.py`는 `tomllib` 없으면 `toml`로 대체).
 - 1단 산출물: `outputs/onset_risk/onset_alerts.csv`(전체)와 `onset_alerts_{livestock,factory,sewage}.csv`(유형별)는 ASOS+AWS 격자별 바람·R5 기준으로 생성한다.
 
 ```powershell

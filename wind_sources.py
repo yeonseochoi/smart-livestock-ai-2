@@ -6,7 +6,7 @@
   그래서 "가까운 지점을 우선하되 비면 먼 지점으로 메운다"는 거리 가중(IDW, 역거리 제곱)으로 위치별 바람을 만든다.
 
 자료 출처
-  ASOS: outputs/weather_integration/asos_hourly_2020_2026.csv (기상청 API 허브 kma_sfctm2)
+  ASOS: outputs/weather_integration/asos_hourly_2020_2026.csv (기상청 API 허브 kma_sfctm3, fetch_kma_weather.py)
   AWS : data/kma_aws_hourly/aws_fileset_2020_2025.zip (기상자료개방포털 파일셋, 지점·연도별 zip 30개, 2020~2025)
         data/kma_aws_hourly/aws_hourly_2026_01_08.csv   (같은 포털 '자료' 탭 조회, 2026-01-01~08-31)
   AWS 지점 좌표: API 허브 stn_inf.php?inf=AWS (2026-07 기준)
@@ -21,7 +21,6 @@
 from __future__ import annotations
 
 import io
-import sys
 import zipfile
 from pathlib import Path
 
@@ -139,16 +138,9 @@ class WindField:
         """해당 위치의 시각별 from_deg·speed(+기온·습도·강수). 관측소별 결측은 가중 재정규화."""
         w = self.weights(lat, lon)
         out = {}
-        for key, mat in (("u", self.U), ("v", self.V), ("speed", self.S)):
+        for key, mat in {"u": self.U, "v": self.V, "speed": self.S, **self.extra}.items():
             values = mat.to_numpy(float)
-            mask = ~np.isnan(values)
-            wsum = (mask * w).sum(axis=1)
-            with np.errstate(invalid="ignore", divide="ignore"):
-                out[key] = np.where(wsum > 0, np.nansum(values * w, axis=1) / wsum, np.nan)
-        for key, mat in self.extra.items():
-            values = mat.to_numpy(float)
-            mask = ~np.isnan(values)
-            wsum = (mask * w).sum(axis=1)
+            wsum = (~np.isnan(values) * w).sum(axis=1)
             with np.errstate(invalid="ignore", divide="ignore"):
                 out[key] = np.where(wsum > 0, np.nansum(values * w, axis=1) / wsum, np.nan)
         table = pd.DataFrame(out, index=self.hours)
@@ -158,11 +150,6 @@ class WindField:
 
     def center_table(self, center: tuple[float, float]) -> pd.DataFrame:
         return self.at(center[0], center[1])
-
-    def nearest_station(self, lat: float, lon: float) -> tuple[int, float]:
-        d = haversine_km(lat, lon, self.lat, self.lon)
-        i = int(np.argmin(d))
-        return int(self.station_ids[i]), float(d[i])
 
 
 def summarize(aws: pd.DataFrame) -> str:

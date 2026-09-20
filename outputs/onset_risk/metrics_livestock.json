@@ -6,18 +6,12 @@
   "test_positives": 1102,
   "test_hours_with_complaints": 840,
   "test_quiet_hours_with_complaints": 460,
+  "test_positive_rate": 0.007053251408090118,
   "neg_rate": 0.03,
   "radius_km": 6.0,
-  "buildings_available": true,
-  "stability_available": true,
-  "wind_window": {
-    "lag": 0,
-    "window": 1,
-    "weighting": "speed"
-  },
   "label_type": "livestock",
   "wind_source": "both",
-  "wind_mode": "local",
+  "train_end": "2025-01-01",
   "seeds": [
     42,
     7,
@@ -180,7 +174,6 @@
       ]
     }
   },
-  "test_positive_rate": 0.007053251408090118,
   "alerts_export": {
     "arm": "R5",
     "hours": 840,
