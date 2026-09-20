@@ -177,6 +177,6 @@
   "alerts_export": {
     "arm": "R5",
     "hours": 42,
-    "rows": 420
+    "rows": 1260
   }
 }

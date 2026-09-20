@@ -25,7 +25,8 @@
                  격자 중심마다 IDW, 기온·습도·강수는 민원 중심점 값.
   --train-end  : 2단 테스트 Event 시각의 1단 점수를 연도별 확장 창(expanding window)으로 만들 때
                  2021-01-01, 2022-01-01, … 로 바꿔 돌린다(fuse_onset_spread.py 입력).
-  산출물: metrics{tag}.json, onset_risk_table{tag}.md, onset_alerts{tag}.csv(테스트 시각별 상위 10, 서비스 입력),
+  산출물: metrics{tag}.json, onset_risk_table{tag}.md, onset_alerts{tag}.csv(테스트 시각별 상위 30, 서비스 입력),
+          onset_cells.csv(1단이 다루는 격자 186개 목록. 후보 축소 규칙에서 "1단 격자 밖" 판정용),
           onset_event_scores{tag}.csv(전체 라벨일 때만. 2단 테스트 Event의 event_hour-1h 시점 전 격자 점수·순위 — 결합 평가용).
 
 풍향 조건부 지도(CPF형)는 수용체 모델의 조건부 확률 함수(conditional probability function)를 격자 단위로 옮긴 것이다.
@@ -73,6 +74,7 @@ ARMS = {
     "R5o": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + CPF_FEATURES,
 }
 EXPORT_ARM_PRIORITY = ("R5", "R2")
+ALERT_TOP_N = 30  # onset_alerts*.csv 에 남기는 시각별 상위 격자 수(문서의 사전 경보 5개 + 후보 축소 규칙 30위)
 
 
 def count_between(times: np.ndarray, start: np.ndarray, end: np.ndarray) -> np.ndarray:
@@ -345,7 +347,7 @@ def export_alerts(test: pd.DataFrame, score: np.ndarray, arm: str, events: pd.Da
         lead["train_end"] = str(train_end.date())
         lead = lead[["event_hour", "hour", "grid_x", "grid_y", "risk_score", "rank", "train_end"]].sort_values(["event_hour", "rank"])
         lead.to_csv(OUTPUT_DIR / f"onset_event_scores{suffix}.csv", index=False, encoding="utf-8-sig")
-    alerts = alerts[alerts["rank"] <= 10].sort_values(["hour", "rank"])
+    alerts = alerts[alerts["rank"] <= ALERT_TOP_N].sort_values(["hour", "rank"])
     hour_max = alerts.groupby("hour")["risk_score"].transform("max")
     alerts["relative_risk"] = (100 * alerts["risk_score"] / hour_max).round().astype(int)
     alerts["arm"] = arm
@@ -393,6 +395,7 @@ def main() -> None:
     events = first_cells_of_events(spread_data, complaints, train_end)
     panel, cells = build_panel(complaints, events, args.neg_rate, args.radius_km, np.random.default_rng(0),
                                args.label_type, args.wind_source, train_end)
+    cells[["grid_x", "grid_y", "center_latitude", "center_longitude"]].to_csv(OUTPUT_DIR / "onset_cells.csv", index=False, encoding="utf-8-sig")
     train, test = panel[panel["is_train"]], panel[~panel["is_train"]]
     summary = {
         "cells": int(len(cells)), "train_rows": int(len(train)), "train_positives": int(train["target"].sum()),

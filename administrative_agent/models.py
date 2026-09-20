@@ -82,6 +82,10 @@ class ForecastResult:
     onset_reference_time: datetime | None = None
     # 냄새 유형별(가축·공장·하수) 모델의 같은 시각 위험 상위 격자. {"가축": (cells...), ...}. 없으면 빈 dict.
     onset_alerts_by_type: dict[str, tuple[OnsetAlertCell, ...]] = field(default_factory=dict)
+    # 후보 축소: 2단 후보 수 → 1단 순위 narrow_rank_limit 이내로 좁힌 뒤 수. 1단 산출물이 없으면 None(좁히지 않음).
+    candidate_count: int | None = None
+    narrowed_candidate_count: int | None = None
+    narrow_rank_limit: int | None = None
 
     def __post_init__(self) -> None:
         if self.grid_size_m != 1000:

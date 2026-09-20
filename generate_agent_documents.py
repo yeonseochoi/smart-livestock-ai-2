@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from administrative_agent.models import ForecastResult, OnsetAlertCell, RiskArea, SourceCandidate
+from administrative_agent.policy import NARROW_RANK_LIMIT, narrow_candidates
 from administrative_agent.service import build_response_package, write_response_package
 
 DEFAULT_PREDICTIONS = Path("outputs/operational_grid_comparison/test_predictions.csv")
@@ -17,6 +18,7 @@ DEFAULT_OUTPUT = Path("outputs/administrative_agent")
 DEFAULT_SOURCE_CANDIDATES = Path("outputs/source_backtrack/source_candidates.csv")
 DEFAULT_GRID_SCORES = Path("outputs/source_backtrack/grid_scores.csv")
 DEFAULT_ONSET_ALERTS = Path("outputs/onset_risk/onset_alerts.csv")
+DEFAULT_ONSET_CELLS = Path("outputs/onset_risk/onset_cells.csv")
 # 유형별 모델 산출물(run_onset_risk.py --label-type X --tag X). 없으면 해당 유형 줄만 생략.
 DEFAULT_ONSET_ALERTS_BY_TYPE = {"가축": Path("outputs/onset_risk/onset_alerts_livestock.csv"),
                                 "공장": Path("outputs/onset_risk/onset_alerts_factory.csv"),
@@ -113,11 +115,32 @@ def load_onset_alerts(path: Path | None, event_hour: pd.Timestamp, limit: int = 
     return cells, reference
 
 
+def onset_ranks_for(path: Path | None, cells_path: Path | None, event_hour: pd.Timestamp,
+                    lead_hours: int = 1) -> pd.DataFrame | None:
+    """event_hour-lead_hours 시각의 1단 순위 표(grid_x, grid_y, onset_rank). 1단 격자인데 저장된 상위 밖이면 순위를 크게 둔다.
+
+    onset_alerts.csv 는 시각별 상위 ALERT_TOP_N 만 담으므로, 격자 목록(onset_cells.csv)으로 '1단 격자 밖'과 '순위 밖'을 구분한다.
+    두 파일 중 하나라도 없으면 None(좁히지 않음).
+    """
+    if path is None or cells_path is None or not path.exists() or not cells_path.exists():
+        return None
+    table = pd.read_csv(path, encoding="utf-8-sig", usecols=["hour", "grid_x", "grid_y", "rank"])
+    table["hour"] = pd.to_datetime(table["hour"])
+    rows = table[table["hour"] == pd.Timestamp(event_hour) - pd.Timedelta(hours=lead_hours)]
+    if rows.empty:
+        return None
+    cells = pd.read_csv(cells_path, encoding="utf-8-sig", usecols=["grid_x", "grid_y"])
+    ranks = cells.merge(rows[["grid_x", "grid_y", "rank"]], on=["grid_x", "grid_y"], how="left")
+    ranks["onset_rank"] = ranks["rank"].fillna(float(len(cells)))  # 저장 범위 밖 = 격자 수 이상의 순위
+    return ranks[["grid_x", "grid_y", "onset_rank"]]
+
+
 def forecast_from_csv(
     path: Path, metrics_path: Path, event_id: str | None = None, event_time: str | None = None,
     source_candidates_path: Path | None = DEFAULT_SOURCE_CANDIDATES, grid_scores_path: Path | None = DEFAULT_GRID_SCORES,
     onset_alerts_path: Path | None = DEFAULT_ONSET_ALERTS,
     onset_alerts_by_type_paths: dict[str, Path] | None = None,
+    onset_cells_path: Path | None = DEFAULT_ONSET_CELLS,
 ) -> ForecastResult:
     predictions = pd.read_csv(path)
     required = {"event_id", "event_hour", "grid_x", "grid_y", "score", "grid_m"}
@@ -133,9 +156,16 @@ def forecast_from_csv(
         matching = one_km[one_km["event_hour"] == pd.Timestamp(event_time)]
         if not matching.empty:
             selected_id = matching.iloc[0]["event_id"]
-    event = one_km[one_km["event_id"] == selected_id].nlargest(3, "score").copy()
-    if len(event) < 3:
+    candidates = one_km[one_km["event_id"] == selected_id].copy()
+    if len(candidates) < 3:
         raise ValueError(f"{selected_id}에 Top 3를 만들 충분한 후보 권역이 없습니다.")
+    # 후보 축소 규칙: 기준시각 1시간 전 1단 순위 NARROW_RANK_LIMIT 이내 격자로 좁힌 뒤 Top 3. 1단 산출물이 없으면 후보 전체.
+    narrow_info = None
+    ranks = onset_ranks_for(onset_alerts_path, onset_cells_path, candidates["event_hour"].iloc[0])
+    if ranks is not None:
+        candidates = candidates.merge(ranks, on=["grid_x", "grid_y"], how="left")
+        candidates, narrow_info = narrow_candidates(candidates, NARROW_RANK_LIMIT)
+    event = candidates.nlargest(3, "score").copy()
     risks = _relative_scores(event["score"])
 
     def optional(row: pd.Series, column: str):
@@ -170,6 +200,9 @@ def forecast_from_csv(
         backtrack_uncertainty=uncertainty, backtrack_weather_source=weather_source,
         onset_alerts=onset_alerts, onset_reference_time=None if onset_reference is None else onset_reference.to_pydatetime(),
         onset_alerts_by_type=by_type,
+        candidate_count=None if narrow_info is None else narrow_info["candidates"],
+        narrowed_candidate_count=None if narrow_info is None else narrow_info["kept"],
+        narrow_rank_limit=None if narrow_info is None else narrow_info["rank_limit"],
     )
 
 
@@ -183,12 +216,13 @@ def main() -> None:
                         help="Track A source_candidates.csv. 없으면 발생원 후보 절을 생략한다")
     parser.add_argument("--grid-scores", type=Path, default=DEFAULT_GRID_SCORES)
     parser.add_argument("--onset-alerts", type=Path, default=DEFAULT_ONSET_ALERTS,
-                        help="run_onset_risk.py의 onset_alerts.csv. 없으면 사전 경보 절을 생략한다")
+                        help="run_onset_risk.py의 onset_alerts.csv. 없으면 사전 경보 절과 후보 축소를 생략한다")
+    parser.add_argument("--onset-cells", type=Path, default=DEFAULT_ONSET_CELLS, help="run_onset_risk.py의 onset_cells.csv")
     args = parser.parse_args()
     package = build_response_package(forecast_from_csv(
         args.predictions, args.metrics, args.event_id,
         source_candidates_path=args.source_candidates, grid_scores_path=args.grid_scores,
-        onset_alerts_path=args.onset_alerts,
+        onset_alerts_path=args.onset_alerts, onset_cells_path=args.onset_cells,
     ))
     write_response_package(package, args.output)
     print(f"행정 대응 문서 생성 완료: {args.output.resolve()}")

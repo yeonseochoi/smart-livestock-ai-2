@@ -39,7 +39,7 @@
 - 방법(`fuse_onset_spread.py`): 2단 모델·Top 3 집합은 그대로 두고, 민원 접수 1시간 전 1단 순위가 가장 높은 격자를 1순위로 올리는 후처리. 1단 점수는 Event마다 그 이전 자료로만 학습한 연도별 확장 창(expanding window) 분할(`run_onset_risk.py --train-end 2021-01-01 … 2024-01-01`)에서 얻어 누수가 없다.
 - 결과(테스트 Event 47개, `outputs/onset_spread_fusion/metrics.json`): 2단 단독 Hit@1 0.553 · Hit@2 0.745 · Hit@3 0.851. 1단으로 Top 3 중 1순위를 고르면 Hit@1 0.553(고친 Event 5, 망친 Event 5), Top 2 중 고르면 0.574(5/4, 부호 검정 p=1.0). 개선 근거 없음.
 - 원인: 2단 후보는 첫 민원 인근 격자라 1단에서도 모두 상위에 있다(Top 3 안 정답 격자의 1단 순위 중앙값 3위, 오답 2위). 두 모델은 "어느 동네"에는 동의하지만 그 안의 1 km 격자 하나를 가르는 정보는 1단에 없다.
-- 후보 축소 규칙(`fuse_onset_spread.py --narrow 30`, `outputs/onset_spread_fusion/narrow_table.md`): 2단 후보를 Event 1시간 전 1단 위험 순위 30위 이내 격자로 좁히면 후보 평균 31.1 → 15.1개, Hit@1/2/3은 0.553/0.745/0.851 그대로(바뀐 Event 0). 정답 격자의 1단 순위 중앙값 6위, 30위 이내 98.7%. 성능 향상은 아니고 화면·문서의 후보 수를 줄이는 용도. 1단은 민원 이력 있는 186격자만 다루므로 1단 격자 밖 후보는 2단 점수가 더 높을 때만 예외 허용한다.
+- 후보 축소 규칙(채택, `administrative_agent/policy.py` `narrow_candidates`; 검증 `fuse_onset_spread.py --narrow 30`, `outputs/onset_spread_fusion/narrow_table.md`): 2단 후보를 Event 1시간 전 1단 위험 순위 30위 이내 격자로 좁히면 후보 평균 31.1 → 15.1개, Hit@1/2/3은 0.553/0.745/0.851 그대로(바뀐 Event 0). 정답 격자의 1단 순위 중앙값 6위, 30위 이내 98.7%. `generate_agent_documents.py`와 Streamlit이 기본으로 적용하며, 1단 산출물(`onset_alerts.csv` 상위 30, `onset_cells.csv`)이 없으면 후보 전체에서 고른다. 1단은 민원 이력 있는 186격자만 다루므로 1단 격자 밖 후보는 2단 점수가 더 높을 때만 예외 허용한다. 성능 향상은 아니고 후보 수 축소다.
 - 대안(2단 격자 크기): `outputs/operational_grid_comparison/metrics.json` 기준 Hit@3는 1 km 0.851 · 1.5 km 0.957 · 2 km 0.894. 저장된 테스트 예측에서 재계산한 Hit@1은 1 km 0.553 · 1.5 km 0.609 · 2 km 0.617, Hit@2는 0.745 · 0.870 · 0.830. 권역 수를 줄이려면 모델 결합보다 격자 크기 조정이 근거가 있다(미채택, 발표용 판단 필요).
 
 ### 2. 행정 대응 Agent
@@ -142,7 +142,7 @@ API 키는 브라우저나 `demo/index.html`에 입력하지 않는다. 현장 �
 
 - Git: 2026-09-20 기준 Track A(`feat/source-backtrack`)와 Track B(`feat/integration-ablation`)를 `main`에 병합했다(`fb6d597`). 이후 main에서 결합 평가·정리·리팩토링을 커밋했고 원격 push는 하지 않았다. 워크트리 `_trackB`는 삭제했다.
 - 테스트: `python -m unittest discover -s tests` 35건 전부 통과(Python 3.10, `tests/test_streamlit_app.py`는 `tomllib` 없으면 `toml`로 대체).
-- 1단 산출물: `outputs/onset_risk/onset_alerts.csv`(전체)와 `onset_alerts_{livestock,factory,sewage}.csv`(유형별)는 ASOS+AWS 격자별 바람·R5 기준으로 생성한다.
+- 1단 산출물: `outputs/onset_risk/onset_alerts.csv`(전체, 시각별 상위 30)와 `onset_alerts_{livestock,factory,sewage}.csv`(유형별)는 ASOS+AWS 격자별 바람·R5 기준으로 생성한다. `onset_cells.csv`는 1단 격자 186개 목록(후보 축소 규칙용).
 
 ```powershell
 python -m unittest discover -s tests -v

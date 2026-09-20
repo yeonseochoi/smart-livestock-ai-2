@@ -1,5 +1,34 @@
 from __future__ import annotations
 
+import pandas as pd
+
+NARROW_RANK_LIMIT = 30  # 확산 예측 후보를 발생 위험 예보 순위 몇 위까지로 좁히나
+MIN_CANDIDATES = 3      # Top 3를 만들 최소 후보 수
+
+
+def narrow_candidates(frame: pd.DataFrame, k: int = NARROW_RANK_LIMIT) -> tuple[pd.DataFrame, dict]:
+    """확산 예측(2단) 후보를 발생 위험 예보(1단) 순위 k 이내 격자로 좁힌다.
+
+    frame 열: score(2단 점수), onset_rank(기준시각 1시간 전 1단 순위. 1단 격자 밖이면 NaN).
+    규칙: 순위 k 이내는 남긴다. 1단 격자 밖 후보(민원 이력 없는 칸)는 2단 점수가 남은 후보 1위보다 높을 때만 남긴다.
+          남은 후보가 MIN_CANDIDATES 미만이면 나머지에서 2단 점수 순으로 채운다.
+    검증(테스트 Event 47개): 후보 평균 31.1 → 15.1, Hit@1/2/3 변화 없음. outputs/onset_spread_fusion/narrow_table.md
+    """
+    ordered = frame.sort_values("score", ascending=False)
+    inside = ordered[ordered["onset_rank"] <= k]
+    outside = ordered[ordered["onset_rank"].isna()]
+    if len(inside) and len(outside):
+        outside = outside[outside["score"] > inside["score"].iloc[0]]
+    kept = pd.concat([inside, outside]).sort_values("score", ascending=False)
+    filled = 0
+    if len(kept) < MIN_CANDIDATES:
+        rest = ordered.drop(kept.index).head(MIN_CANDIDATES - len(kept))
+        filled = len(rest)
+        kept = pd.concat([kept, rest]).sort_values("score", ascending=False)
+    info = {"rank_limit": k, "candidates": int(len(frame)), "kept": int(len(kept)),
+            "filled": filled, "escaped_outside": int(len(outside))}
+    return kept, info
+
 
 def response_level(relative_risk: int) -> tuple[str, str]:
     """상대 위험도에 따른 설명 가능한 대응 문구를 반환한다."""

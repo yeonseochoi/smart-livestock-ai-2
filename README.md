@@ -185,7 +185,7 @@ Streamlit Community Cloud에서는 실행 파일을 `streamlit_app.py`로 지정
 
 행정 문서와 화면에는 민원 접수 1시간 전 시점의 위험 상위 격자가 '사전 경보 (참고)' 절로 붙습니다. 확률이 아닌 상대값이며 원인 시설을 단정하지 않습니다.
 
-두 모델을 합쳐 권역을 1곳으로 줄이는 방식도 검토했습니다. 확산 예측 Top 3 중 발생 위험 순위가 가장 높은 격자를 1순위로 올리는 후처리인데, 테스트 Event 47개에서 Hit@1은 확산 예측 단독 0.553과 같았습니다(고친 Event 5, 망친 Event 5). 확산 예측 후보는 첫 민원 인근이라 발생 위험 예보에서도 모두 상위에 있어 그중 하나를 가를 정보가 없기 때문입니다. 권역 1곳 추천은 채택하지 않았습니다(`fuse_onset_spread.py`, `outputs/onset_spread_fusion/fusion_table.md`). 반대로 발생 위험 순위 30위 이내 격자로 확산 예측 후보를 미리 좁히는 규칙은 후보를 평균 31개에서 15개로 줄이면서 Hit@1/2/3이 그대로였습니다(`--narrow 30`, `narrow_table.md`). 성능 향상이 아니라 후보 수 축소 규칙입니다.
+두 모델을 합쳐 권역을 1곳으로 줄이는 방식도 검토했습니다. 확산 예측 Top 3 중 발생 위험 순위가 가장 높은 격자를 1순위로 올리는 후처리인데, 테스트 Event 47개에서 Hit@1은 확산 예측 단독 0.553과 같았습니다(고친 Event 5, 망친 Event 5). 확산 예측 후보는 첫 민원 인근이라 발생 위험 예보에서도 모두 상위에 있어 그중 하나를 가를 정보가 없기 때문입니다. 권역 1곳 추천은 채택하지 않았습니다(`fuse_onset_spread.py`, `outputs/onset_spread_fusion/fusion_table.md`). 반대로 발생 위험 순위 30위 이내 격자로 확산 예측 후보를 미리 좁히는 규칙은 후보를 평균 31개에서 15개로 줄이면서 Hit@1/2/3이 그대로였습니다(`fuse_onset_spread.py --narrow 30`, `narrow_table.md`). 이 규칙은 문서 생성과 화면에 기본으로 적용됩니다(`administrative_agent/policy.py` `narrow_candidates`). 성능 향상이 아니라 후보 수 축소 규칙이며, 1단 산출물이 없으면 후보 전체에서 고릅니다.
 
 > 재현 참고자료: [run_onset_risk.py](run_onset_risk.py) · [결과 표](outputs/onset_risk/onset_risk_table.md) · [바람 자료원 비교](outputs/wind_lag_sweep/wind_source_compare.md) · [발생원·바람 검정 요약](PROJECT_CONTEXT.md)
 
@@ -197,7 +197,7 @@ Streamlit Community Cloud에서는 실행 파일을 `streamlit_app.py`로 지정
 ```text
 [서비스]
 streamlit_app.py                   Streamlit 화면 (Top 3 + 사전 경보 카드)
-generate_agent_documents.py        예측 결과 → 행정 대응 문서 4종 + agent_output.json
+generate_agent_documents.py        2단 후보를 1단 상위 30으로 좁혀 Top 3 → 행정 대응 문서 4종 + agent_output.json
 administrative_agent/              문서 모델(models)·rule-base 대응 단계(policy)·문서 생성(documents)·LLM 연동(llm)
 demo/                              브라우저 데모(index.html, demo-data.js)와 로컬 API 서버(server.py)
 
@@ -210,11 +210,11 @@ sensitivity_early_prediction.py    격자·시간창 후보 비교(설계 근거
 run_ablation.py                    기상·발생원 역추적을 넣는 소거 실험 M0~M4 (개선 없음 → 미채택)
 
 [1단 발생 위험 예보: 민원 없는 지금, 다음 1시간 어디서 나나]
-run_onset_risk.py                  1단 학습·평가(R0·R1·R2·R5·R5o)와 onset_alerts*.csv 생성
+run_onset_risk.py                  1단 학습·평가(R0·R1·R2·R5·R5o)와 onset_alerts*.csv(시각별 상위 30)·onset_cells.csv 생성
 wind_sources.py                    ASOS+AWS 시간자료 통합, 격자별 역거리 가중(IDW) 바람
 species_weight_sets.py             축종 배출계수 세트(EMEP/EEA NH3 등)
 fetch_kma_weather.py               기상청 API 허브 ASOS 수집(+대기안정도 재료, Track A 옵션)
-fuse_onset_spread.py               1단·2단 결합(권역 1곳) 평가 — 효과 없음, 미채택
+fuse_onset_spread.py               1단·2단 결합 평가: 권역 1곳 재정렬(효과 없음), 후보 축소 규칙 검증(--narrow 30, 채택)
 
 [근거 검정: 바람·발생원 연관 (결론은 outputs/wind_lag_sweep, outputs/wind_source_association)]
 test_wind_source_association.py    민원 시각 풍향 ↔ 축산 발생원 층화 셔플 검정, --travel-lag 로 거리별 시차 가설

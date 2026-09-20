@@ -154,6 +154,9 @@ def create_briefing(forecast: ForecastResult) -> str:
         level, _ = response_level(area.relative_risk)
         lines.append(f"|{area.rank}|{_location(area)}|{area.relative_risk}/100|{level}|")
     weather = forecast.weather
+    if forecast.narrowed_candidate_count is not None:
+        lines += ["", f"- 후보 격자 {forecast.candidate_count}개 중 기준시각 1시간 전 발생 위험 예보 상위 {forecast.narrow_rank_limit}위 안 "
+                      f"{forecast.narrowed_candidate_count}개에서 선정 (후보 축소 규칙, 적중률 변화 없음 확인)"]
     lines += [
         "", "※ 상대위험점수는 실제 악취 발생확률이 아닌 동일 Event 내 후보권역 간 우선순위 판단을 위한 상대적 점수입니다.", "",
         "## 3. 참고 기상정보", "",

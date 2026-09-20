@@ -26,6 +26,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from administrative_agent.policy import narrow_candidates
+
 SPREAD_PATH = Path("outputs/operational_grid_comparison/test_predictions.csv")
 ONSET_DIR = Path("outputs/onset_risk")
 ONSET_PATTERNS = ("onset_event_scores.csv", "onset_event_scores_fold*.csv")  # 유형별(_livestock 등) 파일은 제외
@@ -94,21 +96,12 @@ def summarize(table: pd.DataFrame, label: str) -> dict:
 
 
 def narrow_event(group: pd.DataFrame, k: int) -> dict:
-    """한 Event의 2단 후보를 1단 순위 K 이내로 좁힌 뒤 Top 3 적중. 예외·채움 규칙은 모듈 docstring."""
+    """한 Event의 2단 후보를 1단 순위 K 이내로 좁힌 뒤 Top 3 적중. 규칙은 administrative_agent.policy.narrow_candidates."""
     ordered = group.sort_values("score", ascending=False)
-    inside = ordered[ordered["onset_rank"] <= k]
-    outside = ordered[ordered["onset_rank"].isna()]
-    if len(inside) and len(outside):
-        outside = outside[outside["score"] > inside["score"].iloc[0]]
-    kept = pd.concat([inside, outside]).sort_values("score", ascending=False)
+    kept, info = narrow_candidates(group, k)
     top = kept.head(3)
-    filled = 0
-    if len(top) < 3:
-        rest = ordered.drop(kept.index).head(3 - len(top))
-        filled = len(rest)
-        top = pd.concat([top, rest])
     base = ordered.head(3)
-    return {"candidates": int(len(group)), "kept": int(len(kept)), "filled": filled, "escaped_outside": int(len(outside)),
+    return {"candidates": info["candidates"], "kept": info["kept"], "filled": info["filled"], "escaped_outside": info["escaped_outside"],
             "base_hit1": int(base.iloc[0]["target"]), "base_hit2": int(base.head(2)["target"].max()), "base_hit3": int(base["target"].max()),
             "narrow_hit1": int(top.iloc[0]["target"]), "narrow_hit2": int(top.head(2)["target"].max()), "narrow_hit3": int(top["target"].max()),
             "truth_min_onset_rank": float(group.loc[group["target"] == 1, "onset_rank"].min())}
