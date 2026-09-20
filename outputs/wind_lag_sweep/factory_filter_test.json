@@ -1,6 +1,6 @@
 {
   "permutations": 300,
-  "radius_km": 10.0,
+  "radius_km": 6.0,
   "sector_deg": 30.0,
   "odor_keywords": [
     "폐기물",
@@ -62,216 +62,216 @@
       "n_sources": 768,
       "complaint_group": "전체",
       "n_complaints": 8079,
-      "ratio": 1.0064569540648753,
-      "z": 1.305593696938532,
-      "p": 0.08970099667774087
+      "ratio": 0.9603151376928999,
+      "z": -6.657029042696517,
+      "p": 1.0
     },
     {
       "source_set": "all",
       "n_sources": 768,
       "complaint_group": "가축냄새",
       "n_complaints": 3863,
-      "ratio": 1.0195505985587232,
-      "z": 2.5851406091323943,
+      "ratio": 0.970748474268276,
+      "z": -3.3402135588567314,
+      "p": 1.0
+    },
+    {
+      "source_set": "all",
+      "n_sources": 768,
+      "complaint_group": "공장냄새",
+      "n_complaints": 1340,
+      "ratio": 0.9544654228504581,
+      "z": -3.2409333906863997,
+      "p": 0.9966777408637874
+    },
+    {
+      "source_set": "all",
+      "n_sources": 768,
+      "complaint_group": "하수구냄새",
+      "n_complaints": 546,
+      "ratio": 0.9485267801092263,
+      "z": -2.3562641293061417,
+      "p": 0.9900332225913622
+    },
+    {
+      "source_set": "odor_ind",
+      "n_sources": 133,
+      "complaint_group": "전체",
+      "n_complaints": 8079,
+      "ratio": 0.9253900811162767,
+      "z": -9.120172005013611,
+      "p": 1.0
+    },
+    {
+      "source_set": "odor_ind",
+      "n_sources": 133,
+      "complaint_group": "가축냄새",
+      "n_complaints": 3863,
+      "ratio": 0.937599125929581,
+      "z": -5.333161964754913,
+      "p": 1.0
+    },
+    {
+      "source_set": "odor_ind",
+      "n_sources": 133,
+      "complaint_group": "공장냄새",
+      "n_complaints": 1340,
+      "ratio": 0.9568182864850393,
+      "z": -2.610826105653804,
+      "p": 0.9966777408637874
+    },
+    {
+      "source_set": "odor_ind",
+      "n_sources": 133,
+      "complaint_group": "하수구냄새",
+      "n_complaints": 546,
+      "ratio": 0.9566775386314612,
+      "z": -1.3347354340180564,
+      "p": 0.920265780730897
+    },
+    {
+      "source_set": "big_class",
+      "n_sources": 50,
+      "complaint_group": "전체",
+      "n_complaints": 8079,
+      "ratio": 1.0499414136381666,
+      "z": 3.4459757628710324,
       "p": 0.006644518272425249
     },
     {
-      "source_set": "all",
-      "n_sources": 768,
+      "source_set": "big_class",
+      "n_sources": 50,
+      "complaint_group": "가축냄새",
+      "n_complaints": 3863,
+      "ratio": 1.0614227972714299,
+      "z": 2.640278638766814,
+      "p": 0.006644518272425249
+    },
+    {
+      "source_set": "big_class",
+      "n_sources": 50,
       "complaint_group": "공장냄새",
       "n_complaints": 1340,
-      "ratio": 0.9891198623970507,
-      "z": -1.013373975104625,
-      "p": 0.8504983388704319
+      "ratio": 0.9964383505239538,
+      "z": -0.1324738932529108,
+      "p": 0.5581395348837209
     },
     {
-      "source_set": "all",
-      "n_sources": 768,
+      "source_set": "big_class",
+      "n_sources": 50,
       "complaint_group": "하수구냄새",
       "n_complaints": 546,
-      "ratio": 0.9906301265083884,
-      "z": -0.5903109039513402,
-      "p": 0.7275747508305648
+      "ratio": 0.9672756921024349,
+      "z": -0.5524712064987524,
+      "p": 0.717607973421927
     },
     {
-      "source_set": "odor_ind",
-      "n_sources": 133,
+      "source_set": "odor_big",
+      "n_sources": 16,
       "complaint_group": "전체",
       "n_complaints": 8079,
-      "ratio": 0.9769495399284117,
-      "z": -4.12174986794592,
+      "ratio": 0.9655775449943756,
+      "z": -1.4657337773052916,
+      "p": 0.9269102990033222
+    },
+    {
+      "source_set": "odor_big",
+      "n_sources": 16,
+      "complaint_group": "가축냄새",
+      "n_complaints": 3863,
+      "ratio": 0.8848791407211363,
+      "z": -2.8113437505053107,
+      "p": 0.9966777408637874
+    },
+    {
+      "source_set": "odor_big",
+      "n_sources": 16,
+      "complaint_group": "공장냄새",
+      "n_complaints": 1340,
+      "ratio": 0.9338205440519692,
+      "z": -1.416819164433716,
+      "p": 0.9401993355481728
+    },
+    {
+      "source_set": "odor_big",
+      "n_sources": 16,
+      "complaint_group": "하수구냄새",
+      "n_complaints": 546,
+      "ratio": 0.9028027308659721,
+      "z": -1.056514686140958,
+      "p": 0.8538205980066446
+    },
+    {
+      "source_set": "unknown_ind",
+      "n_sources": 306,
+      "complaint_group": "전체",
+      "n_complaints": 8079,
+      "ratio": 0.9444696402730125,
+      "z": -8.144019362083853,
       "p": 1.0
     },
     {
-      "source_set": "odor_ind",
-      "n_sources": 133,
+      "source_set": "unknown_ind",
+      "n_sources": 306,
       "complaint_group": "가축냄새",
       "n_complaints": 3863,
-      "ratio": 0.9872125945826116,
-      "z": -1.6498333551093793,
-      "p": 0.9534883720930233
+      "ratio": 0.9483937669987296,
+      "z": -4.901187642768028,
+      "p": 1.0
     },
     {
-      "source_set": "odor_ind",
-      "n_sources": 133,
+      "source_set": "unknown_ind",
+      "n_sources": 306,
       "complaint_group": "공장냄새",
       "n_complaints": 1340,
-      "ratio": 1.001320934819649,
-      "z": 0.1540260789731236,
-      "p": 0.45514950166112955
+      "ratio": 0.9363557312325096,
+      "z": -3.8892429642746333,
+      "p": 1.0
     },
     {
-      "source_set": "odor_ind",
-      "n_sources": 133,
+      "source_set": "unknown_ind",
+      "n_sources": 306,
       "complaint_group": "하수구냄새",
       "n_complaints": 546,
-      "ratio": 0.9875945362402617,
-      "z": -0.6786099541816807,
+      "ratio": 0.9294719057314906,
+      "z": -2.777913647095499,
+      "p": 1.0
+    },
+    {
+      "source_set": "non_odor_ind",
+      "n_sources": 329,
+      "complaint_group": "전체",
+      "n_complaints": 8079,
+      "ratio": 0.9816634756355445,
+      "z": -3.239290841967834,
+      "p": 1.0
+    },
+    {
+      "source_set": "non_odor_ind",
+      "n_sources": 329,
+      "complaint_group": "가축냄새",
+      "n_complaints": 3863,
+      "ratio": 0.9948824273168426,
+      "z": -0.6368574629743183,
       "p": 0.7408637873754153
     },
     {
-      "source_set": "big_class",
-      "n_sources": 50,
-      "complaint_group": "전체",
-      "n_complaints": 8079,
-      "ratio": 0.9872715081942571,
-      "z": -1.179559990695895,
-      "p": 0.8770764119601329
-    },
-    {
-      "source_set": "big_class",
-      "n_sources": 50,
-      "complaint_group": "가축냄새",
-      "n_complaints": 3863,
-      "ratio": 0.9688841849545925,
-      "z": -1.9624714478183038,
-      "p": 0.973421926910299
-    },
-    {
-      "source_set": "big_class",
-      "n_sources": 50,
-      "complaint_group": "공장냄새",
-      "n_complaints": 1340,
-      "ratio": 0.9791153660597508,
-      "z": -1.2898812891030187,
-      "p": 0.8970099667774086
-    },
-    {
-      "source_set": "big_class",
-      "n_sources": 50,
-      "complaint_group": "하수구냄새",
-      "n_complaints": 546,
-      "ratio": 0.9684806285256827,
-      "z": -0.7998099209915632,
-      "p": 0.7906976744186046
-    },
-    {
-      "source_set": "odor_big",
-      "n_sources": 16,
-      "complaint_group": "전체",
-      "n_complaints": 8079,
-      "ratio": 0.9410041176528695,
-      "z": -4.373081100320124,
-      "p": 1.0
-    },
-    {
-      "source_set": "odor_big",
-      "n_sources": 16,
-      "complaint_group": "가축냄새",
-      "n_complaints": 3863,
-      "ratio": 0.9029623715143369,
-      "z": -4.46737595448213,
-      "p": 1.0
-    },
-    {
-      "source_set": "odor_big",
-      "n_sources": 16,
-      "complaint_group": "공장냄새",
-      "n_complaints": 1340,
-      "ratio": 0.9715132553927218,
-      "z": -1.5400674234789038,
-      "p": 0.9435215946843853
-    },
-    {
-      "source_set": "odor_big",
-      "n_sources": 16,
-      "complaint_group": "하수구냄새",
-      "n_complaints": 546,
-      "ratio": 0.9528295051083255,
-      "z": -1.0101030691746318,
-      "p": 0.8305647840531561
-    },
-    {
-      "source_set": "unknown_ind",
-      "n_sources": 306,
-      "complaint_group": "전체",
-      "n_complaints": 8079,
-      "ratio": 1.0084055488879282,
-      "z": 1.5886031371402003,
-      "p": 0.053156146179401995
-    },
-    {
-      "source_set": "unknown_ind",
-      "n_sources": 306,
-      "complaint_group": "가축냄새",
-      "n_complaints": 3863,
-      "ratio": 1.0162040305220301,
-      "z": 1.9615594240196412,
-      "p": 0.019933554817275746
-    },
-    {
-      "source_set": "unknown_ind",
-      "n_sources": 306,
-      "complaint_group": "공장냄새",
-      "n_complaints": 1340,
-      "ratio": 0.9880845053447401,
-      "z": -0.9550645214720838,
-      "p": 0.8338870431893688
-    },
-    {
-      "source_set": "unknown_ind",
-      "n_sources": 306,
-      "complaint_group": "하수구냄새",
-      "n_complaints": 546,
-      "ratio": 0.9858022161549579,
-      "z": -0.8420096394171656,
-      "p": 0.7840531561461794
-    },
-    {
-      "source_set": "non_odor_ind",
-      "n_sources": 329,
-      "complaint_group": "전체",
-      "n_complaints": 8079,
-      "ratio": 1.0162221505235116,
-      "z": 3.08790346107351,
-      "p": 0.0033222591362126247
-    },
-    {
-      "source_set": "non_odor_ind",
-      "n_sources": 329,
-      "complaint_group": "가축냄새",
-      "n_complaints": 3863,
-      "ratio": 1.0320792997679378,
-      "z": 4.000553782267075,
-      "p": 0.0033222591362126247
-    },
-    {
       "source_set": "non_odor_ind",
       "n_sources": 329,
       "complaint_group": "공장냄새",
       "n_complaints": 1340,
-      "ratio": 0.9841725106471128,
-      "z": -1.2713929326307096,
-      "p": 0.8870431893687708
+      "ratio": 0.9670381714900642,
+      "z": -2.4747050382579294,
+      "p": 0.9900332225913622
     },
     {
       "source_set": "non_odor_ind",
       "n_sources": 329,
       "complaint_group": "하수구냄새",
       "n_complaints": 546,
-      "ratio": 0.9948180808499818,
-      "z": -0.3015273838300963,
-      "p": 0.6179401993355482
+      "ratio": 0.9578588644315782,
+      "z": -2.190490852987511,
+      "p": 0.9900332225913622
     }
   ]
 }

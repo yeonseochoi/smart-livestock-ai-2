@@ -26,6 +26,7 @@ import test_wind_source_association as t
 
 OUTPUT_DIR = Path("outputs/wind_lag_sweep")
 PERMUTATIONS = 300
+RADIUS_KM = 6.0  # 다른 검정(association_sweep, run_onset_risk)과 같은 반경
 ODOR_KEYWORDS = ("폐기물", "사료", "비료", "도축", "육류", "가금", "식품", "화학", "플라스틱", "고무", "레미콘", "아스콘",
                  "피혁", "염색", "도금", "도장", "주정", "소주", "전분", "유지", "조미료", "하수", "분뇨", "재생")
 NON_ODOR_KEYWORDS = ("수리", "욕탕", "세탁", "병원", "학교", "대학", "교육", "행정", "종교", "부동산", "소매", "보험",
@@ -48,6 +49,7 @@ def factory_table(sources: pd.DataFrame) -> pd.DataFrame:
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     t.PERMUTATIONS = PERMUTATIONS
+    t.RADIUS_KM = RADIUS_KM
     rng = np.random.default_rng(t.SEED)
     complaints = t.load_complaints()
     complaints["is_sewage"] = complaints["odor_type"].astype(str).str.startswith("하수")

@@ -12,6 +12,8 @@
   R2s R2 + 축산 외 발생원(공장·하수처리, 시설 수) 상풍측/전방위 6km 수
   R2w R2 + 대기안정도(Pasquill-Gifford 등급, ASOS 산정; outputs/weather_integration/asos_hourly_stability_2020_2026.csv 있을 때만)
   R4  R3 + 축산 외 발생원 + 대기안정도
+  R5  R2 + 풍향 조건부 과거 민원 지도(CPF형: 격자 g에서 "지금 풍향 구간"일 때 과거 1년 민원율, 전체·가축·공장 유형별)
+  R5o R0 + 풍향 조건부 과거 민원 지도만 (외부 발생원 자료 없이 되는지)
 
 분할: 시간순. 학습 2020-01~2024-12, 테스트 2025-01~2026-07. 음성(민원 없음) 행은 학습에서 3% 표본 추출.
 평가: (1) 테스트(민원 있던 시각 전 격자) PR-AUC, (2) 민원이 1건 이상 있던 시각마다 위험 상위 K 격자 적중률(Hit@K, K=5·10),
@@ -20,6 +22,11 @@
 
 실행: python run_onset_risk.py [--neg-rate 0.03] [--radius-km 6] [--wind-window lag,window,simple|speed] [--tag 이름]
   --wind-window 은 발생원 노출 계산에 쓰는 참조 풍향만 바꾼다(기본 0,1,speed = t 정시 바람). 기상 특징 자체는 t 정시 그대로.
+  --label-type all|livestock|factory|sewage : 양성 라벨을 그 악취종류 민원으로 제한(음성·과거 빈도 특징은 전체 민원 그대로).
+  --seeds N : seed 수(기본 3, 순서 42,7,123,0,1,2,...).
+풍향 조건부 지도(CPF형)는 수용체 모델의 조건부 확률 함수(conditional probability function)를 격자 단위로 옮긴 것이다.
+  cpf_<type>_365d = [t-365d, t) 동안 격자 g에 생긴 <type> 민원 중 그 시각 풍향 구간(30°, 정체는 별도 구간)이 지금과 같은 것의 수
+                    ÷ 같은 기간 그 풍향 구간이었던 시간 수. 모두 t 미만 정보만 쓴다.
 """
 from __future__ import annotations
 
@@ -45,6 +52,7 @@ GRID_M = 1000
 TRAIN_END = pd.Timestamp("2025-01-01")
 PERIOD_START = pd.Timestamp("2020-01-01")
 SEEDS = (42, 7, 123)
+SEED_POOL = (42, 7, 123, 0, 1, 2, 3, 4, 5, 6, 8, 9)
 
 TIME_FEATURES = ["hour_sin", "hour_cos", "month_sin", "month_cos", "weekend", "night"]
 PRIOR_FEATURES = ["cell_rate_365d", "cell_rate_30d", "cell_recent_24h", "city_rate_30d"]
@@ -53,6 +61,8 @@ SOURCE_FEATURES = ["upwind_eea_6km", "total_eea_6km", "upwind_share_eea", "upwin
 BUILDING_FEATURES = ["building_count", "residential_count", "commercial_count"]
 NON_LIVESTOCK_FEATURES = ["upwind_factory_6km", "total_factory_6km", "upwind_wastewater_6km", "total_wastewater_6km"]
 STABILITY_FEATURES = ["stability_pg", "stable_flag"]
+CPF_FEATURES = ["cpf_all_365d", "cpf_all_ratio", "cpf_livestock_365d", "cpf_factory_365d"]
+CPF_SECTOR_DEG = 30
 STABILITY = Path("outputs/weather_integration/asos_hourly_stability_2020_2026.csv")
 STABILITY_CODE = {"A": 1, "B": 2, "C": 3, "D": 4, "E": 5, "F": 6}
 ARMS = {
@@ -63,6 +73,8 @@ ARMS = {
     "R2s": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + NON_LIVESTOCK_FEATURES,
     "R2w": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + STABILITY_FEATURES,
     "R4": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + BUILDING_FEATURES + NON_LIVESTOCK_FEATURES + STABILITY_FEATURES,
+    "R5": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + CPF_FEATURES,
+    "R5o": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + CPF_FEATURES,
 }
 
 
@@ -84,7 +96,11 @@ def load_stability_series() -> pd.Series:
     return frame.set_index("datetime")["stability_class"]
 
 
-def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, wind_spec: dict | None = None) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+LABEL_PREFIX = {"all": None, "livestock": "가축", "factory": "공장", "sewage": "하수"}
+
+
+def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, wind_spec: dict | None = None,
+                label_type: str = "all") -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     complaints, _, _, _, _ = odor.load_inputs()
     meta = {"lat0": float(complaints["latitude"].median()), "lon0": float(complaints["longitude"].median()), "grid_m": GRID_M}
     gridded = sensitivity.add_grid(complaints, GRID_M)
@@ -109,7 +125,9 @@ def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, win
     # 라벨: (hour, cell) 민원 유무
     in_period = gridded[(gridded["hour"] >= hours.min()) & (gridded["hour"] <= hours.max())]
     in_period = in_period.merge(cells[["grid_x", "grid_y", "cell_id"]], on=["grid_x", "grid_y"])
-    positives = in_period.groupby(["hour", "cell_id"]).size().rename("n_complaints").reset_index()
+    prefix = LABEL_PREFIX[label_type]
+    labelled = in_period if prefix is None else in_period[in_period["odor_type"].astype(str).str.startswith(prefix)]
+    positives = labelled.groupby(["hour", "cell_id"]).size().rename("n_complaints").reset_index()
     positives["target"] = 1
 
     # 음성 표본: 학습 구간은 시각×격자에서 neg_rate 표본. 테스트 구간은 "민원이 있던 시각"과
@@ -144,6 +162,8 @@ def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, win
 
     # 과거 빈도(누수 없음): 격자별 민원 시각 정렬 → t 미만 개수 - (t-윈도) 미만 개수
     panel = add_rolling_rates(panel, in_period, gridded, cells)
+    # 풍향 조건부 과거 민원 지도(CPF형, t 미만 정보만)
+    panel = add_wind_conditioned_rates(panel, gridded, cells, wind)
 
     # 기상(t 정시)
     w = wind.reindex(panel["hour"].to_numpy())
@@ -210,6 +230,55 @@ def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, win
         for col in BUILDING_FEATURES:
             panel[col] = np.nan
     return panel, cells, meta
+
+
+def wind_sector(from_deg: np.ndarray, speed: np.ndarray) -> np.ndarray:
+    """30° 풍향 구간 0~11, 정체(풍속<1)·결측은 12."""
+    sec = (np.nan_to_num(from_deg, nan=0.0) // CPF_SECTOR_DEG).astype(int) % (360 // CPF_SECTOR_DEG)
+    calm = np.isnan(from_deg) | np.isnan(speed) | (speed < 1.0)
+    return np.where(calm, 360 // CPF_SECTOR_DEG, sec)
+
+
+def add_wind_conditioned_rates(panel: pd.DataFrame, gridded: pd.DataFrame, cells: pd.DataFrame, wind: pd.DataFrame) -> pd.DataFrame:
+    """격자 g × 풍향 구간 s 별로 [t-365d, t) 민원 수 ÷ 같은 기간 s였던 시간 수. 유형별(전체·가축·공장)."""
+    n_sec = 360 // CPF_SECTOR_DEG + 1
+    hours_sector = pd.Series(wind_sector(wind["from_deg"].to_numpy(float), wind["speed"].to_numpy(float)), index=wind.index)
+    hist = gridded.merge(cells[["grid_x", "grid_y", "cell_id"]], on=["grid_x", "grid_y"])
+    hist = hist[hist["hour"].isin(hours_sector.index)].copy()
+    hist["sector"] = hours_sector.reindex(hist["hour"]).to_numpy()
+    hist["is_livestock"] = hist["odor_type"].astype(str).str.startswith("가축")
+    hist["is_factory"] = hist["odor_type"].astype(str).str.startswith("공장")
+    day = np.timedelta64(1, "D")
+    t = panel["hour"].to_numpy().astype("datetime64[ns]")
+    cell_ids = panel["cell_id"].to_numpy()
+    sectors = hours_sector.reindex(panel["hour"]).to_numpy()
+
+    def count_between(times: np.ndarray, start: np.ndarray, end: np.ndarray) -> np.ndarray:
+        return np.searchsorted(times, end, side="left") - np.searchsorted(times, start, side="left")
+
+    # 분모: 구간별 시간 수 (t 미만 365일)
+    sector_hours = {s: np.sort(hours_sector.index[hours_sector.to_numpy() == s].to_numpy().astype("datetime64[ns]")) for s in range(n_sec)}
+    denom = np.zeros(len(panel))
+    for s in range(n_sec):
+        idx = np.where(sectors == s)[0]
+        denom[idx] = count_between(sector_hours[s], t[idx] - 365 * day, t[idx])
+    out = {}
+    for tag, mask in (("all", np.ones(len(hist), bool)), ("livestock", hist["is_livestock"].to_numpy()), ("factory", hist["is_factory"].to_numpy())):
+        sub = hist[mask]
+        times_by = {k: np.sort(g["datetime"].to_numpy().astype("datetime64[ns]")) for k, g in sub.groupby(["cell_id", "sector"])}
+        num = np.zeros(len(panel))
+        for (cell_id, s), times in times_by.items():
+            idx = np.where((cell_ids == cell_id) & (sectors == s))[0]
+            if len(idx):
+                num[idx] = count_between(times, t[idx] - 365 * day, t[idx])
+        with np.errstate(divide="ignore", invalid="ignore"):
+            out[f"cpf_{tag}_365d"] = np.where(denom > 0, num / denom, np.nan)
+    for k, v in out.items():
+        panel[k] = v
+    with np.errstate(divide="ignore", invalid="ignore"):
+        hourly_rate = panel["cell_rate_365d"].to_numpy() / 24.0  # 일 단위 → 시간 단위
+        panel["cpf_all_ratio"] = np.where(hourly_rate > 0, panel["cpf_all_365d"].to_numpy() / hourly_rate, np.nan)
+    return panel
 
 
 def add_rolling_rates(panel: pd.DataFrame, in_period: pd.DataFrame, gridded: pd.DataFrame, cells: pd.DataFrame) -> pd.DataFrame:
@@ -307,12 +376,15 @@ def main() -> None:
     parser.add_argument("--wind-window", default="0,1,speed", help="발생원 노출용 참조 풍향 창 'lag,window,simple|speed'")
     parser.add_argument("--tag", default="", help="산출물 파일 이름 접미사(실험 구분용)")
     parser.add_argument("--arms", default="", help="실행할 실험군 쉼표 목록(기본 전체)")
+    parser.add_argument("--label-type", default="all", choices=list(LABEL_PREFIX), help="양성 라벨로 쓸 악취종류")
+    parser.add_argument("--seeds", type=int, default=len(SEEDS), help="seed 수(최대 12)")
     args = parser.parse_args()
+    seeds = SEED_POOL[: args.seeds]
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(0)
     lag, window, weighting = args.wind_window.split(",")
     wind_spec = {"lag": int(lag), "window": int(window), "weighting": weighting}
-    panel, cells, meta = build_panel(args.neg_rate, args.radius_km, rng, wind_spec)
+    panel, cells, meta = build_panel(args.neg_rate, args.radius_km, rng, wind_spec, args.label_type)
     train, test = panel[panel["is_train"]], panel[~panel["is_train"]]
     events = first_cells_of_events(cells)
     summary = {
@@ -321,7 +393,8 @@ def main() -> None:
         "test_hours_with_complaints": int(test.loc[test["target"] == 1, "hour"].nunique()),
         "test_quiet_hours_with_complaints": int(test.loc[(test["target"] == 1) & (test["city_quiet_3h"] == 1), "hour"].nunique()),
         "neg_rate": args.neg_rate, "radius_km": args.radius_km, "buildings_available": bool(BUILDINGS.exists()),
-        "stability_available": bool(STABILITY.exists()), "wind_window": wind_spec, "arms": {},
+        "stability_available": bool(STABILITY.exists()), "wind_window": wind_spec, "label_type": args.label_type,
+        "seeds": list(seeds), "arms": {},
     }
     arms = dict(ARMS)
     if not BUILDINGS.exists():
@@ -333,7 +406,7 @@ def main() -> None:
         arms = {k: v for k, v in arms.items() if k in wanted}
     for name, features in arms.items():
         per_seed, importances, scores = [], [], []
-        for seed in SEEDS:
+        for seed in seeds:
             model = fit(train, features, seed)
             score = model.predict_proba(test[features])[:, 1]
             scores.append(score)
@@ -356,7 +429,7 @@ def main() -> None:
     # 서비스 연결용: 채택 실험군(R2, 없으면 마지막)의 테스트 시각별 위험 상위 10 격자. 격자 중심 좌표는 민원 격자 기준(발생원 좌표 아님).
     export_arm = "R2" if "R2" in summary["arms"] else list(summary["arms"])[-1]
     export_features = summary["arms"][export_arm]["features"]
-    export_scores = np.mean([fit(train, export_features, seed).predict_proba(test[export_features])[:, 1] for seed in SEEDS], axis=0)
+    export_scores = np.mean([fit(train, export_features, seed).predict_proba(test[export_features])[:, 1] for seed in seeds], axis=0)
     alerts = test[["hour", "grid_x", "grid_y", "center_latitude", "center_longitude", "city_quiet_3h",
                    "wind_from_deg", "wind_speed", "upwind_share_eea", "upwind_eea_6km", "target"]].copy()
     alerts["risk_score"] = export_scores
@@ -373,7 +446,7 @@ def main() -> None:
              f"- 발생원 노출 참조 풍향 창: lag {wind_spec['lag']}h · window {wind_spec['window']}h · {wind_spec['weighting']}"
              + (f" · 대기안정도 {'있음' if STABILITY.exists() else '없음'}"),
              f"- 격자 {summary['cells']}개, 학습 {summary['train_rows']:,}행(양성 {summary['train_positives']:,}), 테스트 {summary['test_rows']:,}행(양성 {summary['test_positives']:,}, 양성률 {baseline:.4f})",
-             f"- 테스트 구간 민원 있던 시각 {summary['test_hours_with_complaints']:,}개, 그중 직전 3시간 시 전체 민원 없던 '조용한 시각' {summary['test_quiet_hours_with_complaints']:,}개. seed {list(SEEDS)} 평균.", "",
+             f"- 테스트 구간 민원 있던 시각 {summary['test_hours_with_complaints']:,}개, 그중 직전 3시간 시 전체 민원 없던 '조용한 시각' {summary['test_quiet_hours_with_complaints']:,}개. seed {list(seeds)} 평균. 라벨: {args.label_type}.", "",
              "| 실험군 | 특징 수 | PR-AUC | Hit@5 | Hit@10 | 조용한 시각 Hit@5 | 조용한 시각 Hit@10 | Event 첫 격자 1h 전 top10 |", "|---|---:|---:|---:|---:|---:|---:|---:|"]
     for name, r in summary["arms"].items():
         lead = r["onset_lead"]
