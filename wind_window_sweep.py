@@ -26,10 +26,7 @@ import species_weight_sets as sw
 import test_wind_source_association as t
 
 OUTPUT_DIR = Path("outputs/wind_lag_sweep")
-STABILITY_CANDIDATES = (
-    Path("outputs/weather_integration/asos_hourly_stability_2020_2026.csv"),
-    Path("../2026 스마트 축산 AI 공모전/outputs/weather_integration/asos_hourly_stability_2020_2026.csv"),
-)
+STABILITY_CANDIDATES = (Path("outputs/weather_integration/asos_hourly_stability_2020_2026.csv"),)
 LAGS = (0, 1, 2, 3)
 WINDOWS = (1, 2, 3)
 WEIGHTINGS = ("simple", "speed")
