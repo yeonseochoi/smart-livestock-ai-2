@@ -26,9 +26,9 @@
 - 입력: 시각 t의 바람(ASOS+AWS 격자별 보간)·강수·기온·습도, 격자 6km 상풍측 축산 배출 노출(EMEP/EEA NH3 계수 × 사육두수), 격자별 과거 민원 빈도, 격자×풍향 구간별 과거 민원율(조건부 확률 함수 CPF형, t 이전 365일)
 - 출력: "다음 1시간 안에 이 1km 격자에서 민원이 생길 위험" 상위 격자. 확률이 아닌 상대값(같은 시각 최고 = 100)
 - 스크립트: `run_onset_risk.py`. 채택 실험군 R5. 라벨을 냄새 유형(가축·공장·하수)으로 제한한 유형별 모델도 같은 스크립트(`--label-type`)
-- 검증(시간순 분할, 학습 2020~2024, 테스트 2025-01~2026-07, seed 3~10 평균): 직전 3시간 시 전체 민원이 없던 '조용한 시각'에 상위 5 격자 적중률(Hit@5)
-  - 과거 빈도만 0.542 → +기상 0.539 → +축산 발생원 0.576 → +풍향 조건부 민원 지도(R5) 0.581 (ASOS 바람) → 0.599 (ASOS+AWS 격자별 바람)
-  - 유형별(ASOS 바람 기준): 가축 0.487 → 0.571, 공장 0.643 → 0.748
+- 검증(시간순 분할, 학습 2020~2024, 테스트 2025-01~2026-07, seed 3 평균, seed 10 확인은 experiment_summary.md의 b4_seed10): 직전 3시간 시 전체 민원이 없던 '조용한 시각'에 상위 5 격자 적중률(Hit@5)
+  - 과거 빈도만(R0) 0.546 → +기상(R1) 0.548 → +축산 발생원(R2) 0.590 → +풍향 조건부 민원 지도(R5) 0.599. 바람을 ASOS만 쓰면 R5 0.578~0.581 (`outputs/onset_risk/metrics.json`, 변형 실행은 `outputs/onset_risk/experiment_summary.md`)
+  - 유형별(`metrics_{livestock,factory,sewage}.json`): 가축 0.492 → 0.588, 공장 0.644 → 0.747, 하수 0.648 → 0.685(n 작음)
 - 이 예보는 확산 예측(Top 3)과 별개의 참고 정보로, 행정 문서와 화면의 '사전 경보 (참고)' 절에 민원 접수 1시간 전 시각 기준으로 붙는다(`outputs/onset_risk/onset_alerts*.csv`)
 
 이 구조는 "발생원과 기상을 대기과학 역추적으로 반영하되 기존 성능은 지킨다"는 1차 멘토링 요구를 두 단계로 나눠 충족한다. 확산 예측(2단)은 손대지 않아 성능이 보존되고, 발생 예보(1단)에서 발생원·바람이 수용체 모델(receptor model) 방식으로 들어간다.
@@ -91,6 +91,7 @@ Agent는 시설을 원인으로 단정하거나 자동으로 행정조치를 내
 - `wind_sources.py`: ASOS+AWS 통합, 격자별 IDW 바람(`WindField`)
 - `run_onset_risk.py`: 1단 발생 위험 예보 소거 실험과 `onset_alerts*.csv` 생성(`--train-end`로 분할 시점 변경, `onset_event_scores*.csv`는 결합 평가 입력)
 - `fuse_onset_spread.py`: 1단·2단 결합(2단 Top 3 중 1단 순위로 1순위 선택) 평가 → `outputs/onset_spread_fusion/`
+- `작업 최종 아키텍쳐.md`: 최종 구조 설명(입력·2단·1단·결합·Agent·실행·피드백 대응). `outputs/onset_risk/experiment_summary.md`: 1단 변형 실행 25건 요약(원본 json은 정리 시 삭제, git 이력에 있음)
 - `run_ablation.py`: 2단 확산 예측에 기상·발생원을 넣는 소거 실험(M0~M4)
 - `wind_window_sweep.py`, `compare_wind_sources.py`, `test_wind_source_association.py`: 풍향–발생원 연관 검정(참조 바람 창 24조합, 바람 자료원 5종)
 - `build_source_backtrack.py`(Track A): Event별 발생원 역추적 후보와 격자 점수

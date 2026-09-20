@@ -476,7 +476,7 @@ def main() -> None:
     parser.add_argument("--arms", default="", help="실행할 실험군 쉼표 목록(기본 전체)")
     parser.add_argument("--label-type", default="all", choices=list(LABEL_PREFIX), help="양성 라벨로 쓸 악취종류")
     parser.add_argument("--seeds", type=int, default=len(SEEDS), help="seed 수(최대 12)")
-    parser.add_argument("--wind-source", default="both", choices=["asos", "aws", "both", "both_hm"])
+    parser.add_argument("--wind-source", default="both", choices=["asos", "aws", "both"])
     parser.add_argument("--wind-mode", default="local", choices=["center", "local"])
     parser.add_argument("--stations", default="", help="쓸 지점 번호 쉼표 목록(비우면 자료원 전체)")
     parser.add_argument("--calm-fill", default="none", choices=["none", "persist"])
