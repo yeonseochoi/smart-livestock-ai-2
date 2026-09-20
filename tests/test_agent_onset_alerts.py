@@ -53,6 +53,17 @@ class OnsetAlertDocumentTest(unittest.TestCase):
         self.assertIn("## 5. 사전 경보 (참고)", both.briefing)
         self.assertIn("## 6. 상황 판단", both.briefing)
 
+    def test_type_lines_only_when_present(self) -> None:
+        alerts = (OnsetAlertCell(1, "G+1:+0", 100, quiet_hour=True),)
+        plain = build_response_package(_forecast(onset_alerts=alerts))
+        self.assertNotIn("냄새 유형별 위험", plain.briefing)
+        by_type = {"가축": (OnsetAlertCell(1, "G+2:+1", 100), OnsetAlertCell(2, "G+3:+1", 80)),
+                   "공장": (OnsetAlertCell(1, "G+1:+0", 100),)}
+        typed = build_response_package(_forecast(onset_alerts=alerts, onset_alerts_by_type=by_type))
+        self.assertIn("- 가축 냄새: G+2:+1(100), G+3:+1(80)", typed.briefing)
+        self.assertIn("- 공장 냄새: G+1:+0(100)", typed.briefing)
+        self.assertNotIn("하수 냄새", typed.briefing)
+
     def test_loader_uses_hour_before_event(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "onset_alerts.csv"

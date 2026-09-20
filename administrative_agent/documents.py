@@ -111,6 +111,15 @@ def onset_alert_lines(forecast: ForecastResult, heading: str) -> list[str]:
     if quiet is not None:
         lines.append("- 이 시각은 직전 3시간 동안 시 전체 민원이 없던 '조용한 시각'" + ("입니다." if quiet else "이 아닙니다(이미 민원이 이어지던 상황).")
                      + " 조용한 시각의 상위 5 격자 적중률은 검증 구간에서 0.58 수준(참고)입니다.")
+    if forecast.onset_alerts_by_type:
+        # 유형별 모델(라벨을 그 냄새 종류 민원으로 제한)의 상위 3 격자. 담당 부서가 다르므로 따로 보인다.
+        lines += ["", "냄새 유형별 위험 상위 격자(같은 시각, 유형별 모델):"]
+        for odor_type, cells in forecast.onset_alerts_by_type.items():
+            if not cells:
+                continue
+            parts = [f"{c.grid_id}({c.relative_risk})" for c in cells[:3]]
+            lines.append(f"- {odor_type} 냄새: " + ", ".join(parts))
+        lines.append("- 괄호는 그 유형 안에서의 상대위험(최고 100). 검증 구간 조용한 시각 Hit@5: 가축 0.57, 공장 0.75(참고).")
     return lines
 
 

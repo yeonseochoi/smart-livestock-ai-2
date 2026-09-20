@@ -18,7 +18,7 @@ from administrative_agent.llm import llm_configured, provider_name, refine_with_
 from administrative_agent.service import build_response_package, create_completed_followup
 from generate_agent_documents import (
     DEFAULT_GRID_SCORES, DEFAULT_METRICS, DEFAULT_ONSET_ALERTS, DEFAULT_PREDICTIONS, DEFAULT_SOURCE_CANDIDATES,
-    forecast_from_csv, load_onset_alerts, load_source_candidates,
+    DEFAULT_ONSET_ALERTS_BY_TYPE, forecast_from_csv, load_onset_alerts, load_onset_alerts_by_type, load_source_candidates,
 )
 
 
@@ -255,6 +255,10 @@ with st.sidebar:
             share = "" if cell.upwind_share is None else f" · 상풍측 축산 노출 {cell.upwind_share:.0%}"
             mark = " · 확산 예측 Top 3와 일치" if cell.grid_id in top3 else ""
             st.markdown(f'<div class="priority"><b>{cell.rank}순위 · {cell.grid_id}</b><br><small>상대위험 {cell.relative_risk}/100{share}{mark}</small></div>', unsafe_allow_html=True)
+        by_type = load_onset_alerts_by_type({k: ROOT / v for k, v in DEFAULT_ONSET_ALERTS_BY_TYPE.items()}, event["hour"])
+        if by_type:
+            st.caption("유형별 위험 상위 3 (유형별 모델): " + " · ".join(
+                f"{k} {', '.join(f'{c.grid_id}({c.relative_risk})' for c in v[:3])}" for k, v in by_type.items()))
 
     # 역추적 산출물(outputs/source_backtrack)이 있을 때만 발생원 후보를 참고 정보로 보여준다.
     candidates = load_source_candidates(ROOT / DEFAULT_SOURCE_CANDIDATES, event["hour"]) if event.get("hour") else ()

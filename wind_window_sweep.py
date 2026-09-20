@@ -72,6 +72,9 @@ def main() -> None:
     parser.add_argument("--permutations", type=int, default=300)
     parser.add_argument("--radius", type=float, default=6.0)
     parser.add_argument("--weight-set", default="eea_nh3", choices=list(sw.SETS))
+    parser.add_argument("--wind-source", default="asos", choices=["asos", "aws", "both"], help="wind_sources.py 자료원(민원 중심점 IDW)")
+    parser.add_argument("--stations", default="", help="쓸 지점 번호 쉼표 목록(비우면 자료원 전체). 예: 146,140,702,737,736")
+    parser.add_argument("--tag", default="", help="산출물 이름 접미사")
     args = parser.parse_args()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     t.PERMUTATIONS = args.permutations
@@ -84,8 +87,18 @@ def main() -> None:
     sources = sw.apply_weight_set(raw, args.weight_set)
     sources = sources[sources["emission_weight"] > 0]
     bins = t.bearing_bins(complaints, sources)
-    asos = ab.load_asos()
-    wind = t.hourly_wind(asos, (float(complaints["latitude"].median()), float(complaints["longitude"].median())))
+    center = (float(complaints["latitude"].median()), float(complaints["longitude"].median()))
+    if args.wind_source == "asos" and not args.stations:
+        asos = ab.load_asos()
+        wind = t.hourly_wind(asos, center)
+    else:
+        import wind_sources as ws
+        stations = ws.load_wind_stations(args.wind_source)
+        if args.stations:
+            keep = [int(x) for x in args.stations.split(",")]
+            stations = stations[stations["station_id"].isin(keep)]
+        wind = ws.WindField(stations).center_table(center).rename(columns={"rainfall_hour": "rain"})
+        wind = wind.dropna(subset=["speed"])
     stability = load_stability()
     complaints["stability_class"] = complaints["hour"].map(stability)
 
@@ -118,7 +131,9 @@ def main() -> None:
     result = {"radius_km": args.radius, "sector_deg": t.SECTOR_DEG, "permutations": args.permutations,
               "min_wind_ms": t.MIN_WIND, "weight_set": args.weight_set, "sources_used": int(len(sources)),
               "stability_available": bool(len(stability)), "rows": rows, "top3_all": top3}
-    (OUTPUT_DIR / "association_sweep.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    suffix = f"_{args.tag}" if args.tag else ""
+    result["wind_source"] = args.wind_source; result["stations"] = args.stations
+    (OUTPUT_DIR / f"association_sweep{suffix}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
 
     lines = ["# 참조 바람 창 sweep: 풍향–발생원 연관 검정", "",
              f"통계량 = 민원 시각 상풍측 ±{t.SECTOR_DEG:.0f}° 반경 {args.radius:.0f} km 발생원 배출 가중치({args.weight_set}) 합, "
@@ -145,7 +160,7 @@ def main() -> None:
     lines += ["", "## 전체 민원 기준 상위 3 조합", ""]
     for i, row in enumerate(top3, 1):
         lines.append(f"{i}. lag {row['lag_h']}h · window {row['window_h']}h · {row['weighting']} — 비 {row['ratio']:.3f} (z {row['z']:+.1f})")
-    (OUTPUT_DIR / "association_sweep.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (OUTPUT_DIR / f"association_sweep{suffix}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(json.dumps(top3, ensure_ascii=False))
 
 

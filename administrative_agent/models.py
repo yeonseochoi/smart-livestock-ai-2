@@ -81,6 +81,8 @@ class ForecastResult:
     # 발생 위험 예보(1단) 참고 정보. 없으면 빈 튜플이며 문서에서 해당 절이 생략된다.
     onset_alerts: tuple[OnsetAlertCell, ...] = ()
     onset_reference_time: datetime | None = None
+    # 냄새 유형별(가축·공장·하수) 모델의 같은 시각 위험 상위 격자. {"가축": (cells...), ...}. 없으면 빈 dict.
+    onset_alerts_by_type: dict[str, tuple[OnsetAlertCell, ...]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.grid_size_m != 1000:

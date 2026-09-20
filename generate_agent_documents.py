@@ -17,6 +17,20 @@ DEFAULT_OUTPUT = Path("outputs/administrative_agent")
 DEFAULT_SOURCE_CANDIDATES = Path("outputs/source_backtrack/source_candidates.csv")
 DEFAULT_GRID_SCORES = Path("outputs/source_backtrack/grid_scores.csv")
 DEFAULT_ONSET_ALERTS = Path("outputs/onset_risk/onset_alerts.csv")
+# 유형별 모델 산출물(run_onset_risk.py --label-type X --tag X). 없으면 해당 유형 줄만 생략.
+DEFAULT_ONSET_ALERTS_BY_TYPE = {"가축": Path("outputs/onset_risk/onset_alerts_livestock.csv"),
+                                "공장": Path("outputs/onset_risk/onset_alerts_factory.csv"),
+                                "하수": Path("outputs/onset_risk/onset_alerts_sewage.csv")}
+
+
+def load_onset_alerts_by_type(paths: dict[str, Path] | None, event_hour: pd.Timestamp, limit: int = 3,
+                              lead_hours: int = 1) -> dict[str, tuple["OnsetAlertCell", ...]]:
+    result = {}
+    for odor_type, path in (paths or {}).items():
+        cells, _ = load_onset_alerts(path, event_hour, limit=limit, lead_hours=lead_hours)
+        if cells:
+            result[odor_type] = cells
+    return result
 
 
 def _relative_scores(scores: pd.Series) -> list[int]:
@@ -103,6 +117,7 @@ def forecast_from_csv(
     path: Path, metrics_path: Path, event_id: str | None = None, event_time: str | None = None,
     source_candidates_path: Path | None = DEFAULT_SOURCE_CANDIDATES, grid_scores_path: Path | None = DEFAULT_GRID_SCORES,
     onset_alerts_path: Path | None = DEFAULT_ONSET_ALERTS,
+    onset_alerts_by_type_paths: dict[str, Path] | None = None,
 ) -> ForecastResult:
     predictions = pd.read_csv(path)
     required = {"event_id", "event_hour", "grid_x", "grid_y", "score", "grid_m"}
@@ -143,6 +158,9 @@ def forecast_from_csv(
     event_hour = event.iloc[0]["event_hour"]
     uncertainty, weather_source = load_backtrack_context(grid_scores_path, event_hour)
     onset_alerts, onset_reference = load_onset_alerts(onset_alerts_path, event_hour)
+    if onset_alerts_by_type_paths is None:
+        onset_alerts_by_type_paths = DEFAULT_ONSET_ALERTS_BY_TYPE
+    by_type = load_onset_alerts_by_type(onset_alerts_by_type_paths, event_hour) if onset_alerts else {}
     return ForecastResult(
         event_id=str(selected_id), event_time=event_hour.to_pydatetime(),
         forecast_minutes=30, grid_size_m=1000, areas=areas,
@@ -151,6 +169,7 @@ def forecast_from_csv(
         source_candidates=load_source_candidates(source_candidates_path, event_hour),
         backtrack_uncertainty=uncertainty, backtrack_weather_source=weather_source,
         onset_alerts=onset_alerts, onset_reference_time=None if onset_reference is None else onset_reference.to_pydatetime(),
+        onset_alerts_by_type=by_type,
     )
 
 
