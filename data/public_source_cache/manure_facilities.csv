@@ -1,0 +1,8 @@
+city,name,facility_kind,address,address_precision,capacity_ton_day,operation,source_url,source_basis,checked_at
+익산시,익산시 가축분뇨 공공처리시설,공공처리시설,전북특별자치도 익산시 왕궁면 온수1길 40,도로명,700,위탁운영,https://www.data.go.kr/data/15055647/fileData.do,전북특별자치도 가축분뇨 공공처리시설 현황(2020년),2026-09-20
+김제시,김제시 가축분뇨 공공처리시설,공공처리시설,전북특별자치도 김제시 용지면 금백로 731-68,도로명,300,위탁운영,https://www.data.go.kr/data/15055647/fileData.do,전북특별자치도 가축분뇨 공공처리시설 현황(2020년),2026-09-20
+익산시,영농조합법인 부성,유기질비료·상토 제조,전북특별자치도 익산시 왕궁면 쌍제1길 45,도로명,,,https://file.localdata.go.kr/file/air_pollution_facility_installation/info,지방행정인허가 대기오염물질 배출시설 신고 사업장,2026-09-20
+익산시,익산군산축산업협동조합 경축자원화센터,가축분뇨 자원화시설,"전북특별자치도 익산시 용안면 함열로 291-77, 익산군산축협경축자원화센터",도로명,,,https://file.localdata.go.kr/file/air_pollution_facility_installation/info,지방행정인허가 대기오염물질 배출시설 신고 사업장,2026-09-20
+익산시,우주원 공동자원화시설,가축분뇨 공동자원화시설,전북특별자치도 익산시 함열읍 석매리,리,,,https://repository.krei.re.kr/bitstream/2018.oak/20967/1/D384.pdf,한국농촌경제연구원 공동자원화 사례·익산시의회 회의록,2026-09-20
+김제시,전주김제완주축산업협동조합 김제자원순환센터,가축분뇨 자원화시설,전북특별자치도 김제시 백산면 백석로 208,도로명,,,https://www.mafra.go.kr/bbs/home/792/573454/artclView.do,농림축산식품부 현장방문 자료·축협 사무소 안내,2026-09-20
+김제시,유한회사 푸른솔 농업회사법인,폐기물종합재활용·유기질비료 제조,전북특별자치도 김제시 만경읍 소토길 67,도로명,,,https://www.gimje.go.kr/town/board/view.gimje?boardId=BBS_0000027&dataSid=164109&menuCd=DOM_000002203004001000,김제시 악취배출시설 신고대상시설 지정 행정예고·지방행정인허가,2026-09-20

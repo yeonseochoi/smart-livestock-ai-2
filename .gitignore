@@ -22,3 +22,4 @@ outputs/severity_expansion.*
 outputs/source_backtrack/sources.csv
 data/geocode_cache/
 data/vworld_geocode_cache/
+data/public_source_cache/

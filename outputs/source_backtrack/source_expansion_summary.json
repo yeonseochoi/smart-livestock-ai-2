@@ -1,0 +1,93 @@
+{
+  "livestock_rows_preserved": 2778,
+  "non_livestock_rows": 349,
+  "sources_total": 3127,
+  "by_type": {
+    "factory": {
+      "rows": 225,
+      "geocoded": 195,
+      "geocode_rate": 0.8666666666666667,
+      "by_city": {
+        "김제시": 132,
+        "익산시": 93
+      }
+    },
+    "industrial_zone": {
+      "rows": 21,
+      "geocoded": 21,
+      "geocode_rate": 1.0,
+      "by_city": {
+        "김제시": 11,
+        "익산시": 10
+      }
+    },
+    "livestock": {
+      "rows": 2778,
+      "geocoded": 2538,
+      "geocode_rate": 0.9136069114470843,
+      "by_city": {
+        "김제시": 1511,
+        "익산시": 1267
+      }
+    },
+    "manure_plant": {
+      "rows": 7,
+      "geocoded": 7,
+      "geocode_rate": 1.0,
+      "by_city": {
+        "익산시": 4,
+        "김제시": 3
+      }
+    },
+    "waste_facility": {
+      "rows": 3,
+      "geocoded": 3,
+      "geocode_rate": 1.0,
+      "by_city": {
+        "익산시": 3
+      }
+    },
+    "wastewater": {
+      "rows": 93,
+      "geocoded": 81,
+      "geocode_rate": 0.8709677419354839,
+      "by_city": {
+        "김제시": 64,
+        "익산시": 29
+      }
+    }
+  },
+  "source_urls_by_type": {
+    "livestock": [],
+    "factory": [
+      "https://file.localdata.go.kr/file/air_pollution_facility_installation/info"
+    ],
+    "wastewater": [
+      "https://www.data.go.kr/data/3073222/fileData.do",
+      "https://file.localdata.go.kr/file/air_pollution_facility_installation/info"
+    ],
+    "industrial_zone": [
+      "https://www.vworld.kr/dtmk/dtmk_ntads_s002.do?dsId=30137"
+    ],
+    "manure_plant": [
+      "https://www.data.go.kr/data/15055647/fileData.do",
+      "https://file.localdata.go.kr/file/air_pollution_facility_installation/info",
+      "https://repository.krei.re.kr/bitstream/2018.oak/20967/1/D384.pdf",
+      "https://www.mafra.go.kr/bbs/home/792/573454/artclView.do",
+      "https://www.gimje.go.kr/town/board/view.gimje?boardId=BBS_0000027&dataSid=164109"
+    ],
+    "waste_facility": [
+      "https://council.iksan.go.kr/old/board/view.iksan?boardId=BBS_0000014&dataSid=20546",
+      "https://www.iksan.go.kr/01kr/images/iksannews/11.pdf",
+      "https://www.jeonbuk.go.kr/upload_data/board_data/BBS_0000017/147515311456176.pdf"
+    ]
+  },
+  "checked_at": "2026-09-20",
+  "source_urls": [
+    "https://file.localdata.go.kr/file/air_pollution_facility_installation/info",
+    "https://www.data.go.kr/data/3073222/fileData.do",
+    "https://www.vworld.kr/dtmk/dtmk_ntads_s002.do?dsId=30137",
+    "https://www.data.go.kr/data/15055647/fileData.do",
+    "https://council.iksan.go.kr/old/board/view.iksan?boardId=BBS_0000014&dataSid=20546"
+  ]
+}

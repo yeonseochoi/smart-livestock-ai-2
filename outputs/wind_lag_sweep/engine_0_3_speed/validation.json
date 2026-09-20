@@ -1,0 +1,133 @@
+{
+  "random_wind_contrast": {
+    "all": {
+      "real_percentile": 0.521673699202467,
+      "shuffled_mean": 0.5185508337732507,
+      "mean_difference": 0.0031228654292162483,
+      "p_value": 0.22772277227722773
+    },
+    "dry": {
+      "real_percentile": 0.5176698642547873,
+      "shuffled_mean": 0.5169028778019868,
+      "mean_difference": 0.0007669864528004888,
+      "p_value": 0.45544554455445546
+    },
+    "wet": {
+      "real_percentile": 0.5588001687173146,
+      "shuffled_mean": 0.5338318800522435,
+      "mean_difference": 0.02496828866507117,
+      "p_value": 0.2079207920792079
+    }
+  },
+  "random_wind_contrast_comparison": {
+    "fixed0_6km": {
+      "all": {
+        "real_percentile": 0.521673699202467,
+        "shuffled_mean": 0.5185508337732507,
+        "mean_difference": 0.0031228654292162483,
+        "p_value": 0.22772277227722773
+      },
+      "dry": {
+        "real_percentile": 0.5176698642547873,
+        "shuffled_mean": 0.5169028778019868,
+        "mean_difference": 0.0007669864528004888,
+        "p_value": 0.45544554455445546
+      },
+      "wet": {
+        "real_percentile": 0.5588001687173146,
+        "shuffled_mean": 0.5338318800522435,
+        "mean_difference": 0.02496828866507117,
+        "p_value": 0.2079207920792079
+      }
+    }
+  },
+  "direction_sensitivity": {
+    "10": 0.8997050147492625,
+    "20": 0.7949852507374632,
+    "30": 0.7123893805309734
+  },
+  "direction_sensitivity_by_condition": {
+    "all": {
+      "10": 0.8997050147492625,
+      "20": 0.7949852507374632,
+      "30": 0.7123893805309734
+    },
+    "dry": {
+      "10": 0.8986928104575164,
+      "20": 0.7957516339869282,
+      "30": 0.7091503267973858
+    },
+    "wet": {
+      "10": 0.9090909090909093,
+      "20": 0.7878787878787878,
+      "30": 0.7424242424242423
+    }
+  },
+  "facility_lift_top10pct": 0.5256077147631371,
+  "facility_lift_top10pct_by_condition": {
+    "all": 0.5256077147631371,
+    "dry": 0.5320901145715287,
+    "wet": 0.36768208734837754
+  },
+  "geocoding": {
+    "iksan_point_rate": 0.9313338595106551,
+    "iksan_point": 1180,
+    "iksan_total": 1267,
+    "gimje_point": 184,
+    "gimje_village_rate": 0.8847023360964582,
+    "gimje_village": 1174,
+    "gimje_village_total": 1327,
+    "non_livestock": {
+      "factory": {
+        "rows": 879,
+        "geocoded": 768
+      },
+      "other": {
+        "rows": 30,
+        "geocoded": 30
+      },
+      "wastewater": {
+        "rows": 93,
+        "geocoded": 81
+      }
+    }
+  },
+  "constants": {
+    "SPECIES_WEIGHT": {
+      "돼지": 1.0,
+      "한우": 0.3,
+      "육우": 0.3,
+      "젖소": 0.4,
+      "염소": 0.1,
+      "산양": 0.1,
+      "사슴": 0.1,
+      "육계": 0.01,
+      "종계/산란계": 0.01,
+      "오리": 0.01,
+      "메추리": 0.01,
+      "부화용알생산": 0.01
+    },
+    "L_km": {
+      "fast": 1.5,
+      "moderate": 2.5,
+      "slow_or_night": 4.0
+    },
+    "min_wind_speed": 0.5,
+    "max_travel_hours": 3.0,
+    "wind_lag": "fixed0",
+    "max_source_km": 6.0,
+    "wind_window": {
+      "lag": 0,
+      "window": 3,
+      "weighting": "speed"
+    }
+  },
+  "method_notes": {
+    "wind_direction": "KMA wind-from direction converted to downwind by adding 180 degrees",
+    "fixed0": "wind-speed-weighted circular mean of event_hour and event_hour-1h wind, shared by every source-grid pair",
+    "lagged_wind_alignment": "emission_weight-weighted mean cosine alignment among sources within max_source_km",
+    "stagnation": "ASOS hourly phase: wind speed <1 m/s only; 30-minute direction SD unavailable",
+    "random_contrast": "candidate-grid ranks recomputed for each of 100 event-profile wind shuffles",
+    "facility_lift_top10pct": "numerator=sum(emission_weight in the top 10% of traversed cells ranked by 5km upwind-line count); denominator=sum(emission_weight in all traversed cells) * number_of_top_cells / number_of_traversed_cells"
+  }
+}
