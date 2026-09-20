@@ -99,12 +99,20 @@
     "gimje_village_total": 1327,
     "non_livestock": {
       "factory": {
-        "rows": 879,
-        "geocoded": 768
+        "rows": 225,
+        "geocoded": 195
       },
-      "other": {
-        "rows": 30,
-        "geocoded": 30
+      "industrial_zone": {
+        "rows": 21,
+        "geocoded": 21
+      },
+      "manure_plant": {
+        "rows": 7,
+        "geocoded": 7
+      },
+      "waste_facility": {
+        "rows": 3,
+        "geocoded": 3
       },
       "wastewater": {
         "rows": 93,

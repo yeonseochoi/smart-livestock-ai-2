@@ -300,7 +300,7 @@ def main() -> None:
     combined.to_csv(SOURCES_PATH, index=False, encoding="utf-8-sig")
 
     by_type: dict[str, dict[str, object]] = {}
-    for source_type, group in candidates.groupby("source_type"):
+    for source_type, group in combined.groupby("source_type"):
         by_type[source_type] = {
             "rows": int(len(group)),
             "geocoded": int(group["latitude"].notna().sum()),
@@ -312,6 +312,25 @@ def main() -> None:
         "non_livestock_rows": int(len(candidates)),
         "sources_total": int(len(combined)),
         "by_type": by_type,
+        "source_urls_by_type": {
+            "livestock": [],
+            "factory": [AIR_SOURCE_URL],
+            "wastewater": [SEWAGE_SOURCE_URL, AIR_SOURCE_URL],
+            "industrial_zone": [INDUSTRIAL_ZONE_SOURCE_URL],
+            "manure_plant": [
+                MANURE_SOURCE_URL,
+                AIR_SOURCE_URL,
+                "https://repository.krei.re.kr/bitstream/2018.oak/20967/1/D384.pdf",
+                "https://www.mafra.go.kr/bbs/home/792/573454/artclView.do",
+                "https://www.gimje.go.kr/town/board/view.gimje?boardId=BBS_0000027&dataSid=164109",
+            ],
+            "waste_facility": [
+                "https://council.iksan.go.kr/old/board/view.iksan?boardId=BBS_0000014&dataSid=20546",
+                "https://www.iksan.go.kr/01kr/images/iksannews/11.pdf",
+                "https://www.jeonbuk.go.kr/upload_data/board_data/BBS_0000017/147515311456176.pdf",
+            ],
+        },
+        "checked_at": "2026-09-20",
         "source_urls": [
             AIR_SOURCE_URL, SEWAGE_SOURCE_URL, INDUSTRIAL_ZONE_SOURCE_URL, MANURE_SOURCE_URL,
             "https://council.iksan.go.kr/old/board/view.iksan?boardId=BBS_0000014&dataSid=20546",
