@@ -20,6 +20,7 @@
   "wind_mode": "local",
   "stations": [],
   "calm_fill": "none",
+  "train_end": "2025-01-01",
   "seeds": [
     42,
     7,

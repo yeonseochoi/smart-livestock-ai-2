@@ -186,6 +186,8 @@ Streamlit Community Cloud에서는 실행 파일을 `streamlit_app.py`로 지정
 
 행정 문서와 화면에는 민원 접수 1시간 전 시점의 위험 상위 격자가 '사전 경보 (참고)' 절로 붙습니다. 확률이 아닌 상대값이며 원인 시설을 단정하지 않습니다.
 
+두 모델을 합쳐 권역을 1곳으로 줄이는 방식도 검토했습니다. 확산 예측 Top 3 중 발생 위험 순위가 가장 높은 격자를 1순위로 올리는 후처리인데, 테스트 Event 47개에서 Hit@1은 확산 예측 단독 0.553과 같았습니다(고친 Event 5, 망친 Event 5). 확산 예측 후보는 첫 민원 인근이라 발생 위험 예보에서도 모두 상위에 있어 그중 하나를 가를 정보가 없기 때문입니다. 권역 1곳 추천은 채택하지 않았습니다(`fuse_onset_spread.py`, `outputs/onset_spread_fusion/fusion_table.md`).
+
 > 재현 참고자료: [run_onset_risk.py](run_onset_risk.py) · [결과 표](outputs/onset_risk/onset_risk_table.md) · [바람 자료원 비교](outputs/wind_lag_sweep/wind_source_compare.md) · [발생원·바람 검정 요약](PROJECT_CONTEXT.md)
 
 ---
@@ -223,6 +225,10 @@ fetch_kma_weather.py               현장 참고용 기상자료 수집
 # 발생 위험 예보(1단) 재실행: 전체 + 유형별
 python run_onset_risk.py
 python run_onset_risk.py --label-type factory --tag factory --arms R0,R2,R5
+
+# 1단·2단 결합(권역 1곳) 평가: 연도별 분할로 1단 점수를 만든 뒤 결합
+python run_onset_risk.py --train-end 2021-01-01 --arms R5 --tag fold2021   # 2022, 2023, 2024도 같은 방식
+python fuse_onset_spread.py
 
 # 전체 테스트
 .venv\Scripts\python.exe -m unittest discover -s tests -v

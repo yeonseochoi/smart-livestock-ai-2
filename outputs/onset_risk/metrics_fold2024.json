@@ -1,0 +1,96 @@
+{
+  "cells": 186,
+  "train_rows": 201637,
+  "train_positives": 6513,
+  "test_rows": 365676,
+  "test_positives": 2577,
+  "test_hours_with_complaints": 1965,
+  "test_quiet_hours_with_complaints": 1048,
+  "neg_rate": 0.03,
+  "radius_km": 6.0,
+  "buildings_available": true,
+  "stability_available": true,
+  "wind_window": {
+    "lag": 0,
+    "window": 1,
+    "weighting": "speed"
+  },
+  "label_type": "all",
+  "wind_source": "both",
+  "wind_mode": "local",
+  "stations": [],
+  "calm_fill": "none",
+  "train_end": "2024-01-01",
+  "seeds": [
+    42,
+    7,
+    123
+  ],
+  "arms": {
+    "R5": {
+      "pr_auc": 0.19766345861150733,
+      "hit_at_5": 0.655470737913486,
+      "hit_at_10": 0.7905004240882104,
+      "quiet_hit_at_5": 0.6192748091603054,
+      "quiet_hit_at_10": 0.7528625954198475,
+      "pr_auc_sd": 0.003637659780870924,
+      "hit_at_5_sd": 0.0024931193310770484,
+      "hit_at_10_sd": 0.0021322824580113117,
+      "quiet_hit_at_5_sd": 0.004739079015824223,
+      "quiet_hit_at_10_sd": 0.0033960172557351478,
+      "onset_lead": {
+        "events": 14,
+        "first_cell_in_top10_1h_before": 0.7142857142857143,
+        "median_rank_1h_before": 7.0
+      },
+      "feature_importance": {
+        "cell_rate_30d": 0.2609105110168457,
+        "cell_recent_24h": 0.1583375632762909,
+        "cpf_all_365d": 0.11196211725473404,
+        "cell_rate_365d": 0.06261549890041351,
+        "hour_cos": 0.03882768750190735,
+        "cpf_livestock_365d": 0.03729018196463585,
+        "hour_sin": 0.030039330944418907,
+        "cpf_all_ratio": 0.027859846130013466,
+        "wind_from_sin": 0.026679694652557373,
+        "temperature": 0.024068539962172508
+      },
+      "features": [
+        "hour_sin",
+        "hour_cos",
+        "month_sin",
+        "month_cos",
+        "weekend",
+        "night",
+        "cell_rate_365d",
+        "cell_rate_30d",
+        "cell_recent_24h",
+        "city_rate_30d",
+        "wind_speed",
+        "wind_from_sin",
+        "wind_from_cos",
+        "rain_1h",
+        "rain_3h",
+        "temperature",
+        "humidity",
+        "stagnation",
+        "upwind_eea_6km",
+        "total_eea_6km",
+        "upwind_share_eea",
+        "upwind_count_6km",
+        "total_count_6km",
+        "upwind_share_count",
+        "cpf_all_365d",
+        "cpf_all_ratio",
+        "cpf_livestock_365d",
+        "cpf_factory_365d"
+      ]
+    }
+  },
+  "test_positive_rate": 0.007047222131066846,
+  "alerts_export": {
+    "arm": "R5",
+    "hours": 1966,
+    "rows": 19660
+  }
+}

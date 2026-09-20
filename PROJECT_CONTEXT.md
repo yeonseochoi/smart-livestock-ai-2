@@ -33,6 +33,14 @@
 
 이 구조는 "발생원과 기상을 대기과학 역추적으로 반영하되 기존 성능은 지킨다"는 1차 멘토링 요구를 두 단계로 나눠 충족한다. 확산 예측(2단)은 손대지 않아 성능이 보존되고, 발생 예보(1단)에서 발생원·바람이 수용체 모델(receptor model) 방식으로 들어간다.
 
+#### 1단·2단 결합으로 권역 1개만 추천할 수 있는지 (2026-09-20 검토, 무효)
+
+- 질문: 멘토 지적(권역 3곳은 넓다)에 따라 2단 Top 3 중 1곳을 1단 위험 순위로 골라 1개만 추천할 수 있는가.
+- 방법(`fuse_onset_spread.py`): 2단 모델·Top 3 집합은 그대로 두고, 민원 접수 1시간 전 1단 순위가 가장 높은 격자를 1순위로 올리는 후처리. 1단 점수는 Event마다 그 이전 자료로만 학습한 연도별 확장 창(expanding window) 분할(`run_onset_risk.py --train-end 2021-01-01 … 2024-01-01`)에서 얻어 누수가 없다.
+- 결과(테스트 Event 47개, `outputs/onset_spread_fusion/metrics.json`): 2단 단독 Hit@1 0.553 · Hit@2 0.745 · Hit@3 0.851. 1단으로 Top 3 중 1순위를 고르면 Hit@1 0.553(고친 Event 5, 망친 Event 5), Top 2 중 고르면 0.574(5/4, 부호 검정 p=1.0). 개선 근거 없음.
+- 원인: 2단 후보는 첫 민원 인근 격자라 1단에서도 모두 상위에 있다(Top 3 안 정답 격자의 1단 순위 중앙값 3위, 오답 2위). 두 모델은 "어느 동네"에는 동의하지만 그 안의 1 km 격자 하나를 가르는 정보는 1단에 없다.
+- 대안(2단 격자 크기): `outputs/operational_grid_comparison/metrics.json` 기준 Hit@3는 1 km 0.851 · 1.5 km 0.957 · 2 km 0.894. 저장된 테스트 예측에서 재계산한 Hit@1은 1 km 0.553 · 1.5 km 0.609 · 2 km 0.617, Hit@2는 0.745 · 0.870 · 0.830. 권역 수를 줄이려면 모델 결합보다 격자 크기 조정이 근거가 있다(미채택, 발표용 판단 필요).
+
 ### 2. 행정 대응 Agent
 
 예측 결과와 확인 가능한 현재 상황을 이용해 다음 문서의 초안을 생성한다.
@@ -81,7 +89,8 @@ Agent는 시설을 원인으로 단정하거나 자동으로 행정조치를 내
 - `build_odor_ai_mvp.py`: 민원 전처리와 Event 구성 공용 함수
 - `fetch_kma_weather.py`: ASOS 시간자료·대기안정도 재료 수집
 - `wind_sources.py`: ASOS+AWS 통합, 격자별 IDW 바람(`WindField`)
-- `run_onset_risk.py`: 1단 발생 위험 예보 소거 실험과 `onset_alerts*.csv` 생성
+- `run_onset_risk.py`: 1단 발생 위험 예보 소거 실험과 `onset_alerts*.csv` 생성(`--train-end`로 분할 시점 변경, `onset_event_scores*.csv`는 결합 평가 입력)
+- `fuse_onset_spread.py`: 1단·2단 결합(2단 Top 3 중 1단 순위로 1순위 선택) 평가 → `outputs/onset_spread_fusion/`
 - `run_ablation.py`: 2단 확산 예측에 기상·발생원을 넣는 소거 실험(M0~M4)
 - `wind_window_sweep.py`, `compare_wind_sources.py`, `test_wind_source_association.py`: 풍향–발생원 연관 검정(참조 바람 창 24조합, 바람 자료원 5종)
 - `build_source_backtrack.py`(Track A): Event별 발생원 역추적 후보와 격자 점수
@@ -101,6 +110,7 @@ Agent는 시설을 원인으로 단정하거나 자동으로 행정조치를 내
 - 역추적 엔진(Track A)의 무작위 풍향 대조는 전체 조건 p=0.030(0~1시간 창)이지만 건조·강수 층별로는 유의하지 않다. 발생원 후보는 참고 정보다.
 - AWS 함라·여산 지점은 풍속 1 m/s 미만 비율이 63~65%로 익산(30%)·김제(10%)와 달라 관측 환경 차이가 의심된다.
 - 1단 예보 수치는 테스트 구간 사후 계산값이다. 실시간 운영에는 기상 실시간 호출과 매시간 추론 경로가 따로 필요하다.
+- 1단·2단을 결합해 권역 1곳만 추천하는 방식은 개선 근거가 없다(Hit@1 0.553 그대로). 1개 추천을 하려면 2단 Hit@1 0.553을 그대로 감수하거나 격자 크기를 키워야 한다.
 
 ## 확장 조건
 
@@ -127,7 +137,7 @@ API 키는 브라우저나 `demo/index.html`에 입력하지 않는다. 현장 �
 
 ## 최종 확인 상태
 
-- Git: 2026-09-20 기준 `feat/integration-ablation`에 Track A(`feat/source-backtrack`)를 병합했다. `main`에는 아직 반영하지 않았다.
+- Git: 2026-09-20 기준 Track A(`feat/source-backtrack`)와 Track B(`feat/integration-ablation`)를 `main`에 병합했다(`fb6d597`). 원격 push는 하지 않았다.
 - 테스트: `python -m unittest discover -s tests` 32건 중 31건 통과. `tests/test_streamlit_app.py`는 Python 3.10에 `tomllib`이 없어 import 실패(3.11 이상 필요).
 - 1단 산출물: `outputs/onset_risk/onset_alerts.csv`(전체)와 `onset_alerts_{livestock,factory,sewage}.csv`(유형별)는 ASOS+AWS 격자별 바람·R5 기준으로 생성한다.
 

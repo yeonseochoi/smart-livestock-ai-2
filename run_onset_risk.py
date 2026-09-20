@@ -30,6 +30,10 @@
   --stations 146,140,702,... : 쓸 관측 지점만 남김(품질 의심 지점 제외 실험용).
   --calm-fill none|persist : 정체(풍속<1 m/s) 시각의 발생원 노출 참조 풍향. none(기본) = 방향 없음(노출 NaN),
                               persist = 그 격자에서 직전 3시간 안 마지막 비정체 풍향을 씀(냄새가 머문다는 가정).
+  --train-end YYYY-MM-DD : 학습/테스트 분할 시점(기본 2025-01-01). 2단 테스트 Event 시각의 1단 점수를 연도별 확장 창
+                           (expanding window)으로 만들 때 2021-01-01, 2022-01-01, … 로 바꿔 돌린다(fuse_onset_spread.py 입력).
+  산출물: metrics{tag}.json, onset_risk_table{tag}.md, onset_alerts{tag}.csv(테스트 시각별 상위 10),
+          onset_event_scores{tag}.csv(2단 테스트 Event의 event_hour-1h 시점 전 격자 점수·순위 — 1단·2단 결합 평가용).
   바람 자료원 비교(2026-09-20, 조용한 시각 Hit@5 R5): asos/center 0.581, asos/local 0.578, aws/local 0.598, both/local 0.599, both/center 0.593.
 풍향 조건부 지도(CPF형)는 수용체 모델의 조건부 확률 함수(conditional probability function)를 격자 단위로 옮긴 것이다.
   cpf_<type>_365d = [t-365d, t) 동안 격자 g에 생긴 <type> 민원 중 그 시각 풍향 구간(30°, 정체는 별도 구간)이 지금과 같은 것의 수
@@ -456,11 +460,14 @@ def first_cells_of_events(cells: pd.DataFrame) -> pd.DataFrame:
     hours = data[["event_hour"]].drop_duplicates()
     merged = gridded.merge(hours, on="event_hour").sort_values("datetime")
     first = merged.groupby("event_hour").first().reset_index()
-    first = first[first["event_hour"] >= TRAIN_END]
+    test_ids = set(data.loc[~data["is_train"], "event_id"])  # 2단 테스트 Event만(학습 Event는 결합 평가 대상이 아님)
+    test_hours = set(data.loc[data["event_id"].isin(test_ids), "event_hour"])
+    first = first[(first["event_hour"] >= TRAIN_END) & first["event_hour"].isin(test_hours)]
     return first.rename(columns={"grid_x": "first_grid_x", "grid_y": "first_grid_y"})[["event_hour", "first_grid_x", "first_grid_y"]]
 
 
 def main() -> None:
+    global TRAIN_END
     parser = argparse.ArgumentParser()
     parser.add_argument("--neg-rate", type=float, default=0.03)
     parser.add_argument("--radius-km", type=float, default=6.0)
@@ -473,7 +480,9 @@ def main() -> None:
     parser.add_argument("--wind-mode", default="local", choices=["center", "local"])
     parser.add_argument("--stations", default="", help="쓸 지점 번호 쉼표 목록(비우면 자료원 전체)")
     parser.add_argument("--calm-fill", default="none", choices=["none", "persist"])
+    parser.add_argument("--train-end", default=str(TRAIN_END.date()), help="학습/테스트 분할 시점 YYYY-MM-DD")
     args = parser.parse_args()
+    TRAIN_END = pd.Timestamp(args.train_end)
     seeds = SEED_POOL[: args.seeds]
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(0)
@@ -492,6 +501,7 @@ def main() -> None:
         "neg_rate": args.neg_rate, "radius_km": args.radius_km, "buildings_available": bool(BUILDINGS.exists()),
         "stability_available": bool(STABILITY.exists()), "wind_window": wind_spec, "label_type": args.label_type,
         "wind_source": args.wind_source, "wind_mode": args.wind_mode, "stations": list(station_ids), "calm_fill": args.calm_fill,
+        "train_end": str(TRAIN_END.date()),
         "seeds": list(seeds), "arms": {},
     }
     arms = dict(ARMS)
@@ -532,6 +542,12 @@ def main() -> None:
                    "wind_from_deg", "wind_speed", "upwind_share_eea", "upwind_eea_6km", "target"]].copy()
     alerts["risk_score"] = export_scores
     alerts["rank"] = alerts.groupby("hour")["risk_score"].rank(ascending=False, method="first").astype(int)
+    # 1단·2단 결합 평가용: 2단 테스트 Event의 event_hour-1h 시점 전 격자 점수(fuse_onset_spread.py가 읽음)
+    lead = alerts[alerts["hour"].isin(pd.DatetimeIndex(events["event_hour"]) - pd.Timedelta(hours=1))].copy()
+    lead["event_hour"] = lead["hour"] + pd.Timedelta(hours=1)
+    lead["train_end"] = str(TRAIN_END.date())
+    lead = lead[["event_hour", "hour", "grid_x", "grid_y", "risk_score", "rank", "train_end"]].sort_values(["event_hour", "rank"])
+    lead.to_csv(OUTPUT_DIR / f"onset_event_scores{'_' + args.tag if args.tag else ''}.csv", index=False, encoding="utf-8-sig")
     alerts = alerts[alerts["rank"] <= 10].sort_values(["hour", "rank"])
     hour_max = alerts.groupby("hour")["risk_score"].transform("max")
     alerts["relative_risk"] = (100 * alerts["risk_score"] / hour_max).round().astype(int)
@@ -544,7 +560,7 @@ def main() -> None:
              f"- 발생원 노출 참조 풍향 창: lag {wind_spec['lag']}h · window {wind_spec['window']}h · {wind_spec['weighting']}"
              + (f" · 대기안정도 {'있음' if STABILITY.exists() else '없음'}"),
              f"- 격자 {summary['cells']}개, 학습 {summary['train_rows']:,}행(양성 {summary['train_positives']:,}), 테스트 {summary['test_rows']:,}행(양성 {summary['test_positives']:,}, 양성률 {baseline:.4f})",
-             f"- 테스트 구간 민원 있던 시각 {summary['test_hours_with_complaints']:,}개, 그중 직전 3시간 시 전체 민원 없던 '조용한 시각' {summary['test_quiet_hours_with_complaints']:,}개. seed {list(seeds)} 평균. 라벨: {args.label_type}. 바람: {args.wind_source}/{args.wind_mode}.", "",
+             f"- 테스트 구간 민원 있던 시각 {summary['test_hours_with_complaints']:,}개, 그중 직전 3시간 시 전체 민원 없던 '조용한 시각' {summary['test_quiet_hours_with_complaints']:,}개. seed {list(seeds)} 평균. 라벨: {args.label_type}. 바람: {args.wind_source}/{args.wind_mode}. 분할 {summary['train_end']}.", "",
              "| 실험군 | 특징 수 | PR-AUC | Hit@5 | Hit@10 | 조용한 시각 Hit@5 | 조용한 시각 Hit@10 | Event 첫 격자 1h 전 top10 |", "|---|---:|---:|---:|---:|---:|---:|---:|"]
     for name, r in summary["arms"].items():
         lead = r["onset_lead"]

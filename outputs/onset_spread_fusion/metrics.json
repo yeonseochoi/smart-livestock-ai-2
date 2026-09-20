@@ -1,0 +1,105 @@
+{
+  "protocol": {
+    "spread_source": "outputs\\operational_grid_comparison\\test_predictions.csv",
+    "grid_m": 1000,
+    "pool": 3,
+    "onset_files": [
+      "outputs/onset_risk\\onset_event_scores.csv",
+      "outputs/onset_risk\\onset_event_scores_fold2021.csv",
+      "outputs/onset_risk\\onset_event_scores_fold2022.csv",
+      "outputs/onset_risk\\onset_event_scores_fold2023.csv",
+      "outputs/onset_risk\\onset_event_scores_fold2024.csv"
+    ],
+    "rule": "2단 Top pool 중 1단(event_hour-1h) 순위 최상을 1순위로",
+    "events_total": 47,
+    "events_without_onset_scores": 0,
+    "candidate_coverage": 0.8947368421052632
+  },
+  "summaries": [
+    {
+      "label": "1단 점수가 있는 Event 전체",
+      "events": 47,
+      "spread_hit_at_1": 0.5531914893617021,
+      "spread_hit_at_2": 0.7446808510638298,
+      "spread_hit_at_3": 0.851063829787234,
+      "fused_hit_at_1": 0.5531914893617021,
+      "fixed_events": 5,
+      "broken_events": 5,
+      "sign_test_p": 1.0
+    },
+    {
+      "label": "2022년 이후 Event(1단 학습 2년 이상)",
+      "events": 33,
+      "spread_hit_at_1": 0.5151515151515151,
+      "spread_hit_at_2": 0.7272727272727273,
+      "spread_hit_at_3": 0.8181818181818182,
+      "fused_hit_at_1": 0.5151515151515151,
+      "fixed_events": 3,
+      "broken_events": 3,
+      "sign_test_p": 1.0
+    }
+  ],
+  "by_year": [
+    {
+      "label": "2021",
+      "events": 14,
+      "spread_hit_at_1": 0.6428571428571429,
+      "spread_hit_at_2": 0.7857142857142857,
+      "spread_hit_at_3": 0.9285714285714286,
+      "fused_hit_at_1": 0.6428571428571429,
+      "fixed_events": 2,
+      "broken_events": 2,
+      "sign_test_p": 1.0
+    },
+    {
+      "label": "2022",
+      "events": 18,
+      "spread_hit_at_1": 0.5,
+      "spread_hit_at_2": 0.7222222222222222,
+      "spread_hit_at_3": 0.7777777777777778,
+      "fused_hit_at_1": 0.5,
+      "fixed_events": 2,
+      "broken_events": 2,
+      "sign_test_p": 1.0
+    },
+    {
+      "label": "2023",
+      "events": 2,
+      "spread_hit_at_1": 1.0,
+      "spread_hit_at_2": 1.0,
+      "spread_hit_at_3": 1.0,
+      "fused_hit_at_1": 0.5,
+      "fixed_events": 0,
+      "broken_events": 1,
+      "sign_test_p": 1.0
+    },
+    {
+      "label": "2024",
+      "events": 9,
+      "spread_hit_at_1": 0.5555555555555556,
+      "spread_hit_at_2": 0.6666666666666666,
+      "spread_hit_at_3": 0.8888888888888888,
+      "fused_hit_at_1": 0.5555555555555556,
+      "fixed_events": 0,
+      "broken_events": 0,
+      "sign_test_p": NaN
+    },
+    {
+      "label": "2025",
+      "events": 4,
+      "spread_hit_at_1": 0.25,
+      "spread_hit_at_2": 0.75,
+      "spread_hit_at_3": 0.75,
+      "fused_hit_at_1": 0.5,
+      "fixed_events": 1,
+      "broken_events": 0,
+      "sign_test_p": 1.0
+    }
+  ],
+  "onset_signal": {
+    "mixed_events": 32,
+    "true_cell_ranked_above_false": 0.5625,
+    "median_onset_rank_true": 3.0,
+    "median_onset_rank_false": 2.0
+  }
+}
