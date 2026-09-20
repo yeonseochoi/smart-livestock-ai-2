@@ -29,6 +29,100 @@ def _wind_direction(degrees: float | int | None) -> str:
     return f"{names[round(float(degrees) / 45) % 8]}({float(degrees):.0f}°)"
 
 
+def _bearing_name(degrees: float | None) -> str:
+    if degrees is None:
+        return "미제공"
+    names = ("북", "북동", "동", "남동", "남", "남서", "서", "북서")
+    return f"{names[round(float(degrees) / 45) % 8]}쪽({float(degrees):.0f}°)"
+
+
+def _candidate_location(candidate) -> str:
+    label = candidate.name
+    if candidate.location_precision == "village":
+        label += " [리 단위 추정]"
+    return label
+
+
+def _uncertainty_label(value: float | None) -> str:
+    if value is None:
+        return "미제공"
+    level = "낮음" if value < 0.33 else ("중간" if value < 0.66 else "높음")
+    return f"{level}({value:.2f})"
+
+
+def source_candidate_lines(forecast: ForecastResult, heading: str) -> list[str]:
+    """발생원 후보 절. 후보가 없으면 빈 목록을 돌려 문서에서 절 자체를 생략한다.
+
+    표기 순서는 후보 → 근거(방향·거리·도달시간·풍향 일치) → 불확실성 → 주의 문구로 고정한다.
+    시설을 원인으로 단정하는 표현은 쓰지 않는다.
+    """
+    candidates = forecast.source_candidates
+    if not candidates:
+        return []
+    lines = [
+        "", heading, "",
+        "초기 30분 민원 위치와 Event 이전 바람으로 계산한 '현재 민원 분포를 설명하는 정도'가 높은 발생원 후보입니다. 원인 시설 판정이 아니라 현장 확인 시 상풍측 참고 정보입니다.", "",
+        "|순위|발생원 후보|방향·거리|도달시간|풍향 일치|적합도|", "|---:|---|---|---:|---:|---:|",
+    ]
+    for c in candidates:
+        distance = "미제공" if c.distance_km is None else f"{c.distance_km:.1f}km"
+        travel = "미제공" if c.travel_time_min is None else f"약 {c.travel_time_min:.0f}분"
+        alignment = "미제공" if c.wind_alignment is None else f"{c.wind_alignment:.2f}"
+        fit = "미제공" if c.fit_score is None else f"{c.fit_score:.2f}"
+        lines.append(f"|{c.rank}|{_candidate_location(c)}|{_bearing_name(c.bearing_deg)} {distance}|{travel}|{alignment}|{fit}|")
+    lines += [
+        "", f"- 역추적 불확실성: {_uncertainty_label(forecast.backtrack_uncertainty)}"
+        + (f" (바람 출처: {forecast.backtrack_weather_source})" if forecast.backtrack_weather_source else ""),
+        "- 방향은 후보에서 민원 지점을 향한 방위, 도달시간은 거리÷풍속의 점추정입니다. 관측소 바람이라 국지 풍향과 다를 수 있습니다.",
+        "- 후보 확인은 민원 권역 점검을 대체하지 않으며, 시설 방문·지도는 별도 법적 절차와 담당자 판단을 따릅니다.",
+    ]
+    evidence = [c.evidence_text for c in candidates if c.evidence_text]
+    if evidence:
+        lines += ["", "근거 요약:"] + [f"- {text}" for text in evidence[:3]]
+    return lines
+
+
+def onset_alert_lines(forecast: ForecastResult, heading: str) -> list[str]:
+    """사전 경보 절. 발생 위험 예보(1단) 격자가 없으면 빈 목록을 돌려 절을 생략한다.
+
+    확산 예측(Top 3)과 다른 모델의 결과라는 점, 기상·발생원 노출·과거 빈도로 계산했다는 점을 밝힌다.
+    """
+    alerts = forecast.onset_alerts
+    if not alerts:
+        return []
+    reference = forecast.onset_reference_time
+    when = f"{reference:%H:%M}" if reference else "기준시각 1시간 전"
+    lines = [
+        "", heading, "",
+        f"민원이 접수되기 전인 {when} 시점에, 기상(풍향·풍속·강수·기온)·상풍측 6km 축산 발생원 노출·격자별 과거 민원 빈도로 계산한 '다음 1시간 발생 위험' 상위 격자입니다. "
+        "위 확산 예측(Top 3)과는 다른 모델(발생 위험 예보 원형)의 결과이며, 두 결과가 겹치는 격자는 우선 확인 근거가 하나 더 있는 것으로 볼 수 있습니다.", "",
+        "|순위|격자|상대위험|상풍측 축산 노출 비율|", "|---:|---|---:|---:|",
+    ]
+    top3 = {area.grid_id for area in forecast.areas}
+    for cell in alerts:
+        share = "미제공" if cell.upwind_share is None else f"{cell.upwind_share:.0%}"
+        mark = " (확산 예측 Top 3와 일치)" if cell.grid_id in top3 else ""
+        lines.append(f"|{cell.rank}|{_location(cell)}{mark}|{cell.relative_risk}/100|{share}|")
+    quiet = alerts[0].quiet_hour
+    lines += [
+        "", "- 상대위험은 같은 시각 격자 중 최고를 100으로 둔 상대값이며 발생 확률이 아닙니다.",
+        "- 상풍측 축산 노출 비율은 격자 6km 안 축산 시설 배출 가중치(EMEP/EEA NH3 계수 × 사육두수) 중 그 시각 바람이 불어오는 쪽(±30°)의 비율입니다.",
+    ]
+    if quiet is not None:
+        lines.append("- 이 시각은 직전 3시간 동안 시 전체 민원이 없던 '조용한 시각'" + ("입니다." if quiet else "이 아닙니다(이미 민원이 이어지던 상황).")
+                     + " 조용한 시각의 상위 5 격자 적중률은 검증 구간에서 0.58 수준(참고)입니다.")
+    if forecast.onset_alerts_by_type:
+        # 유형별 모델(라벨을 그 냄새 종류 민원으로 제한)의 상위 3 격자. 담당 부서가 다르므로 따로 보인다.
+        lines += ["", "냄새 유형별 위험 상위 격자(같은 시각, 유형별 모델):"]
+        for odor_type, cells in forecast.onset_alerts_by_type.items():
+            if not cells:
+                continue
+            parts = [f"{c.grid_id}({c.relative_risk})" for c in cells[:3]]
+            lines.append(f"- {odor_type} 냄새: " + ", ".join(parts))
+        lines.append("- 괄호는 그 유형 안에서의 상대위험(최고 100). 검증 구간 조용한 시각 Hit@5: 가축 0.57, 공장 0.75(참고).")
+    return lines
+
+
 def _time_windows(forecast: ForecastResult) -> tuple[str, str]:
     boundary = forecast.event_time + timedelta(minutes=forecast.forecast_minutes)
     end = boundary + timedelta(minutes=forecast.forecast_minutes)
@@ -67,8 +161,17 @@ def create_briefing(forecast: ForecastResult) -> str:
         f"- 풍속: {_value(weather.get('windSpeed'), 'm/s')}",
         f"- 상대습도: {_value(weather.get('humidity'), '%')}",
         f"- 최근 1시간 강수량: {_value(weather.get('rainfall'), 'mm')}",
-        "- 기상정보는 현장 판단용 참고정보이며 현재 민원 예측모델 입력에는 사용하지 않음", "",
-        "## 4. 상황 판단", "",
+        "- 기상정보는 확산 예측(Top 3) 모델 입력에는 쓰지 않음(검증 결과 개선 없음). 아래 참고 절이 있으면 그 계산에는 사용됨",
+    ]
+    section = 4
+    if forecast.source_candidates:
+        lines += source_candidate_lines(forecast, f"## {section}. 발생원 후보 (참고)")
+        section += 1
+    if forecast.onset_alerts:
+        lines += onset_alert_lines(forecast, f"## {section}. 사전 경보 (참고)")
+        section += 1
+    lines += [
+        "", f"## {section}. 상황 판단", "",
         "현재 민원 분포와 AI 예측 결과를 고려하여 1순위 권역을 우선 확인대상으로 검토하고, 현장 상황과 기상조건에 따라 2·3순위 권역을 순차적으로 확인할 필요가 있습니다.", "",
         f"> **주의:** {DISCLAIMER}",
     ]
@@ -88,6 +191,7 @@ def create_dispatch_order(forecast: ForecastResult) -> str:
     for area in forecast.areas:
         level, action = response_level(area.relative_risk)
         lines.append(f"|{area.rank}순위|{_location(area)}|{area.relative_risk}/100|{action}|")
+    lines += source_candidate_lines(forecast, "### 점검 시 참고: 상풍측 발생원 후보")
     lines += [
         "", "## 2. 현장 확인 항목", "",
         "현장 도착 시 다음 사항을 확인·기록합니다.", "",
@@ -162,7 +266,10 @@ def create_response_guide(forecast: ForecastResult) -> str:
         "## Event 참고정보", "",
         f"- 초기 접수 민원: {_value(forecast.initial_complaint_count, '건')}",
         f"- 현장 참고 기상: {', '.join(weather_items)}",
-        "- 기상정보는 현재 예측모델 입력이 아니며, 발생원 역추적이나 시설 특정에 사용하지 않습니다.", "",
+        ("- 기상정보는 현재 예측모델 입력이 아닙니다. 아래 발생원 후보는 바람·거리 기반 참고 정보이며 시설 특정이 아닙니다."
+         if forecast.source_candidates else
+         "- 기상정보는 현재 예측모델 입력이 아니며, 발생원 역추적이나 시설 특정에 사용하지 않습니다."),
+        *source_candidate_lines(forecast, "## 발생원 후보 (참고)"), "",
         "## 기록 및 후속 검토", "",
         "현장 확인값과 실시 조치를 동일 Event ID에 기록하고, 확인되지 않은 내용은 추정해 채우지 않습니다. 추가 민원이나 현장 측정 결과가 확보되면 담당자가 대응 우선순위를 다시 검토합니다.", "",
         "> **담당자 검토 필요:** 본 가이드는 AI가 생성한 현장 대응 참고사항이며 행정조치 지시가 아닙니다. 실제 대응은 현장 측정 결과, 안전수칙과 담당자의 판단을 따릅니다.",

@@ -20,6 +20,47 @@ class RiskArea:
 
 
 @dataclass(frozen=True)
+class SourceCandidate:
+    """역추적 엔진이 낸 발생원 후보. 원인 확정이 아니라 '현재 민원을 설명하는 적합도' 순위다.
+
+    계약 문서 `docs/contracts/source_backtrack_contract.md`의 `source_candidates.csv` 한 행과 같다.
+    """
+    rank: int
+    name: str
+    city: str | None = None
+    species: str | None = None
+    location_precision: str | None = None  # point / village
+    distance_km: float | None = None
+    bearing_deg: float | None = None
+    travel_time_min: float | None = None
+    wind_alignment: float | None = None
+    fit_score: float | None = None
+    evidence_text: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class OnsetAlertCell:
+    """발생 위험 예보(1단 원형, run_onset_risk.py)의 기준시각 1시간 전 위험 상위 격자 한 칸.
+
+    `outputs/onset_risk/onset_alerts.csv` 한 행과 같다. 확산 예측(Top 3)과 별개의 참고 정보다.
+    """
+    rank: int
+    grid_id: str
+    relative_risk: int  # 같은 시각 최고 위험 = 100
+    center_latitude: float | None = None
+    center_longitude: float | None = None
+    region_name: str | None = None
+    upwind_share: float | None = None  # 6km 안 축산 배출 가중치 중 상풍측 비율(0~1)
+    quiet_hour: bool | None = None  # 직전 3시간 시 전체 민원 없음
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class ForecastResult:
     event_id: str
     event_time: datetime
@@ -33,6 +74,15 @@ class ForecastResult:
     initial_intensity_average: float | None = None
     initial_intensity_maximum: float | None = None
     weather: dict[str, float | int | None] = field(default_factory=dict)
+    # 역추적 참고 정보. 없으면 빈 튜플·None이며 문서에서 해당 절이 생략된다.
+    source_candidates: tuple[SourceCandidate, ...] = ()
+    backtrack_uncertainty: float | None = None
+    backtrack_weather_source: str | None = None
+    # 발생 위험 예보(1단) 참고 정보. 없으면 빈 튜플이며 문서에서 해당 절이 생략된다.
+    onset_alerts: tuple[OnsetAlertCell, ...] = ()
+    onset_reference_time: datetime | None = None
+    # 냄새 유형별(가축·공장·하수) 모델의 같은 시각 위험 상위 격자. {"가축": (cells...), ...}. 없으면 빈 dict.
+    onset_alerts_by_type: dict[str, tuple[OnsetAlertCell, ...]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if self.grid_size_m != 1000:
@@ -46,6 +96,8 @@ class ForecastResult:
         result = asdict(self)
         result["event_time"] = self.event_time.isoformat()
         result["generated_at"] = self.generated_at.isoformat()
+        if self.onset_reference_time is not None:
+            result["onset_reference_time"] = self.onset_reference_time.isoformat()
         return result
 
 

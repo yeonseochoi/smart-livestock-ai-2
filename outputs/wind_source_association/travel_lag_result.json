@@ -1,0 +1,130 @@
+{
+  "n": 8071,
+  "bands_km": [
+    [
+      0.0,
+      2.0
+    ],
+    [
+      2.0,
+      4.0
+    ],
+    [
+      4.0,
+      6.0
+    ],
+    [
+      6.0,
+      8.0
+    ],
+    [
+      8.0,
+      10.0
+    ]
+  ],
+  "all_bands": {
+    "lag0": {
+      "real_mean": 15948.310345682072,
+      "shuffled_mean": 14975.733565208771,
+      "ratio_real_over_shuffled": 1.0649435152033397,
+      "z": 10.36305646391306,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "lag1": {
+      "real_mean": 15269.361789121545,
+      "shuffled_mean": 14504.887004782553,
+      "ratio_real_over_shuffled": 1.0527046356229408,
+      "z": 7.967193697887856,
+      "p_value_one_sided": 0.001996007984031936
+    },
+    "travel": {
+      "real_mean": 14613.690757031347,
+      "shuffled_mean": 13954.4069615661,
+      "ratio_real_over_shuffled": 1.047245561726921,
+      "z": 7.233618426936936,
+      "p_value_one_sided": 0.001996007984031936
+    }
+  },
+  "per_band": {
+    "0-2km": {
+      "lag0": {
+        "real_mean": 428.5099739809194,
+        "shuffled_mean": 368.9778057241978,
+        "ratio_real_over_shuffled": 1.1613434936550642,
+        "z": 6.464493184358565,
+        "p_value_one_sided": 0.004975124378109453
+      },
+      "travel": {
+        "real_mean": 428.5099739809194,
+        "shuffled_mean": 368.9778057241978,
+        "ratio_real_over_shuffled": 1.1613434936550642,
+        "z": 6.464493184358565,
+        "p_value_one_sided": 0.004975124378109453
+      }
+    },
+    "2-4km": {
+      "lag0": {
+        "real_mean": 1615.4363275926155,
+        "shuffled_mean": 1543.2036890100362,
+        "ratio_real_over_shuffled": 1.0468069374749334,
+        "z": 3.86858067402966,
+        "p_value_one_sided": 0.004975124378109453
+      },
+      "travel": {
+        "real_mean": 1534.5160698798165,
+        "shuffled_mean": 1505.004221038285,
+        "ratio_real_over_shuffled": 1.0196091468907453,
+        "z": 1.5735801532325282,
+        "p_value_one_sided": 0.024875621890547265
+      }
+    },
+    "4-6km": {
+      "lag0": {
+        "real_mean": 3042.893743030603,
+        "shuffled_mean": 2665.461869037294,
+        "ratio_real_over_shuffled": 1.1416009279208443,
+        "z": 12.962306665954262,
+        "p_value_one_sided": 0.004975124378109453
+      },
+      "travel": {
+        "real_mean": 2900.373336637344,
+        "shuffled_mean": 2573.1930670920583,
+        "ratio_real_over_shuffled": 1.1271495224083707,
+        "z": 12.403660432132028,
+        "p_value_one_sided": 0.004975124378109453
+      }
+    },
+    "6-8km": {
+      "lag0": {
+        "real_mean": 3999.897881303432,
+        "shuffled_mean": 3661.455965369842,
+        "ratio_real_over_shuffled": 1.092433698270465,
+        "z": 9.168092730383695,
+        "p_value_one_sided": 0.004975124378109453
+      },
+      "travel": {
+        "real_mean": 3496.074055259571,
+        "shuffled_mean": 3282.7776090323378,
+        "ratio_real_over_shuffled": 1.0649743819503226,
+        "z": 5.5020553251596045,
+        "p_value_one_sided": 0.004975124378109453
+      }
+    },
+    "8-10km": {
+      "lag0": {
+        "real_mean": 6861.572419774501,
+        "shuffled_mean": 6736.441260376657,
+        "ratio_real_over_shuffled": 1.0185752617088577,
+        "z": 2.191863904661814,
+        "p_value_one_sided": 0.014925373134328358
+      },
+      "travel": {
+        "real_mean": 6254.217321273696,
+        "shuffled_mean": 6231.488715586668,
+        "ratio_real_over_shuffled": 1.0036473797393193,
+        "z": 0.40279739363478206,
+        "p_value_one_sided": 0.32338308457711445
+      }
+    }
+  }
+}

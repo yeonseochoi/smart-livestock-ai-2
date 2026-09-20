@@ -16,7 +16,10 @@ from streamlit_folium import st_folium
 from administrative_agent.documents import create_response_guide
 from administrative_agent.llm import llm_configured, provider_name, refine_with_llm
 from administrative_agent.service import build_response_package, create_completed_followup
-from generate_agent_documents import DEFAULT_METRICS, DEFAULT_PREDICTIONS, forecast_from_csv
+from generate_agent_documents import (
+    DEFAULT_GRID_SCORES, DEFAULT_METRICS, DEFAULT_ONSET_ALERTS, DEFAULT_PREDICTIONS, DEFAULT_SOURCE_CANDIDATES,
+    DEFAULT_ONSET_ALERTS_BY_TYPE, forecast_from_csv, load_onset_alerts, load_onset_alerts_by_type, load_source_candidates,
+)
 
 
 ROOT = Path(__file__).resolve().parent
@@ -92,6 +95,9 @@ def current_forecast(event: dict):
         ROOT / DEFAULT_METRICS,
         event_id=event["id"],
         event_time=event["hour"],
+        source_candidates_path=ROOT / DEFAULT_SOURCE_CANDIDATES,
+        grid_scores_path=ROOT / DEFAULT_GRID_SCORES,
+        onset_alerts_path=ROOT / DEFAULT_ONSET_ALERTS,
     )
     reports = event.get("reports", [])
     grid_centers = [tuple(grid["center"]) for grid in event.get("broad", [])]
@@ -237,7 +243,37 @@ with st.sidebar:
       <div class="weather-card"><span class="weather-icon">💧</span><div class="weather-copy"><div class="weather-label">상대습도</div><div class="weather-value">{humidity}</div></div></div>
       <div class="weather-card"><span class="weather-icon">🌧️</span><div class="weather-copy"><div class="weather-label">최근 강수</div><div class="weather-value">{rainfall}</div></div></div>
     </div>''', unsafe_allow_html=True)
-    st.caption("※ 기상정보는 민원 예측 모델 입력에 사용하지 않음")
+    st.caption("※ 기상정보는 확산 예측(Top 3) 입력에는 쓰지 않음(검증 결과 개선 없음). 사전 경보·발생원 후보 계산에만 사용")
+
+    # 발생 위험 예보(1단 원형) 산출물(outputs/onset_risk/onset_alerts.csv)이 있을 때만 기준시각 1시간 전 위험 상위 격자를 보여준다.
+    alerts, alert_reference = load_onset_alerts(ROOT / DEFAULT_ONSET_ALERTS, event["hour"]) if event.get("hour") else ((), None)
+    if alerts:
+        st.markdown('<div class="eyebrow">사전 경보 (참고)</div>', unsafe_allow_html=True)
+        st.caption(f"{alert_reference:%H:%M} 시점 기상·발생원 노출·과거 빈도 기준 '다음 1시간 발생 위험' 상위 격자")
+        top3 = {f"G{int(grid['grid_x']):+d}:{int(grid['grid_y']):+d}" for grid in grids[:3] if "grid_x" in grid}
+        for cell in alerts:
+            share = "" if cell.upwind_share is None else f" · 상풍측 축산 노출 {cell.upwind_share:.0%}"
+            mark = " · 확산 예측 Top 3와 일치" if cell.grid_id in top3 else ""
+            st.markdown(f'<div class="priority"><b>{cell.rank}순위 · {cell.grid_id}</b><br><small>상대위험 {cell.relative_risk}/100{share}{mark}</small></div>', unsafe_allow_html=True)
+        by_type = load_onset_alerts_by_type({k: ROOT / v for k, v in DEFAULT_ONSET_ALERTS_BY_TYPE.items()}, event["hour"])
+        if by_type:
+            st.caption("유형별 위험 상위 3 (유형별 모델): " + " · ".join(
+                f"{k} {', '.join(f'{c.grid_id}({c.relative_risk})' for c in v[:3])}" for k, v in by_type.items()))
+
+    # 역추적 산출물(outputs/source_backtrack)이 있을 때만 발생원 후보를 참고 정보로 보여준다.
+    candidates = load_source_candidates(ROOT / DEFAULT_SOURCE_CANDIDATES, event["hour"]) if event.get("hour") else ()
+    if candidates:
+        st.markdown('<div class="eyebrow">발생원 후보 (참고)</div>', unsafe_allow_html=True)
+        for candidate in candidates:
+            label = candidate.name + (" · 리 단위 추정" if candidate.location_precision == "village" else "")
+            detail = " · ".join(part for part in (
+                None if candidate.distance_km is None else f"{candidate.distance_km:.1f}km",
+                None if candidate.travel_time_min is None else f"도달 약 {candidate.travel_time_min:.0f}분",
+                None if candidate.wind_alignment is None else f"풍향 일치 {candidate.wind_alignment:.2f}",
+                None if candidate.fit_score is None else f"적합도 {candidate.fit_score:.2f}",
+            ) if part)
+            st.markdown(f'<div class="priority"><b>{candidate.rank}순위 · {label}</b><br><small>{detail}</small></div>', unsafe_allow_html=True)
+        st.caption("※ 현재 민원 분포를 설명하는 정도의 순위이며 원인 시설 판정이 아님")
 
     st.markdown('<div class="eyebrow">Dispatch Priority</div>', unsafe_allow_html=True)
     for idx, grid in enumerate(grids[:3], 1):

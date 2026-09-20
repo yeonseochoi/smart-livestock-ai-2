@@ -1,0 +1,163 @@
+{
+  "checked_at": "2026-09-20",
+  "method": {
+    "sector_deg": 30.0,
+    "radii_km": [
+      6.0,
+      10.0
+    ],
+    "permutations": 300,
+    "min_wind_ms": 1.0,
+    "wind_window": "0,1,speed",
+    "shuffle_strata": "month x 6-hour block",
+    "source_weight": "one per facility/zone",
+    "industrial_zone_distance": "shortest distance to polygon boundary"
+  },
+  "prefilter_sources_total": 879,
+  "rows": [
+    {
+      "radius_km": 6.0,
+      "complaint_group": "factory",
+      "source_set": "factory_prefilter",
+      "n_sources": 768,
+      "n_complaints": 1340,
+      "real_mean": 21.015671641791045,
+      "shuffled_mean": 22.012189054726367,
+      "ratio": 0.954728836352541,
+      "z": -3.516347177806906,
+      "p_one_sided": 1.0
+    },
+    {
+      "radius_km": 6.0,
+      "complaint_group": "factory",
+      "source_set": "factory_filtered",
+      "n_sources": 195,
+      "n_complaints": 1340,
+      "real_mean": 4.055223880597015,
+      "shuffled_mean": 3.918174129353233,
+      "ratio": 1.034977963387861,
+      "z": 2.6071006594751296,
+      "p_one_sided": 0.009966777408637873
+    },
+    {
+      "radius_km": 6.0,
+      "complaint_group": "sewer",
+      "source_set": "wastewater_plus_manure",
+      "n_sources": 88,
+      "n_complaints": 546,
+      "real_mean": 2.9853479853479854,
+      "shuffled_mean": 2.916129426129426,
+      "ratio": 1.0237364496233738,
+      "z": 1.753332968296489,
+      "p_one_sided": 0.029900332225913623
+    },
+    {
+      "radius_km": 6.0,
+      "complaint_group": "livestock",
+      "source_set": "livestock",
+      "n_sources": 2538,
+      "n_complaints": 3863,
+      "real_mean": 29.8954180688584,
+      "shuffled_mean": 27.164511174389506,
+      "ratio": 1.1005321567149557,
+      "z": 9.950046893164863,
+      "p_one_sided": 0.0033222591362126247
+    },
+    {
+      "radius_km": 6.0,
+      "complaint_group": "factory",
+      "source_set": "industrial_zone_boundary",
+      "n_sources": 21,
+      "n_complaints": 1340,
+      "real_mean": 0.5694029850746268,
+      "shuffled_mean": 0.5578905472636816,
+      "ratio": 1.0206356567025754,
+      "z": 0.8512961901773801,
+      "p_one_sided": 0.22259136212624583
+    },
+    {
+      "radius_km": 6.0,
+      "complaint_group": "factory",
+      "source_set": "factory_filtered_plus_zone_boundary",
+      "n_sources": 216,
+      "n_complaints": 1340,
+      "real_mean": 4.624626865671642,
+      "shuffled_mean": 4.46579104477612,
+      "ratio": 1.0355672308227053,
+      "z": 2.841642607331747,
+      "p_one_sided": 0.0033222591362126247
+    },
+    {
+      "radius_km": 10.0,
+      "complaint_group": "factory",
+      "source_set": "factory_prefilter",
+      "n_sources": 768,
+      "n_complaints": 1340,
+      "real_mean": 44.90522388059701,
+      "shuffled_mean": 45.384166666666665,
+      "ratio": 0.9894469190194161,
+      "z": -0.9763293237144615,
+      "p_one_sided": 0.8239202657807309
+    },
+    {
+      "radius_km": 10.0,
+      "complaint_group": "factory",
+      "source_set": "factory_filtered",
+      "n_sources": 195,
+      "n_complaints": 1340,
+      "real_mean": 11.494776119402985,
+      "shuffled_mean": 11.052059701492539,
+      "ratio": 1.040057367573816,
+      "z": 4.954487339299146,
+      "p_one_sided": 0.0033222591362126247
+    },
+    {
+      "radius_km": 10.0,
+      "complaint_group": "sewer",
+      "source_set": "wastewater_plus_manure",
+      "n_sources": 88,
+      "n_complaints": 546,
+      "real_mean": 6.54029304029304,
+      "shuffled_mean": 6.381233211233211,
+      "ratio": 1.0249261896242607,
+      "z": 2.6150373828815066,
+      "p_one_sided": 0.006644518272425249
+    },
+    {
+      "radius_km": 10.0,
+      "complaint_group": "livestock",
+      "source_set": "livestock",
+      "n_sources": 2538,
+      "n_complaints": 3863,
+      "real_mean": 96.19880921563552,
+      "shuffled_mean": 91.21747778065406,
+      "ratio": 1.0546093967535455,
+      "z": 6.387864112566763,
+      "p_one_sided": 0.0033222591362126247
+    },
+    {
+      "radius_km": 10.0,
+      "complaint_group": "factory",
+      "source_set": "industrial_zone_boundary",
+      "n_sources": 21,
+      "n_complaints": 1340,
+      "real_mean": 1.2656716417910447,
+      "shuffled_mean": 1.2440820895522389,
+      "ratio": 1.017353800380308,
+      "z": 1.1020558413443378,
+      "p_one_sided": 0.1362126245847176
+    },
+    {
+      "radius_km": 10.0,
+      "complaint_group": "factory",
+      "source_set": "factory_filtered_plus_zone_boundary",
+      "n_sources": 216,
+      "n_complaints": 1340,
+      "real_mean": 12.76044776119403,
+      "shuffled_mean": 12.296641791044776,
+      "ratio": 1.037718100439994,
+      "z": 4.736957833592949,
+      "p_one_sided": 0.0033222591362126247
+    }
+  ]
+}
