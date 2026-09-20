@@ -9,7 +9,8 @@
   R1  R0 + 기상(풍속·풍향 sin/cos·강수 1h/3h·기온·습도·정체·야간)
   R2  R1 + 발생원 노출(상풍측 6km 가중치 합, 전방위 6km 가중치 합, 그 비율) — 계수 세트 2벌(EEA NH3, 시설 수)
   R3  R2 + 건물 밀도(outputs/grid_buildings/grid_buildings_1km.csv, 있을 때만)
-  R2s R2 + 축산 외 발생원(공장·하수처리, 시설 수) 상풍측/전방위 6km 수
+  R2s R2 + 축산 외 발생원(공장·하수처리·분뇨/폐기물 시설 수, 산업단지 경계) 상풍측/전방위 6km
+  R2z R2 + 산업단지 경계만(폴리곤 경계를 100m 간격 점으로 바꿔 상풍측 비율, 최단거리)
   R2w R2 + 대기안정도(Pasquill-Gifford 등급, ASOS 산정; outputs/weather_integration/asos_hourly_stability_2020_2026.csv 있을 때만)
   R4  R3 + 축산 외 발생원 + 대기안정도
   R5  R2 + 풍향 조건부 과거 민원 지도(CPF형: 격자 g에서 "지금 풍향 구간"일 때 과거 1년 민원율, 전체·가축·공장 유형별)
@@ -24,6 +25,8 @@
   --wind-window 은 발생원 노출 계산에 쓰는 참조 풍향만 바꾼다(기본 0,1,speed = t 정시 바람). 기상 특징 자체는 t 정시 그대로.
   --label-type all|livestock|factory|sewage : 양성 라벨을 그 악취종류 민원으로 제한(음성·과거 빈도 특징은 전체 민원 그대로).
   --seeds N : seed 수(기본 3, 순서 42,7,123,0,1,2,...).
+  --wind-source asos|aws|both : 바람 관측 자료원(wind_sources.py). 기본 asos(전주·군산). aws = 익산·함라·여산·김제·진봉 5지점.
+  --wind-mode center|local : center = 민원 중심점 한 곳의 거리 가중(현행), local = 격자 중심마다 거리 가중(IDW). 기온·습도·강수는 항상 center.
 풍향 조건부 지도(CPF형)는 수용체 모델의 조건부 확률 함수(conditional probability function)를 격자 단위로 옮긴 것이다.
   cpf_<type>_365d = [t-365d, t) 동안 격자 g에 생긴 <type> 민원 중 그 시각 풍향 구간(30°, 정체는 별도 구간)이 지금과 같은 것의 수
                     ÷ 같은 기간 그 풍향 구간이었던 시간 수. 모두 t 미만 정보만 쓴다.
@@ -59,7 +62,10 @@ PRIOR_FEATURES = ["cell_rate_365d", "cell_rate_30d", "cell_recent_24h", "city_ra
 WEATHER_FEATURES = ["wind_speed", "wind_from_sin", "wind_from_cos", "rain_1h", "rain_3h", "temperature", "humidity", "stagnation"]
 SOURCE_FEATURES = ["upwind_eea_6km", "total_eea_6km", "upwind_share_eea", "upwind_count_6km", "total_count_6km", "upwind_share_count"]
 BUILDING_FEATURES = ["building_count", "residential_count", "commercial_count"]
-NON_LIVESTOCK_FEATURES = ["upwind_factory_6km", "total_factory_6km", "upwind_wastewater_6km", "total_wastewater_6km"]
+NON_LIVESTOCK_FEATURES = ["upwind_factory_6km", "total_factory_6km", "upwind_wastewater_6km", "total_wastewater_6km",
+                          "upwind_manure_6km", "total_manure_6km"]
+INDUSTRIAL_FEATURES = ["upwind_izone_6km", "total_izone_6km", "dist_izone_km"]
+INDUSTRIAL_ZONES = Path("data/public_source_cache/industrial_zones.geojson")
 STABILITY_FEATURES = ["stability_pg", "stable_flag"]
 CPF_FEATURES = ["cpf_all_365d", "cpf_all_ratio", "cpf_livestock_365d", "cpf_factory_365d"]
 CPF_SECTOR_DEG = 30
@@ -70,9 +76,10 @@ ARMS = {
     "R1": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES,
     "R2": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES,
     "R3": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + BUILDING_FEATURES,
-    "R2s": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + NON_LIVESTOCK_FEATURES,
+    "R2s": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + NON_LIVESTOCK_FEATURES + INDUSTRIAL_FEATURES,
+    "R2z": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + INDUSTRIAL_FEATURES,
     "R2w": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + STABILITY_FEATURES,
-    "R4": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + BUILDING_FEATURES + NON_LIVESTOCK_FEATURES + STABILITY_FEATURES,
+    "R4": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + BUILDING_FEATURES + NON_LIVESTOCK_FEATURES + INDUSTRIAL_FEATURES + STABILITY_FEATURES,
     "R5": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + SOURCE_FEATURES + CPF_FEATURES,
     "R5o": TIME_FEATURES + PRIOR_FEATURES + WEATHER_FEATURES + CPF_FEATURES,
 }
@@ -100,7 +107,7 @@ LABEL_PREFIX = {"all": None, "livestock": "가축", "factory": "공장", "sewage
 
 
 def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, wind_spec: dict | None = None,
-                label_type: str = "all") -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+                label_type: str = "all", wind_source: str = "asos", wind_mode: str = "center") -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     complaints, _, _, _, _ = odor.load_inputs()
     meta = {"lat0": float(complaints["latitude"].median()), "lon0": float(complaints["longitude"].median()), "grid_m": GRID_M}
     gridded = sensitivity.add_grid(complaints, GRID_M)
@@ -113,11 +120,15 @@ def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, win
     centers = np.array([odor.grid_centroid(int(x), int(y), meta) for x, y in zip(cells["grid_x"], cells["grid_y"])])
     cells["center_latitude"], cells["center_longitude"] = centers[:, 0], centers[:, 1]
 
-    # 시각 축: ASOS가 있는 2020-01 ~ 마지막 관측 시각
+    # 시각 축: 관측이 있는 2020-01 ~ 마지막 관측 시각. 바람 자료원·보간 방식은 wind_sources.WindField
+    import wind_sources as ws
+    field = ws.WindField(ws.load_wind_stations(wind_source))
+    center_table = field.center_table((meta["lat0"], meta["lon0"]))
+    wind = center_table[["u", "v", "speed", "from_deg"]].copy()
     asos = ab.load_asos()
-    wind = ab.hourly_wind_table(asos, (meta["lat0"], meta["lon0"]))
     extra = asos.groupby("datetime")[["rainfall_hour", "temperature", "humidity"]].mean()
     wind = wind.join(extra)
+    wind = wind[wind["speed"].notna()]
     wind["rain_3h"] = wind["rainfall_hour"].rolling(3, min_periods=1).sum()
     wind = wind[wind.index >= PERIOD_START]
     hours = wind.index
@@ -165,8 +176,20 @@ def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, win
     # 풍향 조건부 과거 민원 지도(CPF형, t 미만 정보만)
     panel = add_wind_conditioned_rates(panel, gridded, cells, wind)
 
-    # 기상(t 정시)
+    # 기상(t 정시). local 이면 풍향·풍속은 격자 중심별 IDW 값으로 덮어쓴다(기온·습도·강수는 center 그대로).
     w = wind.reindex(panel["hour"].to_numpy())
+    local_from, local_speed = w["from_deg"].to_numpy().copy(), w["speed"].to_numpy().copy()
+    if wind_mode == "local":
+        hour_pos = field.hours.get_indexer(panel["hour"])
+        cell_ids_arr = panel["cell_id"].to_numpy()
+        for cell in cells.itertuples(index=False):
+            table = field.at(float(cell.center_latitude), float(cell.center_longitude))
+            idx = np.where(cell_ids_arr == cell.cell_id)[0]
+            pos = hour_pos[idx]
+            ok = pos >= 0
+            local_from[idx[ok]] = table["from_deg"].to_numpy()[pos[ok]]
+            local_speed[idx[ok]] = table["speed"].to_numpy()[pos[ok]]
+    w = w.assign(from_deg=local_from, speed=local_speed)
     panel["wind_speed"] = w["speed"].to_numpy()
     panel["wind_from_sin"] = np.sin(np.radians(w["from_deg"].to_numpy()))
     panel["wind_from_cos"] = np.cos(np.radians(w["from_deg"].to_numpy()))
@@ -176,9 +199,13 @@ def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, win
     panel["humidity"] = w["humidity"].to_numpy()
     panel["stagnation"] = (w["speed"].to_numpy() < 1.0).astype(int)
     panel["wind_from_deg"] = w["from_deg"].to_numpy()
-    ref = reference_wind(wind, wind_spec).reindex(panel["hour"].to_numpy())
-    panel["ref_from_deg"] = ref["from_deg"].to_numpy()
-    panel["ref_speed"] = ref["speed"].to_numpy()
+    if wind_mode == "local" or not wind_spec or (wind_spec["lag"] == 0 and wind_spec["window"] == 1):
+        panel["ref_from_deg"] = w["from_deg"].to_numpy()  # local 이면 격자별 바람, 아니면 t 정시 center 바람
+        panel["ref_speed"] = w["speed"].to_numpy()
+    else:
+        ref = reference_wind(wind, wind_spec).reindex(panel["hour"].to_numpy())
+        panel["ref_from_deg"] = ref["from_deg"].to_numpy()
+        panel["ref_speed"] = ref["speed"].to_numpy()
 
     # 대기안정도(Pasquill-Gifford A~F → 1~6, 안정 E·F 플래그). 파일 없으면 NaN.
     stability = load_stability_series()
@@ -209,15 +236,26 @@ def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, win
     for tag, set_name in (("eea", "eea_nh3"), ("count", "count")):
         src = sw.apply_weight_set(livestock, set_name)
         exposure(src[src["emission_weight"] > 0], tag, share=True)
-    # 축산 외 발생원: 배출 대리량 없음 → 시설 1곳 = 1
-    for kind in ("factory", "wastewater"):
-        src = raw_sources[raw_sources["source_type"] == kind].copy()
+    # 축산 외 발생원: 배출 대리량 없음 → 시설 1곳 = 1. manure = 가축분뇨 처리시설 + 폐기물 처리시설
+    kind_types = {"factory": ("factory",), "wastewater": ("wastewater",), "manure": ("manure_plant", "waste_facility")}
+    for kind, types in kind_types.items():
+        src = raw_sources[raw_sources["source_type"].isin(types)].copy()
         src["emission_weight"] = 1.0
         if len(src):
             exposure(src, kind, share=False)
         else:
             panel[f"upwind_{kind}_6km"] = np.nan
             panel[f"total_{kind}_6km"] = np.nan
+    # 산업단지: 폴리곤 경계를 100 m 간격 점으로 바꿔 단지당 총 가중치 1 → 상풍측 값 = 단지 경계 중 상풍측 비율의 합
+    izone_points, izone_polys = load_industrial_zones()
+    if len(izone_points):
+        exposure(izone_points, "izone", share=False)
+        centers = cell_frame[["latitude", "longitude"]].to_numpy()
+        dist = np.array([min(odor_geo_distance_km(lat, lon, poly) for poly in izone_polys) for lat, lon in centers])
+        panel["dist_izone_km"] = dist[panel["cell_id"].to_numpy()]
+    else:
+        for col in INDUSTRIAL_FEATURES:
+            panel[col] = np.nan
 
     # 건물 밀도(있을 때만)
     if BUILDINGS.exists():
@@ -230,6 +268,36 @@ def build_panel(neg_rate: float, radius_km: float, rng: np.random.Generator, win
         for col in BUILDING_FEATURES:
             panel[col] = np.nan
     return panel, cells, meta
+
+
+def load_industrial_zones() -> tuple[pd.DataFrame, list]:
+    """산업단지 폴리곤(GeoJSON) → 경계 100 m 간격 점(단지당 가중치 합 1)과 shapely 폴리곤 목록. 파일 없으면 빈 값."""
+    if not INDUSTRIAL_ZONES.exists():
+        return pd.DataFrame(columns=["latitude", "longitude", "emission_weight"]), []
+    from shapely.geometry import shape
+    import json as _json
+    features = _json.load(INDUSTRIAL_ZONES.open(encoding="utf-8"))["features"]
+    rows, polys = [], []
+    for feat in features:
+        geom = shape(feat["geometry"])
+        polys.append(geom)
+        boundary = geom.boundary
+        # 위경도 단위 경계 길이 → 대략 m 로 환산해 100 m 간격 표본
+        n = max(int(boundary.length * 111_000 / 100), 8)
+        pts = [boundary.interpolate(i / n, normalized=True) for i in range(n)]
+        for pt in pts:
+            rows.append({"latitude": pt.y, "longitude": pt.x, "emission_weight": 1.0 / n, "name": feat["properties"].get("name")})
+    return pd.DataFrame(rows), polys
+
+
+def odor_geo_distance_km(lat: float, lon: float, poly) -> float:
+    """격자 중심에서 폴리곤까지 최단거리(km). 안에 있으면 0. 위경도 차를 km 로 근사."""
+    from shapely.geometry import Point
+    pt = Point(lon, lat)
+    if poly.contains(pt):
+        return 0.0
+    nearest = poly.exterior.interpolate(poly.exterior.project(pt))
+    return float(ab.haversine_km(lat, lon, nearest.y, nearest.x))
 
 
 def wind_sector(from_deg: np.ndarray, speed: np.ndarray) -> np.ndarray:
@@ -378,13 +446,15 @@ def main() -> None:
     parser.add_argument("--arms", default="", help="실행할 실험군 쉼표 목록(기본 전체)")
     parser.add_argument("--label-type", default="all", choices=list(LABEL_PREFIX), help="양성 라벨로 쓸 악취종류")
     parser.add_argument("--seeds", type=int, default=len(SEEDS), help="seed 수(최대 12)")
+    parser.add_argument("--wind-source", default="asos", choices=["asos", "aws", "both"])
+    parser.add_argument("--wind-mode", default="center", choices=["center", "local"])
     args = parser.parse_args()
     seeds = SEED_POOL[: args.seeds]
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(0)
     lag, window, weighting = args.wind_window.split(",")
     wind_spec = {"lag": int(lag), "window": int(window), "weighting": weighting}
-    panel, cells, meta = build_panel(args.neg_rate, args.radius_km, rng, wind_spec, args.label_type)
+    panel, cells, meta = build_panel(args.neg_rate, args.radius_km, rng, wind_spec, args.label_type, args.wind_source, args.wind_mode)
     train, test = panel[panel["is_train"]], panel[~panel["is_train"]]
     events = first_cells_of_events(cells)
     summary = {
@@ -394,6 +464,7 @@ def main() -> None:
         "test_quiet_hours_with_complaints": int(test.loc[(test["target"] == 1) & (test["city_quiet_3h"] == 1), "hour"].nunique()),
         "neg_rate": args.neg_rate, "radius_km": args.radius_km, "buildings_available": bool(BUILDINGS.exists()),
         "stability_available": bool(STABILITY.exists()), "wind_window": wind_spec, "label_type": args.label_type,
+        "wind_source": args.wind_source, "wind_mode": args.wind_mode,
         "seeds": list(seeds), "arms": {},
     }
     arms = dict(ARMS)
@@ -446,7 +517,7 @@ def main() -> None:
              f"- 발생원 노출 참조 풍향 창: lag {wind_spec['lag']}h · window {wind_spec['window']}h · {wind_spec['weighting']}"
              + (f" · 대기안정도 {'있음' if STABILITY.exists() else '없음'}"),
              f"- 격자 {summary['cells']}개, 학습 {summary['train_rows']:,}행(양성 {summary['train_positives']:,}), 테스트 {summary['test_rows']:,}행(양성 {summary['test_positives']:,}, 양성률 {baseline:.4f})",
-             f"- 테스트 구간 민원 있던 시각 {summary['test_hours_with_complaints']:,}개, 그중 직전 3시간 시 전체 민원 없던 '조용한 시각' {summary['test_quiet_hours_with_complaints']:,}개. seed {list(seeds)} 평균. 라벨: {args.label_type}.", "",
+             f"- 테스트 구간 민원 있던 시각 {summary['test_hours_with_complaints']:,}개, 그중 직전 3시간 시 전체 민원 없던 '조용한 시각' {summary['test_quiet_hours_with_complaints']:,}개. seed {list(seeds)} 평균. 라벨: {args.label_type}. 바람: {args.wind_source}/{args.wind_mode}.", "",
              "| 실험군 | 특징 수 | PR-AUC | Hit@5 | Hit@10 | 조용한 시각 Hit@5 | 조용한 시각 Hit@10 | Event 첫 격자 1h 전 top10 |", "|---|---:|---:|---:|---:|---:|---:|---:|"]
     for name, r in summary["arms"].items():
         lead = r["onset_lead"]
