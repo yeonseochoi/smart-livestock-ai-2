@@ -10,6 +10,11 @@
 평가: 2단 단독 Hit@1/2/3 vs 결합 Hit@1. 결합이 고친 Event 수·망친 Event 수(부호 검정).
       2021년 Event는 1단 학습 자료가 2020년 1년뿐이라 2022년 이후 Event만 따로도 본다.
 실행: python fuse_onset_spread.py [--pool 3] → outputs/onset_spread_fusion/{metrics.json, fusion_table.md, event_table.csv}
+      python fuse_onset_spread.py --narrow 30 → narrow_table.md, narrow_metrics.json (아래 후보 축소 규칙)
+
+후보 축소 규칙(--narrow K): 2단 후보 중 event_hour-1h 1단 위험 순위가 K 이내인 격자만 남기고 그 안에서 2단 점수 Top 3.
+      예외: 1단 격자 밖(민원 이력 없는 칸) 후보는 2단 점수가 K 안 1위보다 높을 때만 남긴다(새 지역 탈출구).
+      K 안 후보가 3개 미만이면 나머지에서 2단 점수 순으로 채운다. 2단 모델·점수는 그대로. 목적은 후보 수 축소이지 성능 향상이 아니다.
 """
 from __future__ import annotations
 
@@ -88,9 +93,70 @@ def summarize(table: pd.DataFrame, label: str) -> dict:
     }
 
 
+def narrow_event(group: pd.DataFrame, k: int) -> dict:
+    """한 Event의 2단 후보를 1단 순위 K 이내로 좁힌 뒤 Top 3 적중. 예외·채움 규칙은 모듈 docstring."""
+    ordered = group.sort_values("score", ascending=False)
+    inside = ordered[ordered["onset_rank"] <= k]
+    outside = ordered[ordered["onset_rank"].isna()]
+    if len(inside) and len(outside):
+        outside = outside[outside["score"] > inside["score"].iloc[0]]
+    kept = pd.concat([inside, outside]).sort_values("score", ascending=False)
+    top = kept.head(3)
+    filled = 0
+    if len(top) < 3:
+        rest = ordered.drop(kept.index).head(3 - len(top))
+        filled = len(rest)
+        top = pd.concat([top, rest])
+    base = ordered.head(3)
+    return {"candidates": int(len(group)), "kept": int(len(kept)), "filled": filled, "escaped_outside": int(len(outside)),
+            "base_hit1": int(base.iloc[0]["target"]), "base_hit2": int(base.head(2)["target"].max()), "base_hit3": int(base["target"].max()),
+            "narrow_hit1": int(top.iloc[0]["target"]), "narrow_hit2": int(top.head(2)["target"].max()), "narrow_hit3": int(top["target"].max()),
+            "truth_min_onset_rank": float(group.loc[group["target"] == 1, "onset_rank"].min())}
+
+
+def run_narrow(merged: pd.DataFrame, k: int) -> None:
+    rows = []
+    for event_id, group in merged.groupby("event_id"):
+        if group["target"].sum() == 0:
+            continue
+        r = narrow_event(group, k)
+        r.update({"event_id": event_id, "event_hour": group["event_hour"].iloc[0]})
+        rows.append(r)
+    table = pd.DataFrame(rows).sort_values("event_hour")
+    truth = merged[merged["target"] == 1]
+    summary = {
+        "k": k, "events": int(len(table)),
+        "mean_candidates_before": float(table["candidates"].mean()), "mean_candidates_after": float(table["kept"].mean()),
+        "events_filled": int((table["filled"] > 0).sum()), "events_with_outside_escape": int((table["escaped_outside"] > 0).sum()),
+        "base": {f"hit_at_{i}": float(table[f"base_hit{i}"].mean()) for i in (1, 2, 3)},
+        "narrow": {f"hit_at_{i}": float(table[f"narrow_hit{i}"].mean()) for i in (1, 2, 3)},
+        "truth_onset_rank": {"outside_share": float(truth["onset_rank"].isna().mean()), "median": float(truth["onset_rank"].median()),
+                             f"within_{k}": float((truth["onset_rank"] <= k).mean())},
+    }
+    for i in (1, 2, 3):
+        summary[f"hit{i}_fixed"] = int(((table[f"narrow_hit{i}"] == 1) & (table[f"base_hit{i}"] == 0)).sum())
+        summary[f"hit{i}_broken"] = int(((table[f"narrow_hit{i}"] == 0) & (table[f"base_hit{i}"] == 1)).sum())
+    (OUTPUT_DIR / "narrow_metrics.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    table.to_csv(OUTPUT_DIR / "narrow_event_table.csv", index=False, encoding="utf-8-sig")
+    b, n = summary["base"], summary["narrow"]
+    lines = [f"# 후보 축소 규칙: 1단 위험 순위 {k}위 이내 격자만 2단 후보로", "",
+             f"- 테스트 Event {summary['events']}개. 2단 모델·점수 그대로, 후보 집합만 좁힘. 1단 점수는 Event 이전 자료로만 학습한 연도별 분할.",
+             f"- 후보 수 평균 {summary['mean_candidates_before']:.1f} → {summary['mean_candidates_after']:.1f}. "
+             f"채움 발생 Event {summary['events_filled']}개, 1단 격자 밖 예외 허용 Event {summary['events_with_outside_escape']}개.",
+             f"- 정답 격자의 1단 순위: 중앙값 {summary['truth_onset_rank']['median']:.0f}위, {k}위 이내 {summary['truth_onset_rank'][f'within_{k}']:.3f}, "
+             f"1단 격자 밖 {summary['truth_onset_rank']['outside_share']:.3f}.", "",
+             "| | Hit@1 | Hit@2 | Hit@3 |", "|---|---:|---:|---:|",
+             f"| 2단 단독(현행) | {b['hit_at_1']:.3f} | {b['hit_at_2']:.3f} | {b['hit_at_3']:.3f} |",
+             f"| 1단 상위 {k}로 축소 | {n['hit_at_1']:.3f} | {n['hit_at_2']:.3f} | {n['hit_at_3']:.3f} |",
+             f"| 고침 / 망침 Event | {summary['hit1_fixed']}/{summary['hit1_broken']} | {summary['hit2_fixed']}/{summary['hit2_broken']} | {summary['hit3_fixed']}/{summary['hit3_broken']} |"]
+    (OUTPUT_DIR / "narrow_table.md").write_text(chr(10).join(lines) + chr(10), encoding="utf-8")
+    print(chr(10).join(lines))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--pool", type=int, default=3, help="1단 순위로 재정렬할 2단 상위 후보 수(기본 3)")
+    parser.add_argument("--narrow", type=int, default=0, help="후보 축소 규칙만 실행: 1단 위험 순위 K 이내 격자만 2단 후보로(0이면 안 함)")
     args = parser.parse_args()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -98,6 +164,9 @@ def main() -> None:
     spread = spread[spread["grid_m"] == GRID_M]
     onset = load_onset_scores()
     merged = spread.merge(onset, on=["event_hour", "grid_x", "grid_y"], how="left")
+    if args.narrow:
+        run_narrow(merged, args.narrow)
+        return
 
     rows = []
     for event_id, group in merged.groupby("event_id"):

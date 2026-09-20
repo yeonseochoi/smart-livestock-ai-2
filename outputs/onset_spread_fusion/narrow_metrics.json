@@ -1,0 +1,29 @@
+{
+  "k": 30,
+  "events": 47,
+  "mean_candidates_before": 31.127659574468087,
+  "mean_candidates_after": 15.063829787234043,
+  "events_filled": 0,
+  "events_with_outside_escape": 0,
+  "base": {
+    "hit_at_1": 0.5531914893617021,
+    "hit_at_2": 0.7446808510638298,
+    "hit_at_3": 0.851063829787234
+  },
+  "narrow": {
+    "hit_at_1": 0.5531914893617021,
+    "hit_at_2": 0.7446808510638298,
+    "hit_at_3": 0.851063829787234
+  },
+  "truth_onset_rank": {
+    "outside_share": 0.0,
+    "median": 6.0,
+    "within_30": 0.9874213836477987
+  },
+  "hit1_fixed": 0,
+  "hit1_broken": 0,
+  "hit2_fixed": 0,
+  "hit2_broken": 0,
+  "hit3_fixed": 0,
+  "hit3_broken": 0
+}

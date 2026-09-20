@@ -185,7 +185,7 @@ Streamlit Community Cloud에서는 실행 파일을 `streamlit_app.py`로 지정
 
 행정 문서와 화면에는 민원 접수 1시간 전 시점의 위험 상위 격자가 '사전 경보 (참고)' 절로 붙습니다. 확률이 아닌 상대값이며 원인 시설을 단정하지 않습니다.
 
-두 모델을 합쳐 권역을 1곳으로 줄이는 방식도 검토했습니다. 확산 예측 Top 3 중 발생 위험 순위가 가장 높은 격자를 1순위로 올리는 후처리인데, 테스트 Event 47개에서 Hit@1은 확산 예측 단독 0.553과 같았습니다(고친 Event 5, 망친 Event 5). 확산 예측 후보는 첫 민원 인근이라 발생 위험 예보에서도 모두 상위에 있어 그중 하나를 가를 정보가 없기 때문입니다. 권역 1곳 추천은 채택하지 않았습니다(`fuse_onset_spread.py`, `outputs/onset_spread_fusion/fusion_table.md`).
+두 모델을 합쳐 권역을 1곳으로 줄이는 방식도 검토했습니다. 확산 예측 Top 3 중 발생 위험 순위가 가장 높은 격자를 1순위로 올리는 후처리인데, 테스트 Event 47개에서 Hit@1은 확산 예측 단독 0.553과 같았습니다(고친 Event 5, 망친 Event 5). 확산 예측 후보는 첫 민원 인근이라 발생 위험 예보에서도 모두 상위에 있어 그중 하나를 가를 정보가 없기 때문입니다. 권역 1곳 추천은 채택하지 않았습니다(`fuse_onset_spread.py`, `outputs/onset_spread_fusion/fusion_table.md`). 반대로 발생 위험 순위 30위 이내 격자로 확산 예측 후보를 미리 좁히는 규칙은 후보를 평균 31개에서 15개로 줄이면서 Hit@1/2/3이 그대로였습니다(`--narrow 30`, `narrow_table.md`). 성능 향상이 아니라 후보 수 축소 규칙입니다.
 
 > 재현 참고자료: [run_onset_risk.py](run_onset_risk.py) · [결과 표](outputs/onset_risk/onset_risk_table.md) · [바람 자료원 비교](outputs/wind_lag_sweep/wind_source_compare.md) · [발생원·바람 검정 요약](PROJECT_CONTEXT.md)
 
