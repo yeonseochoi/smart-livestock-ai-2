@@ -1,7 +1,7 @@
 """기상청 ASOS/AWS 자료를 수집해 악취 Event와 결합한다.
 
-ASOS는 지정 기간 전체를 월 단위로 캐시하고, AWS 매분자료는 모델에 실제로
-사용되는 Event의 초기 30분만 수집한다. API 호출 결과는 재실행 시 재사용한다.
+ASOS는 지정 기간 전체를 월 단위로 캐시하고, AWS 매분자료는 예측 시각 이전
+120분을 수집한다. 30·60·120분 시간창 특징을 만들며 API 호출 결과는 재사용한다.
 """
 from __future__ import annotations
 
@@ -30,6 +30,8 @@ CACHE_DIR = Path("data/kma_weather_cache")
 OUTPUT_DIR = Path("outputs/weather_integration")
 REQUEST_TIMEOUT = 45
 INVALID_THRESHOLD = -90.0
+AWS_HISTORY_MINUTES = 120
+AWS_WINDOWS_MINUTES = (30, 60, 120)
 
 
 @dataclass(frozen=True)
@@ -69,7 +71,9 @@ def request_text(path: str, params: dict[str, object], api_key: str, retries: in
             return text
         except (requests.RequestException, RuntimeError):
             if attempt + 1 == retries:
-                raise
+                raise RuntimeError(
+                    f"기상청 API 요청에 실패했습니다: {path} (인증키는 로그에서 숨김)"
+                ) from None
             time.sleep(1.5 * (attempt + 1))
     raise AssertionError("unreachable")
 
@@ -211,15 +215,21 @@ def parse_aws(text: str) -> pd.DataFrame:
 
 def fetch_aws_event_window(
     api_key: str, station: Station, event_hour: pd.Timestamp, input_minutes: int,
+    history_minutes: int = AWS_HISTORY_MINUTES,
 ) -> pd.DataFrame:
+    prediction_time = event_hour + pd.Timedelta(minutes=input_minutes)
+    start = prediction_time - pd.Timedelta(minutes=history_minutes)
     end = event_hour + pd.Timedelta(minutes=input_minutes - 1)
-    cache = CACHE_DIR / "aws" / str(station.station_id) / f"{event_hour:%Y%m%d_%H%M}_{input_minutes}.txt"
+    cache = (
+        CACHE_DIR / "aws" / str(station.station_id)
+        / f"{event_hour:%Y%m%d_%H%M}_h{history_minutes}_i{input_minutes}.txt"
+    )
     cache.parent.mkdir(parents=True, exist_ok=True)
     if not cache.exists():
         text = request_text(
             "cgi-bin/url/nph-aws2_min",
             {
-                "tm1": event_hour.strftime("%Y%m%d%H%M"),
+                "tm1": start.strftime("%Y%m%d%H%M"),
                 "tm2": end.strftime("%Y%m%d%H%M"),
                 "stn": station.station_id,
                 "disp": 1,
@@ -268,6 +278,49 @@ def aggregate_aws_station(frame: pd.DataFrame, station: Station, distance_km: fl
     }
 
 
+def aggregate_aws_station_windows(
+    frame: pd.DataFrame, station: Station, distance_km: float,
+    prediction_time: pd.Timestamp, windows: Iterable[int] = AWS_WINDOWS_MINUTES,
+) -> dict[str, object]:
+    """기존 중첩 창과 이벤트 전·후 분리 창을 관측소별로 요약한다."""
+    result: dict[str, object] = {
+        "station_id": station.station_id,
+        "station_name": station.name,
+        "distance_km": distance_km,
+    }
+    for minutes in windows:
+        start = prediction_time - pd.Timedelta(minutes=minutes)
+        window = frame[(frame["datetime"] >= start) & (frame["datetime"] < prediction_time)]
+        _add_window_summary(result, f"w{minutes}", window, station, distance_km)
+
+    event_hour = prediction_time - pd.Timedelta(minutes=odor.INPUT_MINUTES)
+    separated = {
+        "pre30": (event_hour - pd.Timedelta(minutes=30), event_hour),
+        "pre60": (event_hour - pd.Timedelta(minutes=60), event_hour),
+        "initial30": (event_hour, prediction_time),
+    }
+    for prefix, (start, end) in separated.items():
+        window = frame[(frame["datetime"] >= start) & (frame["datetime"] < end)]
+        _add_window_summary(result, prefix, window, station, distance_km)
+    return result
+
+
+def _add_window_summary(
+    result: dict[str, object], prefix: str, window: pd.DataFrame,
+    station: Station, distance_km: float,
+) -> None:
+    summary = aggregate_aws_station(window, station, distance_km)
+    for key, value in summary.items():
+        if key not in {"station_id", "station_name", "distance_km"}:
+            result[f"{prefix}_{key}"] = value
+    sin_value = summary["wind_from_sin"]
+    cos_value = summary["wind_from_cos"]
+    result[f"{prefix}_wind_resultant_length"] = (
+        float(math.hypot(float(sin_value), float(cos_value)))
+        if not pd.isna(sin_value) and not pd.isna(cos_value) else np.nan
+    )
+
+
 def weighted_mean(records: list[dict[str, object]], key: str) -> float:
     values, weights = [], []
     for record in records:
@@ -279,19 +332,41 @@ def weighted_mean(records: list[dict[str, object]], key: str) -> float:
     return float(np.average(values, weights=weights)) if values else np.nan
 
 
-def combine_aws_records(records: list[dict[str, object]]) -> dict[str, object]:
-    keys = [
-        "wind_from_sin", "wind_from_cos", "wind_speed", "wind_speed_max",
-        "rainfall_15m", "rainfall_60m", "raining_fraction", "humidity", "temperature",
-    ]
-    result = {f"aws_{key}": weighted_mean(records, key) for key in keys}
-    sin_value, cos_value = result["aws_wind_from_sin"], result["aws_wind_from_cos"]
-    result["aws_wind_direction"] = (
-        float((np.degrees(np.arctan2(sin_value, cos_value)) + 360) % 360)
-        if not pd.isna(sin_value) and not pd.isna(cos_value) else np.nan
-    )
-    result["aws_downwind_east"] = -sin_value if not pd.isna(sin_value) else np.nan
-    result["aws_downwind_north"] = -cos_value if not pd.isna(cos_value) else np.nan
+def combine_aws_records(
+    records: list[dict[str, object]], windows: Iterable[int] = AWS_WINDOWS_MINUTES,
+) -> dict[str, object]:
+    result: dict[str, object] = {}
+    keys = ["wind_from_sin", "wind_from_cos", "wind_resultant_length", "wind_speed",
+            "wind_speed_max", "rainfall_15m", "rainfall_60m", "raining_fraction",
+            "humidity", "temperature", "samples"]
+    prefixes = [f"w{minutes}" for minutes in windows] + ["pre30", "pre60", "initial30"]
+    for prefix in prefixes:
+        for key in keys:
+            result[f"aws_{prefix}_{key}"] = weighted_mean(records, f"{prefix}_{key}")
+        sin_value = result[f"aws_{prefix}_wind_from_sin"]
+        cos_value = result[f"aws_{prefix}_wind_from_cos"]
+        magnitude = (
+            float(math.hypot(float(sin_value), float(cos_value)))
+            if not pd.isna(sin_value) and not pd.isna(cos_value) else np.nan
+        )
+        result[f"aws_{prefix}_wind_direction"] = (
+            float((np.degrees(np.arctan2(sin_value, cos_value)) + 360) % 360)
+            if not pd.isna(magnitude) and magnitude > 0 else np.nan
+        )
+        result[f"aws_{prefix}_downwind_east"] = (
+            -float(sin_value) / magnitude if not pd.isna(magnitude) and magnitude > 0 else np.nan
+        )
+        result[f"aws_{prefix}_downwind_north"] = (
+            -float(cos_value) / magnitude if not pd.isna(magnitude) and magnitude > 0 else np.nan
+        )
+        result[f"aws_{prefix}_wind_consistency"] = magnitude
+
+    # 기존 데모와 문서 생성 코드가 쓰는 열은 최신 30분 창의 별칭으로 유지한다.
+    legacy_keys = ["wind_from_sin", "wind_from_cos", "wind_speed", "wind_speed_max",
+                   "rainfall_15m", "rainfall_60m", "raining_fraction", "humidity",
+                   "temperature", "wind_direction", "downwind_east", "downwind_north"]
+    for key in legacy_keys:
+        result[f"aws_{key}"] = result[f"aws_w30_{key}"]
     result["aws_station_count"] = len(records)
     result["aws_station_ids"] = ":".join(str(x["station_id"]) for x in records)
     result["aws_station_names"] = ":".join(str(x["station_name"]) for x in records)
@@ -358,8 +433,8 @@ def attach_asos(events: pd.DataFrame, asos: pd.DataFrame, stations: list[Station
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--start", default="2020-01-01")
-    parser.add_argument("--end", default="2026-07-30 23:59")
+    parser.add_argument("--start", default="2019-05-28")
+    parser.add_argument("--end", default="2026-08-18 23:59")
     parser.add_argument("--aws-stations", type=int, default=3)
     parser.add_argument("--asos-stations", type=int, default=2)
     parser.add_argument("--workers", type=int, default=4)
@@ -397,7 +472,7 @@ def main() -> None:
     asos.to_csv(OUTPUT_DIR / "asos_hourly_2020_2026.csv", index=False, encoding="utf-8-sig")
     combined = attach_asos(events, asos, selected_asos)
 
-    print("[4/5] Event 초기 30분 AWS 매분자료 수집")
+    print("[4/5] 예측 시각 이전 120분 AWS 매분자료 수집")
     job_meta: list[tuple[str, pd.Timestamp, Station, float]] = []
     for event in events.itertuples(index=False):
         candidates = nearest_stations(
@@ -408,14 +483,17 @@ def main() -> None:
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         futures = {
             pool.submit(fetch_aws_event_window, api_key, station, hour, odor.INPUT_MINUTES):
-            (event_id, station, distance)
+            (event_id, hour, station, distance)
             for event_id, hour, station, distance in job_meta
         }
         for index, future in enumerate(as_completed(futures), 1):
-            event_id, station, distance = futures[future]
+            event_id, event_hour, station, distance = futures[future]
             frame = future.result()
             if not frame.empty:
-                station_records[event_id].append(aggregate_aws_station(frame, station, distance))
+                prediction_time = event_hour + pd.Timedelta(minutes=odor.INPUT_MINUTES)
+                station_records[event_id].append(
+                    aggregate_aws_station_windows(frame, station, distance, prediction_time)
+                )
             if index % 50 == 0 or index == len(job_meta):
                 print(f"      AWS {index}/{len(job_meta)} Event-지점 구간 완료")
 

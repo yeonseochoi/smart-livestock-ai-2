@@ -58,6 +58,8 @@ Agent는 시설을 원인으로 단정하거나 자동으로 행정조치를 내
 - `optimize_early_prediction.py`: 후보 모델 학습·평가
 - `build_odor_ai_mvp.py`: 민원 전처리와 Event 구성 공용 함수
 - `fetch_kma_weather.py`: 담당자 상황 정보용 기상자료 수집
+- `weather_feature_engineering.py`: 30·60·120분 기상을 후보 격자별 풍하 정렬도·이동 특징으로 변환
+- `weather_ablation_experiment.py`: 기존 모델과 기상 결합 모델을 동일 시간 분할로 비교하고 안전 혼합계수 선택
 - `demo/index.html`: 운영 화면 데모
 - `demo/build_demo_data.py`: 검증 결과로 데모 데이터 생성
 
@@ -80,6 +82,8 @@ Windows에서는 `run_demo.bat`을 더블클릭하면 Gemini 모드로 실행된
 
 ```powershell
 python -m pip install -r requirements.txt
+python fetch_kma_weather.py
+python weather_ablation_experiment.py
 python compare_operational_grid_sizes.py
 python generate_agent_documents.py
 python demo/server.py

@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 .venv/
 .python/
+.docx_deps/
 venv/
 .env
 .DS_Store

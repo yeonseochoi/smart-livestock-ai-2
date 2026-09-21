@@ -76,10 +76,16 @@ def build_data(
             count=("datetime", "size"), mean_intensity=("intensity", "mean"),
             first15_count=("is_first15", "sum"),
         ).reset_index()
+        centroid_x = float(np.average(agg["grid_x"], weights=agg["count"]))
+        centroid_y = float(np.average(agg["grid_y"], weights=agg["count"]))
         for gx, gy in odor.candidate_cells(observed, radius=radius):
             values = odor.cell_features((gx, gy), agg, hour, outer_prior, include_trend=True)
-            rows.append([event_id, event_id in train_ids, hour, gx, gy, int((gx, gy) in target), *values])
-    columns = ["event_id", "is_train", "event_hour", "grid_x", "grid_y", "target", *FEATURES]
+            rows.append([
+                event_id, event_id in train_ids, hour, gx, gy, centroid_x, centroid_y,
+                int((gx, gy) in target), *values,
+            ])
+    columns = ["event_id", "is_train", "event_hour", "grid_x", "grid_y",
+               "initial_centroid_x", "initial_centroid_y", "target", *FEATURES]
     return pd.DataFrame(rows, columns=columns), train_ids, test_ids
 
 
