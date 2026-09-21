@@ -4,6 +4,7 @@ __pycache__/
 .python/
 venv/
 .env
+/v2/.env
 .streamlit/secrets.toml
 .DS_Store
 Thumbs.db
@@ -17,3 +18,5 @@ demo/server.log
 demo/server.pid
 outputs/grid_compare.*
 outputs/severity_expansion.*
+/v2/data_ext/cache/
+/v2/data_ext/*.tmp
