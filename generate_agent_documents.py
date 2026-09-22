@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from administrative_agent.models import ForecastResult, OnsetAlertCell, RiskArea, SourceCandidate
+from administrative_agent.onset import latest_event_scores
 from administrative_agent.policy import NARROW_RANK_LIMIT, narrow_candidates
 from administrative_agent.service import build_response_package, write_response_package
 
@@ -19,6 +20,7 @@ DEFAULT_SOURCE_CANDIDATES = Path("outputs/source_backtrack/source_candidates.csv
 DEFAULT_GRID_SCORES = Path("outputs/source_backtrack/grid_scores.csv")
 DEFAULT_ONSET_ALERTS = Path("outputs/onset_risk/onset_alerts.csv")
 DEFAULT_ONSET_CELLS = Path("outputs/onset_risk/onset_cells.csv")
+DEFAULT_ONSET_EVENT_SCORE_DIR = Path("outputs/onset_risk")
 # 유형별 모델 산출물(run_onset_risk.py --label-type X --tag X). 없으면 해당 유형 줄만 생략.
 DEFAULT_ONSET_ALERTS_BY_TYPE = {"가축": Path("outputs/onset_risk/onset_alerts_livestock.csv"),
                                 "공장": Path("outputs/onset_risk/onset_alerts_factory.csv"),
@@ -115,13 +117,43 @@ def load_onset_alerts(path: Path | None, event_hour: pd.Timestamp, limit: int = 
     return cells, reference
 
 
+def onset_event_score_paths(directory: Path = DEFAULT_ONSET_EVENT_SCORE_DIR) -> tuple[Path, ...]:
+    return tuple(sorted(directory.glob("onset_event_scores*.csv")))
+
+
+def load_onset_alerts_for_event(score_paths: tuple[Path, ...] | list[Path] | None,
+                                alerts_path: Path | None, event_hour: pd.Timestamp,
+                                limit: int = 5) -> tuple[tuple[OnsetAlertCell, ...], pd.Timestamp | None]:
+    """연도별 점수가 있으면 이를 사용하고, 없으면 정시 예보 파일로 대체한다."""
+    rows = latest_event_scores(score_paths, event_hour).head(limit)
+    if rows.empty:
+        return load_onset_alerts(alerts_path, event_hour, limit=limit)
+    max_score = float(rows["risk_score"].max())
+    relative = ((100 * rows["risk_score"] / max_score).round().astype(int).tolist()
+                if max_score > 0 else [100 - 20 * i for i in range(len(rows))])
+    cells = tuple(
+        OnsetAlertCell(
+            rank=int(row["rank"]), grid_id=f"G{int(row['grid_x']):+d}:{int(row['grid_y']):+d}",
+            relative_risk=relative[index],
+        )
+        for index, (_, row) in enumerate(rows.iterrows())
+    )
+    return cells, pd.Timestamp(rows.iloc[0]["hour"])
+
+
 def onset_ranks_for(path: Path | None, cells_path: Path | None, event_hour: pd.Timestamp,
-                    lead_hours: int = 1) -> pd.DataFrame | None:
+                    lead_hours: int = 1,
+                    event_score_paths: tuple[Path, ...] | list[Path] | None = None) -> pd.DataFrame | None:
     """event_hour-lead_hours 시각의 1단 순위 표(grid_x, grid_y, onset_rank). 1단 격자인데 저장된 상위 밖이면 순위를 크게 둔다.
 
     onset_alerts.csv 는 시각별 상위 ALERT_TOP_N 만 담으므로, 격자 목록(onset_cells.csv)으로 '1단 격자 밖'과 '순위 밖'을 구분한다.
     두 파일 중 하나라도 없으면 None(좁히지 않음).
     """
+    score_rows = latest_event_scores(event_score_paths, event_hour)
+    if score_rows.empty:
+        score_rows = latest_event_scores(path, event_hour)
+    if not score_rows.empty:
+        return score_rows[["grid_x", "grid_y", "rank"]].rename(columns={"rank": "onset_rank"})
     if path is None or cells_path is None or not path.exists() or not cells_path.exists():
         return None
     table = pd.read_csv(path, encoding="utf-8-sig", usecols=["hour", "grid_x", "grid_y", "rank"])
@@ -141,6 +173,7 @@ def forecast_from_csv(
     onset_alerts_path: Path | None = DEFAULT_ONSET_ALERTS,
     onset_alerts_by_type_paths: dict[str, Path] | None = None,
     onset_cells_path: Path | None = DEFAULT_ONSET_CELLS,
+    onset_event_score_files: tuple[Path, ...] | list[Path] | None = None,
 ) -> ForecastResult:
     predictions = pd.read_csv(path)
     required = {"event_id", "event_hour", "grid_x", "grid_y", "score", "grid_m"}
@@ -159,9 +192,12 @@ def forecast_from_csv(
     candidates = one_km[one_km["event_id"] == selected_id].copy()
     if len(candidates) < 3:
         raise ValueError(f"{selected_id}에 Top 3를 만들 충분한 후보 권역이 없습니다.")
-    # 후보 축소 규칙: 기준시각 1시간 전 1단 순위 NARROW_RANK_LIMIT 이내 격자로 좁힌 뒤 Top 3. 1단 산출물이 없으면 후보 전체.
+    # 기존 2단 Top 3를 보호하고 나머지를 기준시각 1시간 전 1단 순위 NARROW_RANK_LIMIT 이내로 좁힌다.
     narrow_info = None
-    ranks = onset_ranks_for(onset_alerts_path, onset_cells_path, candidates["event_hour"].iloc[0])
+    if onset_event_score_files is None:
+        onset_event_score_files = onset_event_score_paths()
+    ranks = onset_ranks_for(onset_alerts_path, onset_cells_path, candidates["event_hour"].iloc[0],
+                            event_score_paths=onset_event_score_files)
     if ranks is not None:
         candidates = candidates.merge(ranks, on=["grid_x", "grid_y"], how="left")
         candidates, narrow_info = narrow_candidates(candidates, NARROW_RANK_LIMIT)
@@ -187,7 +223,9 @@ def forecast_from_csv(
     )
     event_hour = event.iloc[0]["event_hour"]
     uncertainty, weather_source = load_backtrack_context(grid_scores_path, event_hour)
-    onset_alerts, onset_reference = load_onset_alerts(onset_alerts_path, event_hour)
+    onset_alerts, onset_reference = load_onset_alerts_for_event(
+        onset_event_score_files, onset_alerts_path, event_hour,
+    )
     if onset_alerts_by_type_paths is None:
         onset_alerts_by_type_paths = DEFAULT_ONSET_ALERTS_BY_TYPE
     by_type = load_onset_alerts_by_type(onset_alerts_by_type_paths, event_hour) if onset_alerts else {}

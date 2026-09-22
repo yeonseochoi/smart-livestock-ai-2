@@ -12,9 +12,9 @@
 실행: python fuse_onset_spread.py [--pool 3] → outputs/onset_spread_fusion/{metrics.json, fusion_table.md, event_table.csv}
       python fuse_onset_spread.py --narrow 30 → narrow_table.md, narrow_metrics.json (아래 후보 축소 규칙)
 
-후보 축소 규칙(--narrow K): 2단 후보 중 event_hour-1h 1단 위험 순위가 K 이내인 격자만 남기고 그 안에서 2단 점수 Top 3.
+후보 축소 규칙(--narrow K): 기존 2단 Top 3를 보호하고, 나머지 후보 중 event_hour-1h 1단 위험 순위가 K 이내인 격자를 남긴다.
       예외: 1단 격자 밖(민원 이력 없는 칸) 후보는 2단 점수가 K 안 1위보다 높을 때만 남긴다(새 지역 탈출구).
-      K 안 후보가 3개 미만이면 나머지에서 2단 점수 순으로 채운다. 2단 모델·점수는 그대로. 목적은 후보 수 축소이지 성능 향상이 아니다.
+      2단 모델·점수와 기존 Top 3는 그대로다. 목적은 후보 수 축소이지 성능 향상이 아니다.
 """
 from __future__ import annotations
 
@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 
 from administrative_agent.policy import narrow_candidates
+from administrative_agent.onset import latest_event_scores
 
 SPREAD_PATH = Path("outputs/operational_grid_comparison/test_predictions.csv")
 ONSET_DIR = Path("outputs/onset_risk")
@@ -54,13 +55,12 @@ def load_onset_scores() -> pd.DataFrame:
     files = load_onset_files()
     if not files:
         raise SystemExit(f"1단 Event 점수 파일 없음: {ONSET_DIR}/{ONSET_PATTERNS} (run_onset_risk.py 를 먼저 실행)")
-    onset = pd.concat([pd.read_csv(f, parse_dates=["event_hour", "hour"]) for f in files], ignore_index=True)
-    onset["train_end"] = pd.to_datetime(onset["train_end"])
-    onset = onset[onset["train_end"] <= onset["event_hour"]]  # event 이전 자료로만 학습한 분할만
-    latest = onset.groupby("event_hour")["train_end"].transform("max")
-    onset = onset[onset["train_end"] == latest]
-    if onset.duplicated(["event_hour", "grid_x", "grid_y"]).any():
-        raise SystemExit("같은 Event·격자에 1단 점수가 둘 이상 (분할 파일이 겹침)")
+    try:
+        onset = latest_event_scores([Path(file) for file in files])
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    if onset.empty:
+        raise SystemExit("Event 이전 자료로 학습한 1단 점수가 없습니다.")
     return onset.rename(columns={"risk_score": "onset_score", "rank": "onset_rank"})[
         ["event_hour", "grid_x", "grid_y", "onset_score", "onset_rank", "train_end"]]
 
@@ -132,8 +132,8 @@ def run_narrow(merged: pd.DataFrame, k: int) -> None:
     (OUTPUT_DIR / "narrow_metrics.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     table.to_csv(OUTPUT_DIR / "narrow_event_table.csv", index=False, encoding="utf-8-sig")
     b, n = summary["base"], summary["narrow"]
-    lines = [f"# 후보 축소 규칙: 1단 위험 순위 {k}위 이내 격자만 2단 후보로", "",
-             f"- 테스트 Event {summary['events']}개. 2단 모델·점수 그대로, 후보 집합만 좁힘. 1단 점수는 Event 이전 자료로만 학습한 연도별 분할.",
+    lines = [f"# 후보 축소 규칙: 기존 2단 Top 3 보호 + 1단 위험 순위 {k}위 이내", "",
+             f"- 테스트 Event {summary['events']}개. 2단 모델·점수·기존 Top 3를 보존하고 나머지 후보만 좁힘. 1단 점수는 Event 이전 자료로만 학습한 연도별 분할.",
              f"- 후보 수 평균 {summary['mean_candidates_before']:.1f} → {summary['mean_candidates_after']:.1f}. "
              f"채움 발생 Event {summary['events_filled']}개, 1단 격자 밖 예외 허용 Event {summary['events_with_outside_escape']}개.",
              f"- 정답 격자의 1단 순위: 중앙값 {summary['truth_onset_rank']['median']:.0f}위, {k}위 이내 {summary['truth_onset_rank'][f'within_{k}']:.3f}, "
@@ -149,7 +149,7 @@ def run_narrow(merged: pd.DataFrame, k: int) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--pool", type=int, default=3, help="1단 순위로 재정렬할 2단 상위 후보 수(기본 3)")
-    parser.add_argument("--narrow", type=int, default=0, help="후보 축소 규칙만 실행: 1단 위험 순위 K 이내 격자만 2단 후보로(0이면 안 함)")
+    parser.add_argument("--narrow", type=int, default=0, help="후보 축소 규칙만 실행: 기존 Top 3 보호 + 1단 위험 순위 K 이내(0이면 안 함)")
     args = parser.parse_args()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 

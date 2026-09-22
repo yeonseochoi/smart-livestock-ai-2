@@ -18,7 +18,8 @@ from administrative_agent.llm import llm_configured, provider_name, refine_with_
 from administrative_agent.service import build_response_package, create_completed_followup
 from generate_agent_documents import (
     DEFAULT_GRID_SCORES, DEFAULT_METRICS, DEFAULT_ONSET_ALERTS, DEFAULT_PREDICTIONS, DEFAULT_SOURCE_CANDIDATES,
-    DEFAULT_ONSET_ALERTS_BY_TYPE, forecast_from_csv, load_onset_alerts, load_onset_alerts_by_type, load_source_candidates,
+    DEFAULT_ONSET_ALERTS_BY_TYPE, DEFAULT_ONSET_EVENT_SCORE_DIR, forecast_from_csv, load_onset_alerts_by_type,
+    load_onset_alerts_for_event, load_source_candidates, onset_event_score_paths,
 )
 
 
@@ -98,6 +99,7 @@ def current_forecast(event: dict):
         source_candidates_path=ROOT / DEFAULT_SOURCE_CANDIDATES,
         grid_scores_path=ROOT / DEFAULT_GRID_SCORES,
         onset_alerts_path=ROOT / DEFAULT_ONSET_ALERTS,
+        onset_event_score_files=onset_event_score_paths(ROOT / DEFAULT_ONSET_EVENT_SCORE_DIR),
     )
     reports = event.get("reports", [])
     grid_centers = [tuple(grid["center"]) for grid in event.get("broad", [])]
@@ -246,7 +248,9 @@ with st.sidebar:
     st.caption("※ 기상정보는 확산 예측(Top 3) 입력에는 쓰지 않음(검증 결과 개선 없음). 사전 경보·발생원 후보 계산에만 사용")
 
     # 발생 위험 예보(1단 원형) 산출물(outputs/onset_risk/onset_alerts.csv)이 있을 때만 기준시각 1시간 전 위험 상위 격자를 보여준다.
-    alerts, alert_reference = load_onset_alerts(ROOT / DEFAULT_ONSET_ALERTS, event["hour"]) if event.get("hour") else ((), None)
+    alerts, alert_reference = load_onset_alerts_for_event(
+        onset_event_score_paths(ROOT / DEFAULT_ONSET_EVENT_SCORE_DIR), ROOT / DEFAULT_ONSET_ALERTS, event["hour"],
+    ) if event.get("hour") else ((), None)
     if alerts:
         st.markdown('<div class="eyebrow">사전 경보 (참고)</div>', unsafe_allow_html=True)
         st.caption(f"{alert_reference:%H:%M} 시점 기상·발생원 노출·과거 빈도 기준 '다음 1시간 발생 위험' 상위 격자")

@@ -10,23 +10,21 @@ def narrow_candidates(frame: pd.DataFrame, k: int = NARROW_RANK_LIMIT) -> tuple[
     """확산 예측(2단) 후보를 발생 위험 예보(1단) 순위 k 이내 격자로 좁힌다.
 
     frame 열: score(2단 점수), onset_rank(기준시각 1시간 전 1단 순위. 1단 격자 밖이면 NaN).
-    규칙: 순위 k 이내는 남긴다. 1단 격자 밖 후보(민원 이력 없는 칸)는 2단 점수가 남은 후보 1위보다 높을 때만 남긴다.
-          남은 후보가 MIN_CANDIDATES 미만이면 나머지에서 2단 점수 순으로 채운다.
+    규칙: 기존 2단 Top 3는 항상 보존한다. 그 밖에는 순위 k 이내를 남기고,
+          1단 격자 밖 후보(민원 이력 없는 칸)는 2단 점수가 남은 후보 1위보다 높을 때만 남긴다.
     검증(테스트 Event 47개): 후보 평균 31.1 → 15.1, Hit@1/2/3 변화 없음. outputs/onset_spread_fusion/narrow_table.md
     """
     ordered = frame.sort_values("score", ascending=False)
+    spread_top = ordered.head(MIN_CANDIDATES)
     inside = ordered[ordered["onset_rank"] <= k]
     outside = ordered[ordered["onset_rank"].isna()]
     if len(inside) and len(outside):
         outside = outside[outside["score"] > inside["score"].iloc[0]]
-    kept = pd.concat([inside, outside]).sort_values("score", ascending=False)
-    filled = 0
-    if len(kept) < MIN_CANDIDATES:
-        rest = ordered.drop(kept.index).head(MIN_CANDIDATES - len(kept))
-        filled = len(rest)
-        kept = pd.concat([kept, rest]).sort_values("score", ascending=False)
+    filtered = pd.concat([inside, outside])
+    protected = spread_top.drop(filtered.index, errors="ignore")
+    kept = pd.concat([filtered, protected]).sort_values("score", ascending=False)
     info = {"rank_limit": k, "candidates": int(len(frame)), "kept": int(len(kept)),
-            "filled": filled, "escaped_outside": int(len(outside))}
+            "filled": 0, "protected_top3": int(len(protected)), "escaped_outside": int(len(outside))}
     return kept, info
 
 

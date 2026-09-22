@@ -4,6 +4,8 @@ from __future__ import annotations
 import sys
 import tempfile
 import unittest
+import json
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -82,9 +84,68 @@ class OnsetAlertDocumentTest(unittest.TestCase):
             self.assertIsNone(none_reference)
             self.assertEqual(generate.load_onset_alerts(Path(folder) / "missing.csv", pd.Timestamp("2025-07-28 23:00")), ((), None))
 
+    def test_rank_loader_uses_latest_non_future_training_cutoff(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            scores = Path(folder) / "onset_event_scores.csv"
+            cells = Path(folder) / "onset_cells.csv"
+            pd.DataFrame({
+                "event_hour": ["2022-06-01 00:00:00"] * 6,
+                "hour": ["2022-05-31 23:00:00"] * 6,
+                "grid_x": [1, 2, 1, 2, 1, 2],
+                "grid_y": [0, 0, 0, 0, 0, 0],
+                "rank": [1, 2, 2, 1, 1, 2],
+                "risk_score": [0.8, 0.7, 0.6, 0.9, 0.95, 0.5],
+                "train_end": ["2021-01-01"] * 2 + ["2022-01-01"] * 2 + ["2023-01-01"] * 2,
+            }).to_csv(scores, index=False, encoding="utf-8-sig")
+            pd.DataFrame({"grid_x": [1, 2], "grid_y": [0, 0]}).to_csv(cells, index=False, encoding="utf-8-sig")
+
+            ranks = generate.onset_ranks_for(scores, cells, pd.Timestamp("2022-06-01 00:00"))
+
+            self.assertEqual(len(ranks), 2)
+            self.assertEqual(ranks.sort_values("grid_x")["onset_rank"].tolist(), [2, 1])
+
+    def test_forecast_uses_historical_event_score_files(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            onset_dir = root / "outputs" / "onset_risk"
+            onset_dir.mkdir(parents=True)
+            predictions = root / "predictions.csv"
+            metrics = root / "metrics.json"
+            pd.DataFrame({
+                "event_id": ["EVT-OLD"] * 4,
+                "event_hour": ["2022-06-01 00:00:00"] * 4,
+                "grid_x": [1, 2, 3, 4], "grid_y": [0, 0, 0, 0],
+                "score": [0.9, 0.8, 0.7, 0.6], "grid_m": [1000] * 4,
+            }).to_csv(predictions, index=False)
+            metrics.write_text(json.dumps({"grids": {"1000": {"test": {
+                "topk_recall": 0.5, "roc_auc": 0.8, "pr_auc": 0.4,
+            }}}}), encoding="utf-8")
+            pd.DataFrame({
+                "event_hour": ["2022-06-01 00:00:00"] * 4,
+                "hour": ["2022-05-31 23:00:00"] * 4,
+                "grid_x": [1, 2, 3, 4], "grid_y": [0, 0, 0, 0],
+                "risk_score": [0.4, 0.9, 0.8, 0.1], "rank": [31, 1, 2, 40],
+                "train_end": ["2022-01-01"] * 4,
+            }).to_csv(onset_dir / "onset_event_scores_fold2022.csv", index=False, encoding="utf-8-sig")
+
+            previous = Path.cwd()
+            try:
+                os.chdir(root)
+                forecast = generate.forecast_from_csv(
+                    predictions, metrics, event_id="EVT-OLD",
+                    source_candidates_path=None, grid_scores_path=None,
+                    onset_alerts_by_type_paths={}, onset_cells_path=None,
+                )
+            finally:
+                os.chdir(previous)
+
+            self.assertEqual([area.grid_id for area in forecast.areas], ["G+1:+0", "G+2:+0", "G+3:+0"])
+            self.assertEqual((forecast.candidate_count, forecast.narrowed_candidate_count), (4, 3))
+            self.assertEqual([cell.grid_id for cell in forecast.onset_alerts], ["G+2:+0", "G+3:+0", "G+1:+0", "G+4:+0"])
+
 
 class NarrowCandidatesTest(unittest.TestCase):
-    """후보 축소 규칙: 1단 순위 k 이내만 남기고, 1단 격자 밖 후보는 2단 점수가 더 높을 때만, 3개 미만이면 채운다."""
+    """후보 축소 규칙: 기존 2단 Top 3는 보호하고 나머지 후보에 1단 순위 필터를 적용한다."""
 
     def test_rule(self) -> None:
         from administrative_agent.policy import narrow_candidates
@@ -93,12 +154,23 @@ class NarrowCandidatesTest(unittest.TestCase):
             "onset_rank": [1, 40, 5, 31, 30, float("nan"), float("nan")],  # NaN = 1단 격자 밖
         })
         kept, info = narrow_candidates(frame, k=30)
-        self.assertEqual(sorted(kept["score"].tolist()), [0.5, 0.7, 0.9, 0.95])  # 40위·31위 제외, 밖이지만 0.95는 1위보다 높아 허용
-        self.assertEqual((info["candidates"], info["kept"], info["filled"], info["escaped_outside"]), (7, 4, 0, 1))
+        self.assertEqual(sorted(kept["score"].tolist()), [0.5, 0.7, 0.8, 0.9, 0.95])  # 기존 Top 3의 0.8은 순위 밖이어도 보존
+        self.assertEqual((info["candidates"], info["kept"], info["protected_top3"], info["escaped_outside"]), (7, 5, 1, 1))
         tiny = pd.DataFrame({"score": [0.9, 0.8, 0.7, 0.6], "onset_rank": [1, 50, 60, 70]})
         kept, info = narrow_candidates(tiny, k=30)
-        self.assertEqual(kept["score"].tolist(), [0.9, 0.8, 0.7])  # 1개뿐이라 2개를 점수 순으로 채움
-        self.assertEqual(info["filled"], 2)
+        self.assertEqual(kept["score"].tolist(), [0.9, 0.8, 0.7])  # 기존 Top 3를 보존
+        self.assertEqual(info["protected_top3"], 2)
+
+    def test_narrowing_preserves_original_spread_top3(self) -> None:
+        from administrative_agent.policy import narrow_candidates
+        frame = pd.DataFrame({
+            "score": [0.9, 0.8, 0.7, 0.6],
+            "onset_rank": [31, 1, 2, 3],
+        })
+
+        kept, _ = narrow_candidates(frame, k=30)
+
+        self.assertEqual(kept.head(3).index.tolist(), [0, 1, 2])
 
     def test_briefing_mentions_narrowing(self) -> None:
         package = build_response_package(_forecast(candidate_count=31, narrowed_candidate_count=15, narrow_rank_limit=30))

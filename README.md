@@ -197,7 +197,7 @@ Streamlit Community Cloud에서는 실행 파일을 `streamlit_app.py`로 지정
 ```text
 [서비스]
 streamlit_app.py                   Streamlit 화면 (Top 3 + 사전 경보 카드)
-generate_agent_documents.py        2단 후보를 1단 상위 30으로 좁혀 Top 3 → 행정 대응 문서 4종 + agent_output.json
+generate_agent_documents.py        기존 2단 Top 3를 보호하고 나머지 후보를 1단 상위 30으로 축소 → 행정 대응 문서 4종 + agent_output.json
 administrative_agent/              문서 모델(models)·rule-base 대응 단계(policy)·문서 생성(documents)·LLM 연동(llm)
 demo/                              브라우저 데모(index.html, demo-data.js)와 로컬 API 서버(server.py)
 

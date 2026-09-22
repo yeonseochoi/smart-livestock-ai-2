@@ -29,7 +29,7 @@
 - 검증(시간순 분할, 학습 2020~2024, 테스트 2025-01~2026-07, seed 3 평균, seed 10 확인은 experiment_summary.md의 b4_seed10): 직전 3시간 시 전체 민원이 없던 '조용한 시각'에 상위 5 격자 적중률(Hit@5)
   - 과거 빈도만(R0) 0.546 → +기상(R1) 0.548 → +축산 발생원(R2) 0.590 → +풍향 조건부 민원 지도(R5) 0.599. 바람을 ASOS만 쓰면 R5 0.578~0.581 (`outputs/onset_risk/metrics.json`, 변형 실행은 `outputs/onset_risk/experiment_summary.md`)
   - 유형별(`metrics_{livestock,factory,sewage}.json`): 가축 0.492 → 0.588, 공장 0.644 → 0.747, 하수 0.648 → 0.685(n 작음)
-- 이 예보는 확산 예측(Top 3)과 별개의 참고 정보로, 행정 문서와 화면의 '사전 경보 (참고)' 절에 민원 접수 1시간 전 시각 기준으로 붙는다(`outputs/onset_risk/onset_alerts*.csv`)
+- 이 예보는 확산 예측(Top 3)과 별개의 참고 정보로, 행정 문서와 화면의 '사전 경보 (참고)' 절에 민원 접수 1시간 전 시각 기준으로 붙는다. 과거 Event는 Event 이전 자료로 학습한 가장 최신 `onset_event_scores*.csv`를 사용하고, 해당 점수가 없으면 정시 예보 `onset_alerts*.csv`를 사용한다.
 
 이 구조는 "발생원과 기상을 대기과학 역추적으로 반영하되 기존 성능은 지킨다"는 1차 멘토링 요구를 두 단계로 나눠 충족한다. 확산 예측(2단)은 손대지 않아 성능이 보존되고, 발생 예보(1단)에서 발생원·바람이 수용체 모델(receptor model) 방식으로 들어간다.
 
@@ -39,7 +39,7 @@
 - 방법(`fuse_onset_spread.py`): 2단 모델·Top 3 집합은 그대로 두고, 민원 접수 1시간 전 1단 순위가 가장 높은 격자를 1순위로 올리는 후처리. 1단 점수는 Event마다 그 이전 자료로만 학습한 연도별 확장 창(expanding window) 분할(`run_onset_risk.py --train-end 2021-01-01 … 2024-01-01`)에서 얻어 누수가 없다.
 - 결과(테스트 Event 47개, `outputs/onset_spread_fusion/metrics.json`): 2단 단독 Hit@1 0.553 · Hit@2 0.745 · Hit@3 0.851. 1단으로 Top 3 중 1순위를 고르면 Hit@1 0.553(고친 Event 5, 망친 Event 5), Top 2 중 고르면 0.574(5/4, 부호 검정 p=1.0). 개선 근거 없음.
 - 원인: 2단 후보는 첫 민원 인근 격자라 1단에서도 모두 상위에 있다(Top 3 안 정답 격자의 1단 순위 중앙값 3위, 오답 2위). 두 모델은 "어느 동네"에는 동의하지만 그 안의 1 km 격자 하나를 가르는 정보는 1단에 없다.
-- 후보 축소 규칙(채택, `administrative_agent/policy.py` `narrow_candidates`; 검증 `fuse_onset_spread.py --narrow 30`, `outputs/onset_spread_fusion/narrow_table.md`): 2단 후보를 Event 1시간 전 1단 위험 순위 30위 이내 격자로 좁히면 후보 평균 31.1 → 15.1개, Hit@1/2/3은 0.553/0.745/0.851 그대로(바뀐 Event 0). 정답 격자의 1단 순위 중앙값 6위, 30위 이내 98.7%. `generate_agent_documents.py`와 Streamlit이 기본으로 적용하며, 1단 산출물(`onset_alerts.csv` 상위 30, `onset_cells.csv`)이 없으면 후보 전체에서 고른다. 1단은 민원 이력 있는 186격자만 다루므로 1단 격자 밖 후보는 2단 점수가 더 높을 때만 예외 허용한다. 성능 향상은 아니고 후보 수 축소다.
+- 후보 축소 규칙(채택, `administrative_agent/policy.py` `narrow_candidates`; 검증 `fuse_onset_spread.py --narrow 30`, `outputs/onset_spread_fusion/narrow_table.md`): 기존 2단 Top 3를 먼저 보호하고, 나머지 후보만 Event 1시간 전 1단 위험 순위 30위 이내로 좁힌다. 테스트에서는 후보 평균 31.1 → 15.1개였고 Hit@1/2/3은 0.553/0.745/0.851 그대로였다. 과거 Event는 검증과 서비스 모두 Event 이전 자료로 학습한 가장 최신 `onset_event_scores*.csv`를 선택한다. 이 파일이 없으면 `onset_alerts.csv`와 `onset_cells.csv`를 사용하고, 어떤 1단 산출물도 없으면 후보 전체를 사용한다. 성능 향상이 아니라 검토 후보 수 축소다.
 - 대안(2단 격자 크기): `outputs/operational_grid_comparison/metrics.json` 기준 Hit@3는 1 km 0.851 · 1.5 km 0.957 · 2 km 0.894. 저장된 테스트 예측에서 재계산한 Hit@1은 1 km 0.553 · 1.5 km 0.609 · 2 km 0.617, Hit@2는 0.745 · 0.870 · 0.830. 권역 수를 줄이려면 모델 결합보다 격자 크기 조정이 근거가 있다(미채택, 발표용 판단 필요).
 
 ### 2. 행정 대응 Agent
