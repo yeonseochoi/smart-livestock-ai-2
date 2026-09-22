@@ -1,0 +1,9 @@
+{
+  "lat0": 35.9566125,
+  "lon0": 126.98382,
+  "grid_m": 1000,
+  "candidate_radius": 2,
+  "events": 160,
+  "rows": 5567,
+  "complaints_signature": "49c9d49f18cee6293ac6957659105f36"
+}

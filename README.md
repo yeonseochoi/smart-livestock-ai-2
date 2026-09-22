@@ -168,24 +168,75 @@ Streamlit Community Cloud에서는 실행 파일을 `streamlit_app.py`로 지정
 
 > 재현 참고자료: [실험 코드](compare_operational_grid_sizes.py) · [결과 산출물](outputs/operational_grid_comparison/metrics.json)
 
+### 발생 위험 예보 (1단, 참고 정보)
+
+위 확산 예측은 민원이 30분 쌓인 뒤 "어디로 번지나"를 맞힙니다. 그 앞단으로, 민원이 아직 없는 시각에 "다음 1시간 안에 어느 1km 격자에서 민원이 생길까"를 내는 발생 위험 예보를 두었습니다. 발생원(축산 시설 배출 노출)과 바람(ASOS+AWS 격자별 보간)은 여기서 쓰입니다. 확산 예측에 넣었을 때는 개선이 없었기 때문입니다(이후 30분 민원의 89%가 2km 안에서 발생).
+
+평가는 직전 3시간 시 전체에 민원이 없던 '조용한 시각'에 위험 상위 5 격자를 찍어 실제 민원 격자를 맞힌 비율(Hit@5, 2025-01~2026-07 테스트, seed 평균)입니다.
+
+| 특징 구성 (바람 ASOS+AWS 격자별 보간) | 조용한 시각 Hit@5 |
+|---|---:|
+| R0 시간 + 격자 과거 빈도 | 0.546 |
+| R1 + 기상 | 0.548 |
+| R2 + 축산 발생원 노출 | 0.590 |
+| R5 + 격자×풍향별 과거 민원율(채택) | **0.599** |
+
+바람을 ASOS만 쓰면 R5는 0.578(격자별)~0.581(중심점)이라 AWS 추가가 +0.02입니다(`outputs/onset_risk/experiment_summary.md`). 냄새 유형별로 라벨을 나누면 가축 0.492 → 0.588, 공장 0.644 → 0.747, 하수 0.648 → 0.685(n 작음)입니다. 공장·하수처리·산업단지 등 외부 시설 데이터는 검토했으나 개선이 없어 채택하지 않았습니다. 186개 격자 중 5개를 찍는 문제이며 과거 빈도만으로도 54%가 나오므로, 발생원·바람의 기여는 그 위 +4~6%p(공장 냄새 +10%p)입니다.
+
+행정 문서와 화면에는 민원 접수 1시간 전 시점의 위험 상위 격자가 '사전 경보 (참고)' 절로 붙습니다. 확률이 아닌 상대값이며 원인 시설을 단정하지 않습니다.
+
+두 모델을 합쳐 권역을 1곳으로 줄이는 방식도 검토했습니다. 확산 예측 Top 3 중 발생 위험 순위가 가장 높은 격자를 1순위로 올리는 후처리인데, 테스트 Event 47개에서 Hit@1은 확산 예측 단독 0.553과 같았습니다(고친 Event 5, 망친 Event 5). 확산 예측 후보는 첫 민원 인근이라 발생 위험 예보에서도 모두 상위에 있어 그중 하나를 가를 정보가 없기 때문입니다. 권역 1곳 추천은 채택하지 않았습니다(`fuse_onset_spread.py`, `outputs/onset_spread_fusion/fusion_table.md`). 반대로 발생 위험 순위 30위 이내 격자로 확산 예측 후보를 미리 좁히는 규칙은 후보를 평균 31개에서 15개로 줄이면서 Hit@1/2/3이 그대로였습니다(`fuse_onset_spread.py --narrow 30`, `narrow_table.md`). 이 규칙은 문서 생성과 화면에 기본으로 적용됩니다(`administrative_agent/policy.py` `narrow_candidates`). 성능 향상이 아니라 후보 수 축소 규칙이며, 1단 산출물이 없으면 후보 전체에서 고릅니다.
+
+> 재현 참고자료: [run_onset_risk.py](run_onset_risk.py) · [결과 표](outputs/onset_risk/onset_risk_table.md) · [바람 자료원 비교](outputs/wind_lag_sweep/wind_source_compare.md) · [발생원·바람 검정 요약](PROJECT_CONTEXT.md)
+
 ---
 
 <a id="6-프로젝트-구조"></a>
 ## 6. 🗂️ 프로젝트 구조
 
 ```text
-administrative_agent/              행정 대응 문서 모델·템플릿·LLM 연동
-data/                              원본 및 가공 데이터
-demo/                              브라우저 데모와 로컬 API 서버
-docs/screenshots/                  README 데모 스크린샷
-outputs/                           모델 평가 및 생성 문서
-tests/                             행정 대응 Agent와 Streamlit 테스트
-streamlit_app.py                   Streamlit Community Cloud 실행 파일
-compare_operational_grid_sizes.py  격자 크기 비교와 최종 성능 재현
-generate_agent_documents.py        예측 결과 기반 문서 생성
-optimize_early_prediction.py       후보 모델 학습·평가
+[서비스]
+streamlit_app.py                   Streamlit 화면 (Top 3 + 사전 경보 카드)
+generate_agent_documents.py        기존 2단 Top 3를 보호하고 나머지 후보를 1단 상위 30으로 축소 → 행정 대응 문서 4종 + agent_output.json
+administrative_agent/              문서 모델(models)·rule-base 대응 단계(policy)·문서 생성(documents)·LLM 연동(llm)
+demo/                              브라우저 데모(index.html, demo-data.js)와 로컬 API 서버(server.py)
+
+[2단 확산 예측: 민원 30분 뒤 어디로 번지나]
+analyze_spatiotemporal_complaints.py  민원 엑셀 읽기·열 매핑·익산 필터 (모든 스크립트의 입력 단계)
+build_odor_ai_mvp.py               Event 구성·격자·후보 격자 특징 공용 함수
+compare_operational_grid_sizes.py  1km·1.5km·2km 공통 검증과 최종 성능 재현 (운영 모델 xgb_d3)
+optimize_early_prediction.py       후보 모델 학습·평가 라이브러리
 sensitivity_early_prediction.py    격자·시간창 후보 비교(설계 근거, 제품 입력 아님)
-fetch_kma_weather.py               현장 참고용 기상자료 수집
+run_ablation.py                    기상·발생원 역추적을 넣는 소거 실험 M0~M4 (개선 없음 → 미채택)
+
+[1단 발생 위험 예보: 민원 없는 지금, 다음 1시간 어디서 나나]
+run_onset_risk.py                  1단 학습·평가(R0·R1·R2·R5·R5o)와 onset_alerts*.csv(시각별 상위 30)·onset_cells.csv 생성
+wind_sources.py                    ASOS+AWS 시간자료 통합, 격자별 역거리 가중(IDW) 바람
+species_weight_sets.py             축종 배출계수 세트(EMEP/EEA NH3 등)
+fetch_kma_weather.py               기상청 API 허브 ASOS 수집(+대기안정도 재료, Track A 옵션)
+fuse_onset_spread.py               1단·2단 결합 평가: 권역 1곳 재정렬(효과 없음), 후보 축소 규칙 검증(--narrow 30, 채택)
+
+[근거 검정: 바람·발생원 연관 (결론은 outputs/wind_lag_sweep, outputs/wind_source_association)]
+test_wind_source_association.py    민원 시각 풍향 ↔ 축산 발생원 층화 셔플 검정, --travel-lag 로 거리별 시차 가설
+wind_window_sweep.py               참조 바람 창 24조합(시차×평균 창×가중) 비교
+minute_wind_test.py                익산 AWS 분 자료로 신고 직전 창 19종 비교
+compare_wind_sources.py            바람 자료원 5종(ASOS 중심/격자별, AWS, 결합) 비교
+sensitivity_species_weights.py     배출계수 세트 4벌 × 반경 2종 민감도
+test_factory_source_filters.py     대기배출시설 업종 필터 전후 연관 (무효)
+
+[Track A 발생원 역추적 (Codex 담당, 참고 정보)]
+build_source_backtrack.py          Event별 발생원 후보·격자 점수 (outputs/source_backtrack)
+extend_source_catalog.py           축산 외 시설 목록 확장,  analyze_source_type_association.py  유형별 연관 분석
+tools/                             역추적 산출물 검증기, 산단 경계·공장 목록 수집
+docs/contracts/                    Track A/B 인터페이스 계약
+
+[문서·데이터·테스트]
+작업 최종 아키텍쳐.md              전체 구조 설명(입력→2단·1단→결합→Agent), 멘토 피드백 대응표
+PROJECT_CONTEXT.md                 현재 상태·성능·한계 (기획 기준 문서)
+docs/kma_api_availability.md       기상청 API 실시간 조건 확인
+data/                              민원 원본, 축산농가 현황, AWS 파일셋, 외부 시설 캐시
+outputs/                           실험 산출물(metrics.json 등)과 생성 문서
+tests/                             행정 Agent·Streamlit·소거 실험·계약 테스트 (35건)
 ```
 
 ### 예측 및 문서 재생성
@@ -199,6 +250,14 @@ fetch_kma_weather.py               현장 참고용 기상자료 수집
 
 # 특정 Event 행정문서 생성
 .venv\Scripts\python.exe generate_agent_documents.py --event-id EVT-0175
+
+# 발생 위험 예보(1단) 재실행: 전체(R0·R1·R2·R5·R5o) + 유형별
+python run_onset_risk.py
+python run_onset_risk.py --label-type factory --tag factory --arms R0,R2,R5
+
+# 1단·2단 결합(권역 1곳) 평가: 연도별 분할로 1단 점수를 만든 뒤 결합
+python run_onset_risk.py --train-end 2021-01-01 --arms R5 --tag fold2021   # 2022, 2023, 2024도 같은 방식
+python fuse_onset_spread.py
 
 # 전체 테스트
 .venv\Scripts\python.exe -m unittest discover -s tests -v
@@ -217,7 +276,8 @@ fetch_kma_weather.py               현장 참고용 기상자료 수집
 - 공통 Event 160개, 시간순 학습 112개 / 테스트 48개
 - 신고 위치는 신고 행동이 반영된 데이터이며 실제 악취 영향권과 같지 않습니다.
 - 장기간의 현장 출동 결과와 배출원 정보가 없어 악취 발생 자체나 원인 시설을 학습하지 않았습니다.
-- 기상정보는 최종 예측 점수에 사용하지 않으며 현장 판단을 위한 참고자료로만 제공합니다.
+- 기상정보는 확산 예측(Top 3) 점수에는 사용하지 않습니다. 발생 위험 예보(사전 경보)와 발생원 후보 계산에만 사용합니다.
+- 기상은 ASOS 전주·군산(18~19km)과 AWS 익산·함라·여산·김제·진봉(3~19km) 시간자료를 거리 가중으로 합친 값입니다. 발생 위험 예보는 테스트 구간 사후 계산이며, 실시간 운영에는 기상 실시간 호출과 매시간 추론 경로가 추가로 필요합니다.
 
 예측 엔진과 행정 대응 Agent는 분리되어 있습니다. Agent는 예측 엔진이 전달한 Top 3와 확인 가능한 상황정보만 사용하며, 민원 원본이나 시설 데이터를 직접 조회하거나 원인 시설을 추론하지 않습니다.
 

@@ -17,3 +17,11 @@ demo/server.log
 demo/server.pid
 outputs/grid_compare.*
 outputs/severity_expansion.*
+
+# Track A 발생원 테이블 (지오코딩 API 결과 저장 제한)
+outputs/source_backtrack/sources.csv
+data/geocode_cache/
+data/vworld_geocode_cache/
+data/public_source_cache/
+outputs/weather_integration/aws702_minute_2020_2026.csv
+outputs/ablation/base_dataset_1000m.csv
