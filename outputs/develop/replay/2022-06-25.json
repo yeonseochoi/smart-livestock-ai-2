@@ -1,0 +1,252 @@
+{
+  "night_date": "2022-06-25",
+  "afternoon": {
+    "alert": true,
+    "season_rank": 12,
+    "risk_score": 9.136726218388471,
+    "observed_complaints": 10,
+    "model_id": "hgb_poisson",
+    "night_wind": {
+      "direction": 160.09768125003205,
+      "speed": 2.25,
+      "station_id": 702
+    }
+  },
+  "standby": {
+    "chosen_point_id": "AWS-YONGJI",
+    "reason": "밤 평균 풍향 160.1°, 도시 중심에서 대기 장소 방위와 차이 7.7°",
+    "points": [
+      {
+        "point_id": "AWS-IK-0",
+        "cluster_id": "IK-0",
+        "name": "왕궁 방면",
+        "grade": "주",
+        "lat": 35.95104026847338,
+        "lon": 127.0315317496597,
+        "lift_all": 1.467142129393785
+      },
+      {
+        "point_id": "AWS-IK-7",
+        "cluster_id": "IK-7",
+        "name": "춘포 방면",
+        "grade": "주",
+        "lat": 35.95749250601154,
+        "lon": 126.9869118997266,
+        "lift_all": 1.2825027085590464
+      },
+      {
+        "point_id": "AWS-IK-8",
+        "cluster_id": "IK-8",
+        "name": "IK-8",
+        "grade": "주",
+        "lat": 36.10625238083163,
+        "lon": 126.99724321447052,
+        "lift_all": 1.7900552486187842
+      },
+      {
+        "point_id": "AWS-YONGJI",
+        "cluster_id": "YONGJI",
+        "name": "용지 방면",
+        "grade": "주",
+        "lat": 35.850107569726404,
+        "lon": 126.98306306886404,
+        "lift_all": 1.718942533885964
+      }
+    ]
+  },
+  "events": [
+    {
+      "event_id": "EV2-0288",
+      "event_hour": "2022-06-25T21:39:00",
+      "trigger_rule": "30분 안 서로 다른 장소 5곳(확인) / 7곳(출동)",
+      "level": "출동",
+      "first30_complaints": [
+        {
+          "datetime": "2022-06-25T21:21:00",
+          "lat": 35.960068,
+          "lon": 126.98967
+        },
+        {
+          "datetime": "2022-06-25T21:38:00",
+          "lat": 35.961475,
+          "lon": 126.99423
+        }
+      ],
+      "top3": [
+        {
+          "rank": 1,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.9893688171416,
+          "score": 0.9676710963249207,
+          "hit": true
+        },
+        {
+          "rank": 2,
+          "region_name": null,
+          "lat": 35.95208925049756,
+          "lon": 126.9893688171416,
+          "score": 0.963834285736084,
+          "hit": false
+        },
+        {
+          "rank": 3,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.97827118285839,
+          "score": 0.9542768597602844,
+          "hit": true
+        }
+      ],
+      "direction_overlap": {
+        "wind_direction": 172.2,
+        "wind_speed": 1.9,
+        "n_complaints": 2,
+        "per_point": [
+          {
+            "point_id": "AWS-IK-0",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-7",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-8",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-YONGJI",
+            "n_pointing": 2
+          }
+        ],
+        "suggested_point_id": "AWS-YONGJI"
+      },
+      "field": {
+        "staff_point_id": "AWS-YONGJI",
+        "mode": "sector",
+        "confidence": "보통",
+        "notes": [
+          "냄새 확인 측정 지점이 2곳 미만: 다중 측정 일치는 풍향 일치 비율로 대체"
+        ],
+        "cards": [
+          {
+            "rank": 1,
+            "farm_id": "GJ-264",
+            "name": "산마루농장",
+            "score": 71.4,
+            "components": {
+              "풍향 일치": 39.8,
+              "거리": 11.8,
+              "다중 측정 일치": 19.9,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.51,
+            "reference": {
+              "species": "돼지",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 0°), 거리 1.5 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 2,
+            "farm_id": "GJ-265",
+            "name": "산마루농장",
+            "score": 71.4,
+            "components": {
+              "풍향 일치": 39.8,
+              "거리": 11.8,
+              "다중 측정 일치": 19.9,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.51,
+            "reference": {
+              "species": "돼지",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 0°), 거리 1.5 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 3,
+            "farm_id": "GJ-266",
+            "name": "산마루농장",
+            "score": 71.4,
+            "components": {
+              "풍향 일치": 39.8,
+              "거리": 11.8,
+              "다중 측정 일치": 19.9,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.51,
+            "reference": {
+              "species": "돼지",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 0°), 거리 1.5 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 4,
+            "farm_id": "GJ-267",
+            "name": "산마루농장",
+            "score": 71.4,
+            "components": {
+              "풍향 일치": 39.8,
+              "거리": 11.8,
+              "다중 측정 일치": 19.9,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.51,
+            "reference": {
+              "species": "돼지",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 0°), 거리 1.5 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 5,
+            "farm_id": "GJ-351",
+            "name": "용성에그팜 영농조합법인",
+            "score": 64.0,
+            "components": {
+              "풍향 일치": 36.8,
+              "거리": 8.9,
+              "다중 측정 일치": 18.4,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.07,
+            "reference": {
+              "species": "가금",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 7°), 거리 2.1 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          }
+        ]
+      }
+    }
+  ]
+}

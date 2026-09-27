@@ -1,0 +1,646 @@
+{
+  "night_date": "2022-07-25",
+  "afternoon": {
+    "alert": false,
+    "season_rank": 71,
+    "risk_score": 2.066971778726427,
+    "observed_complaints": 18,
+    "model_id": "hgb_poisson",
+    "night_wind": {
+      "direction": 128.78875090817624,
+      "speed": 1.4500000000000002,
+      "station_id": 702
+    }
+  },
+  "standby": {
+    "chosen_point_id": "AWS-YONGJI",
+    "reason": "밤 평균 풍향 128.8°, 도시 중심에서 대기 장소 방위와 차이 39.0°",
+    "points": [
+      {
+        "point_id": "AWS-IK-0",
+        "cluster_id": "IK-0",
+        "name": "왕궁 방면",
+        "grade": "주",
+        "lat": 35.95104026847338,
+        "lon": 127.0315317496597,
+        "lift_all": 1.467142129393785
+      },
+      {
+        "point_id": "AWS-IK-7",
+        "cluster_id": "IK-7",
+        "name": "춘포 방면",
+        "grade": "주",
+        "lat": 35.95749250601154,
+        "lon": 126.9869118997266,
+        "lift_all": 1.2825027085590464
+      },
+      {
+        "point_id": "AWS-IK-8",
+        "cluster_id": "IK-8",
+        "name": "IK-8",
+        "grade": "주",
+        "lat": 36.10625238083163,
+        "lon": 126.99724321447052,
+        "lift_all": 1.7900552486187842
+      },
+      {
+        "point_id": "AWS-YONGJI",
+        "cluster_id": "YONGJI",
+        "name": "용지 방면",
+        "grade": "주",
+        "lat": 35.850107569726404,
+        "lon": 126.98306306886404,
+        "lift_all": 1.718942533885964
+      }
+    ]
+  },
+  "events": [
+    {
+      "event_id": "EV2-0317",
+      "event_hour": "2022-07-26T00:51:00",
+      "trigger_rule": "30분 안 서로 다른 장소 5곳(확인) / 7곳(출동)",
+      "level": "출동",
+      "first30_complaints": [
+        {
+          "datetime": "2022-07-26T00:32:00",
+          "lat": 35.95744,
+          "lon": 126.99796
+        },
+        {
+          "datetime": "2022-07-26T00:50:00",
+          "lat": 35.96025,
+          "lon": 126.98958
+        }
+      ],
+      "top3": [
+        {
+          "rank": 1,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.9893688171416,
+          "score": 0.9832779765129089,
+          "hit": true
+        },
+        {
+          "rank": 2,
+          "region_name": null,
+          "lat": 35.95208925049756,
+          "lon": 126.9893688171416,
+          "score": 0.9432619214057922,
+          "hit": true
+        },
+        {
+          "rank": 3,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.97827118285839,
+          "score": 0.9142469763755798,
+          "hit": false
+        }
+      ],
+      "direction_overlap": {
+        "wind_direction": 0.0,
+        "wind_speed": 0.0,
+        "n_complaints": 2,
+        "per_point": [
+          {
+            "point_id": "AWS-IK-0",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-7",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-8",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-YONGJI",
+            "n_pointing": 0
+          }
+        ],
+        "suggested_point_id": null
+      },
+      "field": {
+        "staff_point_id": "AWS-YONGJI",
+        "mode": "gradient",
+        "confidence": "매우 낮음",
+        "notes": [
+          "풍속 0.5 m/s 미만: 풍향 신뢰도가 낮아 측정값 경사로 방향을 보정해야 함",
+          "냄새 확인 측정 지점이 2곳 미만: 다중 측정 일치는 풍향 일치 비율로 대체"
+        ],
+        "cards": [
+          {
+            "rank": 1,
+            "farm_id": "GJ-1412",
+            "name": "아름농장",
+            "score": 62.6,
+            "components": {
+              "풍향 일치": 32.2,
+              "거리": 14.3,
+              "다중 측정 일치": 16.1,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.11,
+            "reference": {
+              "species": "소",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 18°), 거리 1.1 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 2,
+            "farm_id": "GJ-316",
+            "name": "현서농장",
+            "score": 56.7,
+            "components": {
+              "풍향 일치": 25.8,
+              "거리": 18.0,
+              "다중 측정 일치": 12.9,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 0.65,
+            "reference": {
+              "species": "가금",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 32°), 거리 0.7 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 3,
+            "farm_id": "GJ-367",
+            "name": "다래농장",
+            "score": 52.1,
+            "components": {
+              "풍향 일치": 28.7,
+              "거리": 9.1,
+              "다중 측정 일치": 14.3,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.03,
+            "reference": {
+              "species": "가금",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 25°), 거리 2.0 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 4,
+            "farm_id": "GJ-537",
+            "name": "다래농장",
+            "score": 52.1,
+            "components": {
+              "풍향 일치": 28.7,
+              "거리": 9.1,
+              "다중 측정 일치": 14.3,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.03,
+            "reference": {
+              "species": "가금",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 25°), 거리 2.0 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 5,
+            "farm_id": "GJ-184",
+            "name": "행복한농장",
+            "score": 47.7,
+            "components": {
+              "풍향 일치": 23.4,
+              "거리": 12.7,
+              "다중 측정 일치": 11.7,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.36,
+            "reference": {
+              "species": "소",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 37°), 거리 1.4 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "EV2-0318",
+      "event_hour": "2022-07-26T01:53:00",
+      "trigger_rule": "30분 안 서로 다른 장소 5곳(확인) / 7곳(출동)",
+      "level": "확인",
+      "first30_complaints": [
+        {
+          "datetime": "2022-07-26T01:27:00",
+          "lat": 35.963783,
+          "lon": 126.98759
+        },
+        {
+          "datetime": "2022-07-26T01:42:00",
+          "lat": 35.96151,
+          "lon": 126.9796
+        },
+        {
+          "datetime": "2022-07-26T01:52:00",
+          "lat": 35.96443,
+          "lon": 126.982574
+        }
+      ],
+      "top3": [
+        {
+          "rank": 1,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.9893688171416,
+          "score": 0.9890217185020447,
+          "hit": false
+        },
+        {
+          "rank": 2,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.97827118285839,
+          "score": 0.9785286784172058,
+          "hit": true
+        },
+        {
+          "rank": 3,
+          "region_name": null,
+          "lat": 35.95208925049756,
+          "lon": 126.9893688171416,
+          "score": 0.9759268164634705,
+          "hit": false
+        }
+      ],
+      "direction_overlap": {
+        "wind_direction": 0.0,
+        "wind_speed": 0.0,
+        "n_complaints": 3,
+        "per_point": [
+          {
+            "point_id": "AWS-IK-0",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-7",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-8",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-YONGJI",
+            "n_pointing": 0
+          }
+        ],
+        "suggested_point_id": null
+      },
+      "field": {
+        "staff_point_id": "AWS-YONGJI",
+        "mode": "gradient",
+        "confidence": "매우 낮음",
+        "notes": [
+          "풍속 0.5 m/s 미만: 풍향 신뢰도가 낮아 측정값 경사로 방향을 보정해야 함",
+          "냄새 확인 측정 지점이 2곳 미만: 다중 측정 일치는 풍향 일치 비율로 대체"
+        ],
+        "cards": [
+          {
+            "rank": 1,
+            "farm_id": "GJ-1412",
+            "name": "아름농장",
+            "score": 62.6,
+            "components": {
+              "풍향 일치": 32.2,
+              "거리": 14.3,
+              "다중 측정 일치": 16.1,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.11,
+            "reference": {
+              "species": "소",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 18°), 거리 1.1 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 2,
+            "farm_id": "GJ-316",
+            "name": "현서농장",
+            "score": 56.7,
+            "components": {
+              "풍향 일치": 25.8,
+              "거리": 18.0,
+              "다중 측정 일치": 12.9,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 0.65,
+            "reference": {
+              "species": "가금",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 32°), 거리 0.7 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 3,
+            "farm_id": "GJ-367",
+            "name": "다래농장",
+            "score": 52.1,
+            "components": {
+              "풍향 일치": 28.7,
+              "거리": 9.1,
+              "다중 측정 일치": 14.3,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.03,
+            "reference": {
+              "species": "가금",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 25°), 거리 2.0 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 4,
+            "farm_id": "GJ-537",
+            "name": "다래농장",
+            "score": 52.1,
+            "components": {
+              "풍향 일치": 28.7,
+              "거리": 9.1,
+              "다중 측정 일치": 14.3,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.03,
+            "reference": {
+              "species": "가금",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 25°), 거리 2.0 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 5,
+            "farm_id": "GJ-184",
+            "name": "행복한농장",
+            "score": 47.7,
+            "components": {
+              "풍향 일치": 23.4,
+              "거리": 12.7,
+              "다중 측정 일치": 11.7,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.36,
+            "reference": {
+              "species": "소",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 37°), 거리 1.4 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "EV2-0319",
+      "event_hour": "2022-07-26T02:54:00",
+      "trigger_rule": "30분 안 서로 다른 장소 5곳(확인) / 7곳(출동)",
+      "level": "확인",
+      "first30_complaints": [
+        {
+          "datetime": "2022-07-26T02:26:00",
+          "lat": 35.928486,
+          "lon": 126.964096
+        },
+        {
+          "datetime": "2022-07-26T02:30:00",
+          "lat": 35.92852,
+          "lon": 126.963165
+        }
+      ],
+      "top3": [
+        {
+          "rank": 1,
+          "region_name": null,
+          "lat": 35.95208925049756,
+          "lon": 126.9893688171416,
+          "score": 0.9388411641120911,
+          "hit": false
+        },
+        {
+          "rank": 2,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 127.0004664514248,
+          "score": 0.8403759598731995,
+          "hit": false
+        },
+        {
+          "rank": 3,
+          "region_name": null,
+          "lat": 35.93399625248779,
+          "lon": 126.96717354857519,
+          "score": 0.8101825714111328,
+          "hit": false
+        }
+      ],
+      "direction_overlap": {
+        "wind_direction": 0.0,
+        "wind_speed": 0.0,
+        "n_complaints": 2,
+        "per_point": [
+          {
+            "point_id": "AWS-IK-0",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-7",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-8",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-YONGJI",
+            "n_pointing": 0
+          }
+        ],
+        "suggested_point_id": null
+      },
+      "field": {
+        "staff_point_id": "AWS-YONGJI",
+        "mode": "gradient",
+        "confidence": "매우 낮음",
+        "notes": [
+          "풍속 0.5 m/s 미만: 풍향 신뢰도가 낮아 측정값 경사로 방향을 보정해야 함",
+          "냄새 확인 측정 지점이 2곳 미만: 다중 측정 일치는 풍향 일치 비율로 대체"
+        ],
+        "cards": [
+          {
+            "rank": 1,
+            "farm_id": "GJ-1412",
+            "name": "아름농장",
+            "score": 62.6,
+            "components": {
+              "풍향 일치": 32.2,
+              "거리": 14.3,
+              "다중 측정 일치": 16.1,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.11,
+            "reference": {
+              "species": "소",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 18°), 거리 1.1 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 2,
+            "farm_id": "GJ-316",
+            "name": "현서농장",
+            "score": 56.7,
+            "components": {
+              "풍향 일치": 25.8,
+              "거리": 18.0,
+              "다중 측정 일치": 12.9,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 0.65,
+            "reference": {
+              "species": "가금",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 32°), 거리 0.7 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 3,
+            "farm_id": "GJ-367",
+            "name": "다래농장",
+            "score": 52.1,
+            "components": {
+              "풍향 일치": 28.7,
+              "거리": 9.1,
+              "다중 측정 일치": 14.3,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.03,
+            "reference": {
+              "species": "가금",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 25°), 거리 2.0 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 4,
+            "farm_id": "GJ-537",
+            "name": "다래농장",
+            "score": 52.1,
+            "components": {
+              "풍향 일치": 28.7,
+              "거리": 9.1,
+              "다중 측정 일치": 14.3,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.03,
+            "reference": {
+              "species": "가금",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 25°), 거리 2.0 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 5,
+            "farm_id": "GJ-184",
+            "name": "행복한농장",
+            "score": 47.7,
+            "components": {
+              "풍향 일치": 23.4,
+              "거리": 12.7,
+              "다중 측정 일치": 11.7,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.36,
+            "reference": {
+              "species": "소",
+              "eq": null
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 37°), 거리 1.4 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          }
+        ]
+      }
+    }
+  ]
+}

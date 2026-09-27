@@ -1,0 +1,62 @@
+{
+  "_note": "화면 개발용 가짜 샘플. 값은 형식 확인용이며 실제 결과가 아님.",
+  "night_date": "2022-06-30",
+  "afternoon": {
+    "alert": true,
+    "season_rank": 8,
+    "risk_score": 9.4,
+    "observed_complaints": 19,
+    "model_id": "hgb_poisson",
+    "night_wind": {"direction": 190.0, "speed": 0.9, "station_id": 702}
+  },
+  "standby": {
+    "chosen_point_id": "AWS-YONGJI",
+    "reason": "오늘 밤 평균 풍향 190°에서 바람이 불어오는 쪽 주 대기 장소",
+    "points": [
+      {"point_id": "AWS-YONGJI", "cluster_id": "YONGJI", "name": "용지 방면", "grade": "주", "lat": 35.8501, "lon": 126.9831, "lift_all": 1.72},
+      {"point_id": "AWS-IK-0", "cluster_id": "IK-0", "name": "왕궁 방면", "grade": "주", "lat": 35.9510, "lon": 127.0315, "lift_all": 1.47},
+      {"point_id": "AWS-IK-7", "cluster_id": "IK-7", "name": "춘포 방면", "grade": "주", "lat": 35.9575, "lon": 126.9869, "lift_all": 1.28}
+    ]
+  },
+  "events": [
+    {
+      "event_id": "EVT-0148",
+      "level": "확인",
+      "event_hour": "2022-06-30T23:00:00",
+      "trigger_rule": "기존 사건 기준(1시간 안 10건·5칸 이상)",
+      "first30_complaints": [
+        {"datetime": "2022-06-30T23:04:00", "lat": 35.9451, "lon": 126.9602},
+        {"datetime": "2022-06-30T23:11:00", "lat": 35.9422, "lon": 126.9555}
+      ],
+      "top3": [
+        {"rank": 1, "region_name": "송학동", "lat": 35.9431, "lon": 126.9562, "score": 0.71, "hit": true},
+        {"rank": 2, "region_name": "모현동", "lat": 35.9522, "lon": 126.9451, "score": 0.55, "hit": false},
+        {"rank": 3, "region_name": "평화동", "lat": 35.9398, "lon": 126.9671, "score": 0.41, "hit": true}
+      ],
+      "direction_overlap": {
+        "wind_direction": 185.0,
+        "wind_speed": 1.1,
+        "n_complaints": 7,
+        "per_point": [
+          {"point_id": "AWS-YONGJI", "n_pointing": 6},
+          {"point_id": "AWS-IK-0", "n_pointing": 0},
+          {"point_id": "AWS-IK-7", "n_pointing": 1}
+        ],
+        "suggested_point_id": "AWS-YONGJI"
+      },
+      "field": {
+        "staff_point_id": "AWS-YONGJI",
+        "mode": "sector",
+        "confidence": "보통",
+        "notes": [],
+        "cards": [
+          {"rank": 1, "farm_id": "GJ-101", "name": "가짜농장A", "score": 71.2,
+           "components": {"풍향 일치": 34.0, "거리": 16.1, "다중 측정 일치": 17.0, "과거 반복": 4.1, "규모": 0.0},
+           "distance_km": 0.9, "reference": {"species": "돼지", "eq": null},
+           "coord_warning": true, "reason": "현재 풍상 방향(차이 15°), 거리 0.9 km",
+           "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"}
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "night_date": "2024-10-01",
+  "afternoon": {
+    "alert": false,
+    "season_rank": 127,
+    "risk_score": 0.9468681947063357,
+    "observed_complaints": 11,
+    "model_id": "hgb_poisson",
+    "night_wind": {
+      "direction": null,
+      "speed": null,
+      "station_id": 702
+    }
+  },
+  "standby": {
+    "chosen_point_id": "AWS-IK-8",
+    "reason": "밤 평균 풍향 없음; lift_all이 가장 큰 주 대기 장소 선택",
+    "points": [
+      {
+        "point_id": "AWS-IK-0",
+        "cluster_id": "IK-0",
+        "name": "왕궁 방면",
+        "grade": "주",
+        "lat": 35.95104026847338,
+        "lon": 127.0315317496597,
+        "lift_all": 1.467142129393785
+      },
+      {
+        "point_id": "AWS-IK-7",
+        "cluster_id": "IK-7",
+        "name": "춘포 방면",
+        "grade": "주",
+        "lat": 35.95749250601154,
+        "lon": 126.9869118997266,
+        "lift_all": 1.2825027085590464
+      },
+      {
+        "point_id": "AWS-IK-8",
+        "cluster_id": "IK-8",
+        "name": "IK-8",
+        "grade": "주",
+        "lat": 36.10625238083163,
+        "lon": 126.99724321447052,
+        "lift_all": 1.7900552486187842
+      },
+      {
+        "point_id": "AWS-YONGJI",
+        "cluster_id": "YONGJI",
+        "name": "용지 방면",
+        "grade": "주",
+        "lat": 35.850107569726404,
+        "lon": 126.98306306886404,
+        "lift_all": 1.718942533885964
+      }
+    ]
+  },
+  "events": [
+    {
+      "event_id": "EV2-0397",
+      "event_hour": "2024-10-01T21:26:00",
+      "trigger_rule": "30분 안 서로 다른 장소 5곳(확인) / 7곳(출동)",
+      "level": "출동",
+      "first30_complaints": [
+        {
+          "datetime": "2024-10-01T21:09:00",
+          "lat": 35.96917,
+          "lon": 127.09097
+        },
+        {
+          "datetime": "2024-10-01T21:19:00",
+          "lat": 35.96914,
+          "lon": 127.090904
+        }
+      ],
+      "top3": [
+        {
+          "rank": 1,
+          "region_name": null,
+          "lat": 35.97018224850733,
+          "lon": 127.08924752569042,
+          "score": 0.9734160304069519,
+          "hit": true
+        },
+        {
+          "rank": 2,
+          "region_name": null,
+          "lat": 35.97018224850733,
+          "lon": 127.10034515997363,
+          "score": 0.007590188179165125,
+          "hit": false
+        },
+        {
+          "rank": 3,
+          "region_name": null,
+          "lat": 35.97922874751221,
+          "lon": 127.08924752569042,
+          "score": 0.007590188179165125,
+          "hit": true
+        }
+      ],
+      "direction_overlap": {
+        "wind_direction": null,
+        "wind_speed": null,
+        "n_complaints": 2,
+        "per_point": [
+          {
+            "point_id": "AWS-IK-0",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-7",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-8",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-YONGJI",
+            "n_pointing": 0
+          }
+        ],
+        "suggested_point_id": null
+      },
+      "field": {
+        "staff_point_id": "AWS-IK-8",
+        "mode": null,
+        "confidence": null,
+        "notes": [
+          "사건 시각과 밤 평균 풍향·풍속이 없어 방문 순서 카드를 생성할 수 없음"
+        ],
+        "cards": []
+      }
+    }
+  ]
+}

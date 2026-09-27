@@ -1,0 +1,343 @@
+{
+  "meta": {
+    "n_farms": 1395,
+    "n_trials_per_condition": 400,
+    "seed": 0,
+    "conditions": "관측 풍향 N(0,σ) 흔들림, 플룸 사행 N(0,σ), 담당자 0.5~3 km 풍하, 근사 좌표 N(0,0.4 km), 30% 동시 배출, 냄새 확인 지점 3곳",
+    "not_tested": "과거 반복(hist) 항목, 약풍 농도 경사 모드, 반복 추적(multi-hop)",
+    "weights": {
+      "점수 카드(풍향40·거리25·다중20)": {
+        "wind": 40.0,
+        "dist": 25.0,
+        "multi": 20.0,
+        "hist": 0.0
+      },
+      "소거: 풍향 제외": {
+        "wind": 0.0,
+        "dist": 25.0,
+        "multi": 20.0,
+        "hist": 0.0
+      },
+      "소거: 거리 제외": {
+        "wind": 40.0,
+        "dist": 0.0,
+        "multi": 20.0,
+        "hist": 0.0
+      },
+      "소거: 다중 측정 제외": {
+        "wind": 40.0,
+        "dist": 25.0,
+        "multi": 0.0,
+        "hist": 0.0
+      }
+    }
+  },
+  "results": {
+    "prior=uniform, sigma=10": {
+      "점수 카드(풍향40·거리25·다중20)": {
+        "top1": 0.2,
+        "top3": 0.425,
+        "top5": 0.573,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 3.0
+      },
+      "소거: 풍향 제외": {
+        "top1": 0.133,
+        "top3": 0.388,
+        "top5": 0.537,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 4.0
+      },
+      "소거: 거리 제외": {
+        "top1": 0.145,
+        "top3": 0.36,
+        "top5": 0.495,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 5.0
+      },
+      "소거: 다중 측정 제외": {
+        "top1": 0.17,
+        "top3": 0.372,
+        "top5": 0.517,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 4.0
+      },
+      "가까운 순": {
+        "top1": 0.02,
+        "top3": 0.117,
+        "top5": 0.18,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 17.0
+      },
+      "풍상 반원 가까운 순": {
+        "top1": 0.058,
+        "top3": 0.182,
+        "top5": 0.292,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 11.0
+      },
+      "규모 큰 순": {
+        "top1": 0.015,
+        "top3": 0.08,
+        "top5": 0.125,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 41.0
+      }
+    },
+    "prior=uniform, sigma=20": {
+      "점수 카드(풍향40·거리25·다중20)": {
+        "top1": 0.152,
+        "top3": 0.357,
+        "top5": 0.453,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 6.0
+      },
+      "소거: 풍향 제외": {
+        "top1": 0.147,
+        "top3": 0.4,
+        "top5": 0.547,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 4.0
+      },
+      "소거: 거리 제외": {
+        "top1": 0.092,
+        "top3": 0.28,
+        "top5": 0.36,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 8.0
+      },
+      "소거: 다중 측정 제외": {
+        "top1": 0.12,
+        "top3": 0.297,
+        "top5": 0.4,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 7.0
+      },
+      "가까운 순": {
+        "top1": 0.037,
+        "top3": 0.117,
+        "top5": 0.175,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 21.0
+      },
+      "풍상 반원 가까운 순": {
+        "top1": 0.052,
+        "top3": 0.207,
+        "top5": 0.282,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 11.0
+      },
+      "규모 큰 순": {
+        "top1": 0.013,
+        "top3": 0.058,
+        "top5": 0.09,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 42.0
+      }
+    },
+    "prior=uniform, sigma=45": {
+      "점수 카드(풍향40·거리25·다중20)": {
+        "top1": 0.072,
+        "top3": 0.163,
+        "top5": 0.23,
+        "miss": 0.13,
+        "wasted_visits_median_if_found": 13.5
+      },
+      "소거: 풍향 제외": {
+        "top1": 0.075,
+        "top3": 0.2,
+        "top5": 0.285,
+        "miss": 0.13,
+        "wasted_visits_median_if_found": 9.0
+      },
+      "소거: 거리 제외": {
+        "top1": 0.052,
+        "top3": 0.13,
+        "top5": 0.193,
+        "miss": 0.13,
+        "wasted_visits_median_if_found": 16.0
+      },
+      "소거: 다중 측정 제외": {
+        "top1": 0.07,
+        "top3": 0.177,
+        "top5": 0.255,
+        "miss": 0.13,
+        "wasted_visits_median_if_found": 12.0
+      },
+      "가까운 순": {
+        "top1": 0.037,
+        "top3": 0.117,
+        "top5": 0.195,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 17.5
+      },
+      "풍상 반원 가까운 순": {
+        "top1": 0.058,
+        "top3": 0.152,
+        "top5": 0.228,
+        "miss": 0.13,
+        "wasted_visits_median_if_found": 10.0
+      },
+      "규모 큰 순": {
+        "top1": 0.02,
+        "top3": 0.07,
+        "top5": 0.122,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 36.0
+      }
+    },
+    "prior=eq, sigma=10": {
+      "점수 카드(풍향40·거리25·다중20)": {
+        "top1": 0.155,
+        "top3": 0.343,
+        "top5": 0.492,
+        "miss": 0.005,
+        "wasted_visits_median_if_found": 5.0
+      },
+      "소거: 풍향 제외": {
+        "top1": 0.09,
+        "top3": 0.318,
+        "top5": 0.47,
+        "miss": 0.005,
+        "wasted_visits_median_if_found": 5.0
+      },
+      "소거: 거리 제외": {
+        "top1": 0.115,
+        "top3": 0.247,
+        "top5": 0.367,
+        "miss": 0.005,
+        "wasted_visits_median_if_found": 7.0
+      },
+      "소거: 다중 측정 제외": {
+        "top1": 0.133,
+        "top3": 0.285,
+        "top5": 0.412,
+        "miss": 0.005,
+        "wasted_visits_median_if_found": 6.0
+      },
+      "가까운 순": {
+        "top1": 0.02,
+        "top3": 0.07,
+        "top5": 0.107,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 26.0
+      },
+      "풍상 반원 가까운 순": {
+        "top1": 0.03,
+        "top3": 0.122,
+        "top5": 0.188,
+        "miss": 0.005,
+        "wasted_visits_median_if_found": 16.0
+      },
+      "규모 큰 순": {
+        "top1": 0.117,
+        "top3": 0.312,
+        "top5": 0.407,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 7.0
+      }
+    },
+    "prior=eq, sigma=20": {
+      "점수 카드(풍향40·거리25·다중20)": {
+        "top1": 0.113,
+        "top3": 0.27,
+        "top5": 0.38,
+        "miss": 0.01,
+        "wasted_visits_median_if_found": 8.0
+      },
+      "소거: 풍향 제외": {
+        "top1": 0.11,
+        "top3": 0.305,
+        "top5": 0.43,
+        "miss": 0.01,
+        "wasted_visits_median_if_found": 5.0
+      },
+      "소거: 거리 제외": {
+        "top1": 0.062,
+        "top3": 0.177,
+        "top5": 0.265,
+        "miss": 0.01,
+        "wasted_visits_median_if_found": 12.0
+      },
+      "소거: 다중 측정 제외": {
+        "top1": 0.083,
+        "top3": 0.22,
+        "top5": 0.333,
+        "miss": 0.01,
+        "wasted_visits_median_if_found": 10.0
+      },
+      "가까운 순": {
+        "top1": 0.025,
+        "top3": 0.065,
+        "top5": 0.13,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 25.5
+      },
+      "풍상 반원 가까운 순": {
+        "top1": 0.043,
+        "top3": 0.128,
+        "top5": 0.212,
+        "miss": 0.01,
+        "wasted_visits_median_if_found": 15.0
+      },
+      "규모 큰 순": {
+        "top1": 0.128,
+        "top3": 0.273,
+        "top5": 0.367,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 8.5
+      }
+    },
+    "prior=eq, sigma=45": {
+      "점수 카드(풍향40·거리25·다중20)": {
+        "top1": 0.048,
+        "top3": 0.107,
+        "top5": 0.168,
+        "miss": 0.133,
+        "wasted_visits_median_if_found": 20.0
+      },
+      "소거: 풍향 제외": {
+        "top1": 0.052,
+        "top3": 0.138,
+        "top5": 0.217,
+        "miss": 0.133,
+        "wasted_visits_median_if_found": 15.0
+      },
+      "소거: 거리 제외": {
+        "top1": 0.028,
+        "top3": 0.075,
+        "top5": 0.125,
+        "miss": 0.133,
+        "wasted_visits_median_if_found": 23.0
+      },
+      "소거: 다중 측정 제외": {
+        "top1": 0.052,
+        "top3": 0.1,
+        "top5": 0.16,
+        "miss": 0.133,
+        "wasted_visits_median_if_found": 21.0
+      },
+      "가까운 순": {
+        "top1": 0.028,
+        "top3": 0.07,
+        "top5": 0.14,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 26.0
+      },
+      "풍상 반원 가까운 순": {
+        "top1": 0.052,
+        "top3": 0.113,
+        "top5": 0.188,
+        "miss": 0.133,
+        "wasted_visits_median_if_found": 14.0
+      },
+      "규모 큰 순": {
+        "top1": 0.14,
+        "top3": 0.297,
+        "top5": 0.425,
+        "miss": 0.0,
+        "wasted_visits_median_if_found": 7.0
+      }
+    }
+  }
+}

@@ -1,0 +1,247 @@
+{
+  "night_date": "2025-09-30",
+  "afternoon": {
+    "alert": false,
+    "season_rank": 40,
+    "risk_score": 5.088239478048649,
+    "observed_complaints": 9,
+    "model_id": "hgb_poisson",
+    "night_wind": {
+      "direction": 100.03951637757629,
+      "speed": 1.3749999999999998,
+      "station_id": 702
+    }
+  },
+  "standby": {
+    "chosen_point_id": "AWS-IK-0",
+    "reason": "밤 평균 풍향 100.0°, 도시 중심에서 대기 장소 방위와 차이 12.9°",
+    "points": [
+      {
+        "point_id": "AWS-IK-0",
+        "cluster_id": "IK-0",
+        "name": "왕궁 방면",
+        "grade": "주",
+        "lat": 35.95104026847338,
+        "lon": 127.0315317496597,
+        "lift_all": 1.467142129393785
+      },
+      {
+        "point_id": "AWS-IK-7",
+        "cluster_id": "IK-7",
+        "name": "춘포 방면",
+        "grade": "주",
+        "lat": 35.95749250601154,
+        "lon": 126.9869118997266,
+        "lift_all": 1.2825027085590464
+      },
+      {
+        "point_id": "AWS-IK-8",
+        "cluster_id": "IK-8",
+        "name": "IK-8",
+        "grade": "주",
+        "lat": 36.10625238083163,
+        "lon": 126.99724321447052,
+        "lift_all": 1.7900552486187842
+      },
+      {
+        "point_id": "AWS-YONGJI",
+        "cluster_id": "YONGJI",
+        "name": "용지 방면",
+        "grade": "주",
+        "lat": 35.850107569726404,
+        "lon": 126.98306306886404,
+        "lift_all": 1.718942533885964
+      }
+    ]
+  },
+  "events": [
+    {
+      "event_id": "EV2-0419",
+      "event_hour": "2025-09-30T21:49:00",
+      "trigger_rule": "30분 안 서로 다른 장소 5곳(확인) / 7곳(출동)",
+      "level": "확인",
+      "first30_complaints": [
+        {
+          "datetime": "2025-09-30T21:41:00",
+          "lat": 35.969078,
+          "lon": 127.09137
+        }
+      ],
+      "top3": [
+        {
+          "rank": 1,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.9893688171416,
+          "score": 0.966580867767334,
+          "hit": false
+        },
+        {
+          "rank": 2,
+          "region_name": null,
+          "lat": 35.97018224850733,
+          "lon": 127.08924752569042,
+          "score": 0.9288649559020996,
+          "hit": true
+        },
+        {
+          "rank": 3,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.97827118285839,
+          "score": 0.8822286128997803,
+          "hit": false
+        }
+      ],
+      "direction_overlap": {
+        "wind_direction": 125.5,
+        "wind_speed": 2.3,
+        "n_complaints": 1,
+        "per_point": [
+          {
+            "point_id": "AWS-IK-0",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-7",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-8",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-YONGJI",
+            "n_pointing": 0
+          }
+        ],
+        "suggested_point_id": "AWS-IK-8"
+      },
+      "field": {
+        "staff_point_id": "AWS-IK-0",
+        "mode": "sector",
+        "confidence": "보통",
+        "notes": [
+          "냄새 확인 측정 지점이 2곳 미만: 다중 측정 일치는 풍향 일치 비율로 대체"
+        ],
+        "cards": [
+          {
+            "rank": 1,
+            "farm_id": "IK-1154",
+            "name": "왕춘농장",
+            "score": 66.7,
+            "components": {
+              "풍향 일치": 40.0,
+              "거리": 6.8,
+              "다중 측정 일치": 20.0,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.6,
+            "reference": {
+              "species": "소",
+              "eq": 192.0
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 0°), 거리 2.6 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 2,
+            "farm_id": "IK-379",
+            "name": "차우 구백농장",
+            "score": 66.2,
+            "components": {
+              "풍향 일치": 40.0,
+              "거리": 6.2,
+              "다중 측정 일치": 20.0,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.8,
+            "reference": {
+              "species": "돼지",
+              "eq": 9200.0
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 0°), 거리 2.8 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 3,
+            "farm_id": "IK-161",
+            "name": "둥지목장",
+            "score": 65.7,
+            "components": {
+              "풍향 일치": 39.6,
+              "거리": 6.2,
+              "다중 측정 일치": 19.8,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.78,
+            "reference": {
+              "species": "소",
+              "eq": 296.40000000000003
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 1°), 거리 2.8 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 4,
+            "farm_id": "IK-63",
+            "name": "박O동농장",
+            "score": 64.8,
+            "components": {
+              "풍향 일치": 38.6,
+              "거리": 7.0,
+              "다중 측정 일치": 19.3,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.56,
+            "reference": {
+              "species": "소",
+              "eq": 68.4
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 3°), 거리 2.6 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 5,
+            "farm_id": "IK-714",
+            "name": "송O호농장",
+            "score": 64.7,
+            "components": {
+              "풍향 일치": 28.6,
+              "거리": 21.7,
+              "다중 측정 일치": 14.3,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 0.28,
+            "reference": {
+              "species": "소",
+              "eq": 28.5
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 26°), 거리 0.3 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          }
+        ]
+      }
+    }
+  ]
+}

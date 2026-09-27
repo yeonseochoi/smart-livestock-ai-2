@@ -1,0 +1,737 @@
+[
+  {
+    "night_date": "2022-05-05",
+    "alert": false,
+    "season_rank": 147,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2022-06-25",
+    "alert": true,
+    "season_rank": 12,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-06-26",
+    "alert": true,
+    "season_rank": 6,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-06-27",
+    "alert": false,
+    "season_rank": 54,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2022-06-29",
+    "alert": true,
+    "season_rank": 2,
+    "n_events": 2,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-06-30",
+    "alert": true,
+    "season_rank": 8,
+    "n_events": 3,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-02",
+    "alert": false,
+    "season_rank": 33,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-03",
+    "alert": true,
+    "season_rank": 27,
+    "n_events": 3,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-04",
+    "alert": false,
+    "season_rank": 48,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-05",
+    "alert": true,
+    "season_rank": 11,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-06",
+    "alert": false,
+    "season_rank": 52,
+    "n_events": 2,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2022-07-07",
+    "alert": true,
+    "season_rank": 17,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-10",
+    "alert": true,
+    "season_rank": 15,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-13",
+    "alert": true,
+    "season_rank": 16,
+    "n_events": 5,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-15",
+    "alert": false,
+    "season_rank": 87,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2022-07-16",
+    "alert": false,
+    "season_rank": 72,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-17",
+    "alert": true,
+    "season_rank": 28,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-19",
+    "alert": false,
+    "season_rank": 91,
+    "n_events": 2,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-22",
+    "alert": false,
+    "season_rank": 43,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-25",
+    "alert": false,
+    "season_rank": 71,
+    "n_events": 3,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-26",
+    "alert": true,
+    "season_rank": 29,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-27",
+    "alert": false,
+    "season_rank": 41,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-07-29",
+    "alert": false,
+    "season_rank": 51,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-08-01",
+    "alert": true,
+    "season_rank": 23,
+    "n_events": 2,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-08-02",
+    "alert": true,
+    "season_rank": 20,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2022-08-04",
+    "alert": false,
+    "season_rank": 45,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2022-08-14",
+    "alert": true,
+    "season_rank": 4,
+    "n_events": 2,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-08-18",
+    "alert": false,
+    "season_rank": 40,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-08-20",
+    "alert": false,
+    "season_rank": 57,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2022-08-21",
+    "alert": true,
+    "season_rank": 14,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2022-08-22",
+    "alert": false,
+    "season_rank": 35,
+    "n_events": 2,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2022-08-26",
+    "alert": false,
+    "season_rank": 83,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-09-02",
+    "alert": false,
+    "season_rank": 122,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-09-06",
+    "alert": false,
+    "season_rank": 68,
+    "n_events": 2,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-09-14",
+    "alert": false,
+    "season_rank": 145,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-09-15",
+    "alert": false,
+    "season_rank": 67,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2022-09-16",
+    "alert": false,
+    "season_rank": 34,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2022-09-18",
+    "alert": false,
+    "season_rank": 80,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-09-22",
+    "alert": false,
+    "season_rank": 73,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2022-10-02",
+    "alert": false,
+    "season_rank": 47,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2023-06-26",
+    "alert": false,
+    "season_rank": 133,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2023-07-05",
+    "alert": true,
+    "season_rank": 10,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2023-07-13",
+    "alert": true,
+    "season_rank": 30,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2023-08-21",
+    "alert": true,
+    "season_rank": 16,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2023-09-04",
+    "alert": true,
+    "season_rank": 7,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2023-09-08",
+    "alert": false,
+    "season_rank": 54,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2023-09-10",
+    "alert": false,
+    "season_rank": 45,
+    "n_events": 2,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2023-09-11",
+    "alert": false,
+    "season_rank": 76,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2023-09-12",
+    "alert": false,
+    "season_rank": 51,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2023-09-17",
+    "alert": false,
+    "season_rank": 69,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2023-09-18",
+    "alert": false,
+    "season_rank": 84,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2023-09-19",
+    "alert": false,
+    "season_rank": 75,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2023-09-30",
+    "alert": false,
+    "season_rank": 90,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2023-10-05",
+    "alert": false,
+    "season_rank": 96,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2023-10-13",
+    "alert": false,
+    "season_rank": 112,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2024-05-25",
+    "alert": false,
+    "season_rank": 129,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2024-06-01",
+    "alert": false,
+    "season_rank": 162,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-06-18",
+    "alert": false,
+    "season_rank": 109,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2024-06-23",
+    "alert": false,
+    "season_rank": 54,
+    "n_events": 2,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-06-27",
+    "alert": false,
+    "season_rank": 39,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-07-02",
+    "alert": false,
+    "season_rank": 64,
+    "n_events": 2,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2024-07-04",
+    "alert": false,
+    "season_rank": 59,
+    "n_events": 2,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-07-05",
+    "alert": false,
+    "season_rank": 72,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-07-14",
+    "alert": true,
+    "season_rank": 21,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2024-07-17",
+    "alert": false,
+    "season_rank": 40,
+    "n_events": 3,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-07-22",
+    "alert": false,
+    "season_rank": 52,
+    "n_events": 2,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-07-23",
+    "alert": true,
+    "season_rank": 2,
+    "n_events": 2,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-07-28",
+    "alert": false,
+    "season_rank": 50,
+    "n_events": 3,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-07-30",
+    "alert": false,
+    "season_rank": 46,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2024-08-15",
+    "alert": true,
+    "season_rank": 19,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2024-08-20",
+    "alert": false,
+    "season_rank": 124,
+    "n_events": 2,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-08-31",
+    "alert": false,
+    "season_rank": 33,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-09-01",
+    "alert": true,
+    "season_rank": 26,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-09-03",
+    "alert": true,
+    "season_rank": 17,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-09-04",
+    "alert": true,
+    "season_rank": 23,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-09-07",
+    "alert": true,
+    "season_rank": 13,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-09-08",
+    "alert": false,
+    "season_rank": 44,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-09-12",
+    "alert": false,
+    "season_rank": 135,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-09-13",
+    "alert": true,
+    "season_rank": 20,
+    "n_events": 2,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-09-25",
+    "alert": true,
+    "season_rank": 30,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2024-09-29",
+    "alert": false,
+    "season_rank": 68,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2024-10-01",
+    "alert": false,
+    "season_rank": 127,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-10-03",
+    "alert": false,
+    "season_rank": 159,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-10-12",
+    "alert": false,
+    "season_rank": 79,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2024-10-27",
+    "alert": false,
+    "season_rank": 110,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2025-06-06",
+    "alert": false,
+    "season_rank": 82,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2025-06-19",
+    "alert": false,
+    "season_rank": 66,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2025-07-30",
+    "alert": true,
+    "season_rank": 12,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2025-08-08",
+    "alert": false,
+    "season_rank": 35,
+    "n_events": 2,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2025-08-13",
+    "alert": true,
+    "season_rank": 1,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2025-08-16",
+    "alert": true,
+    "season_rank": 15,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2025-08-19",
+    "alert": true,
+    "season_rank": 6,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2025-08-20",
+    "alert": true,
+    "season_rank": 25,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2025-08-28",
+    "alert": true,
+    "season_rank": 24,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2025-08-31",
+    "alert": true,
+    "season_rank": 20,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2025-09-05",
+    "alert": true,
+    "season_rank": 4,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2025-09-13",
+    "alert": false,
+    "season_rank": 32,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2025-09-14",
+    "alert": false,
+    "season_rank": 101,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2025-09-16",
+    "alert": true,
+    "season_rank": 3,
+    "n_events": 2,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2025-09-20",
+    "alert": false,
+    "season_rank": 74,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2025-09-23",
+    "alert": false,
+    "season_rank": 100,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2025-09-30",
+    "alert": false,
+    "season_rank": 40,
+    "n_events": 1,
+    "hit_any_top3": true
+  },
+  {
+    "night_date": "2025-10-10",
+    "alert": false,
+    "season_rank": 51,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2025-10-11",
+    "alert": true,
+    "season_rank": 23,
+    "n_events": 1,
+    "hit_any_top3": false
+  },
+  {
+    "night_date": "2025-10-12",
+    "alert": false,
+    "season_rank": 86,
+    "n_events": 1,
+    "hit_any_top3": true
+  }
+]

@@ -1,0 +1,476 @@
+{
+  "night_date": "2024-07-23",
+  "afternoon": {
+    "alert": true,
+    "season_rank": 2,
+    "risk_score": 13.604465255675482,
+    "observed_complaints": 9,
+    "model_id": "hgb_poisson",
+    "night_wind": {
+      "direction": 109.2860398284712,
+      "speed": 0.9,
+      "station_id": 702
+    }
+  },
+  "standby": {
+    "chosen_point_id": "AWS-IK-0",
+    "reason": "밤 평균 풍향 109.3°, 도시 중심에서 대기 장소 방위와 차이 22.2°",
+    "points": [
+      {
+        "point_id": "AWS-IK-0",
+        "cluster_id": "IK-0",
+        "name": "왕궁 방면",
+        "grade": "주",
+        "lat": 35.95104026847338,
+        "lon": 127.0315317496597,
+        "lift_all": 1.467142129393785
+      },
+      {
+        "point_id": "AWS-IK-7",
+        "cluster_id": "IK-7",
+        "name": "춘포 방면",
+        "grade": "주",
+        "lat": 35.95749250601154,
+        "lon": 126.9869118997266,
+        "lift_all": 1.2825027085590464
+      },
+      {
+        "point_id": "AWS-IK-8",
+        "cluster_id": "IK-8",
+        "name": "IK-8",
+        "grade": "주",
+        "lat": 36.10625238083163,
+        "lon": 126.99724321447052,
+        "lift_all": 1.7900552486187842
+      },
+      {
+        "point_id": "AWS-YONGJI",
+        "cluster_id": "YONGJI",
+        "name": "용지 방면",
+        "grade": "주",
+        "lat": 35.850107569726404,
+        "lon": 126.98306306886404,
+        "lift_all": 1.718942533885964
+      }
+    ]
+  },
+  "events": [
+    {
+      "event_id": "EV2-0377",
+      "event_hour": "2024-07-23T19:59:00",
+      "trigger_rule": "30분 안 서로 다른 장소 5곳(확인) / 7곳(출동)",
+      "level": "확인",
+      "first30_complaints": [
+        {
+          "datetime": "2024-07-23T19:31:00",
+          "lat": 35.913357,
+          "lon": 126.86168
+        },
+        {
+          "datetime": "2024-07-23T19:38:00",
+          "lat": 35.926296,
+          "lon": 126.95894
+        },
+        {
+          "datetime": "2024-07-23T19:42:00",
+          "lat": 35.96854,
+          "lon": 127.091194
+        },
+        {
+          "datetime": "2024-07-23T19:49:00",
+          "lat": 35.93914,
+          "lon": 126.98593
+        },
+        {
+          "datetime": "2024-07-23T19:58:00",
+          "lat": 35.946472,
+          "lon": 126.9466
+        }
+      ],
+      "top3": [
+        {
+          "rank": 1,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.9893688171416,
+          "score": 0.9521473050117493,
+          "hit": false
+        },
+        {
+          "rank": 2,
+          "region_name": null,
+          "lat": 35.95208925049756,
+          "lon": 126.9893688171416,
+          "score": 0.9418094158172607,
+          "hit": false
+        },
+        {
+          "rank": 3,
+          "region_name": null,
+          "lat": 35.93399625248779,
+          "lon": 126.96717354857519,
+          "score": 0.8922338485717773,
+          "hit": false
+        }
+      ],
+      "direction_overlap": {
+        "wind_direction": 176.7,
+        "wind_speed": 1.6,
+        "n_complaints": 5,
+        "per_point": [
+          {
+            "point_id": "AWS-IK-0",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-7",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-8",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-YONGJI",
+            "n_pointing": 3
+          }
+        ],
+        "suggested_point_id": "AWS-YONGJI"
+      },
+      "field": {
+        "staff_point_id": "AWS-IK-0",
+        "mode": "sector",
+        "confidence": "보통",
+        "notes": [
+          "냄새 확인 측정 지점이 2곳 미만: 다중 측정 일치는 풍향 일치 비율로 대체"
+        ],
+        "cards": [
+          {
+            "rank": 1,
+            "farm_id": "IK-331",
+            "name": "태열 농장",
+            "score": 69.8,
+            "components": {
+              "풍향 일치": 39.9,
+              "거리": 9.9,
+              "다중 측정 일치": 19.9,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.84,
+            "reference": {
+              "species": "소",
+              "eq": 199.5
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 0°), 거리 1.8 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 2,
+            "farm_id": "IK-704",
+            "name": "이O철농장",
+            "score": 69.3,
+            "components": {
+              "풍향 일치": 37.2,
+              "거리": 13.4,
+              "다중 측정 일치": 18.6,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.24,
+            "reference": {
+              "species": "소",
+              "eq": 45.6
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 6°), 거리 1.2 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 3,
+            "farm_id": "IK-975",
+            "name": "봄나루 농장",
+            "score": 68.0,
+            "components": {
+              "풍향 일치": 39.5,
+              "거리": 8.7,
+              "다중 측정 일치": 19.8,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.11,
+            "reference": {
+              "species": "소",
+              "eq": 530.1
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 1°), 거리 2.1 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 4,
+            "farm_id": "IK-1071",
+            "name": "OK농장",
+            "score": 66.9,
+            "components": {
+              "풍향 일치": 39.2,
+              "거리": 8.1,
+              "다중 측정 일치": 19.6,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.26,
+            "reference": {
+              "species": "소",
+              "eq": 1026.0
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 2°), 거리 2.3 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 5,
+            "farm_id": "IK-807",
+            "name": "하누리 1목장",
+            "score": 64.9,
+            "components": {
+              "풍향 일치": 36.7,
+              "거리": 9.8,
+              "다중 측정 일치": 18.4,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.86,
+            "reference": {
+              "species": "소",
+              "eq": 239.4
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 7°), 거리 1.9 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "EV2-0378",
+      "event_hour": "2024-07-23T23:40:00",
+      "trigger_rule": "30분 안 서로 다른 장소 5곳(확인) / 7곳(출동)",
+      "level": "확인",
+      "first30_complaints": [
+        {
+          "datetime": "2024-07-23T23:10:00",
+          "lat": 35.936493,
+          "lon": 126.96916
+        },
+        {
+          "datetime": "2024-07-23T23:18:00",
+          "lat": 35.93647,
+          "lon": 126.97035
+        },
+        {
+          "datetime": "2024-07-23T23:19:00",
+          "lat": 35.960693,
+          "lon": 126.97356
+        },
+        {
+          "datetime": "2024-07-23T23:22:00",
+          "lat": 35.968475,
+          "lon": 127.09136
+        },
+        {
+          "datetime": "2024-07-23T23:39:00",
+          "lat": 35.941982,
+          "lon": 126.93203
+        }
+      ],
+      "top3": [
+        {
+          "rank": 1,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.9893688171416,
+          "score": 0.9643192291259766,
+          "hit": false
+        },
+        {
+          "rank": 2,
+          "region_name": null,
+          "lat": 35.93399625248779,
+          "lon": 126.96717354857519,
+          "score": 0.9538009762763977,
+          "hit": true
+        },
+        {
+          "rank": 3,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.97827118285839,
+          "score": 0.9460141658782959,
+          "hit": false
+        }
+      ],
+      "direction_overlap": {
+        "wind_direction": 0.0,
+        "wind_speed": 0.3,
+        "n_complaints": 5,
+        "per_point": [
+          {
+            "point_id": "AWS-IK-0",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-7",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-8",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-YONGJI",
+            "n_pointing": 0
+          }
+        ],
+        "suggested_point_id": null
+      },
+      "field": {
+        "staff_point_id": "AWS-IK-0",
+        "mode": "gradient",
+        "confidence": "매우 낮음",
+        "notes": [
+          "풍속 0.5 m/s 미만: 풍향 신뢰도가 낮아 측정값 경사로 방향을 보정해야 함",
+          "냄새 확인 측정 지점이 2곳 미만: 다중 측정 일치는 풍향 일치 비율로 대체"
+        ],
+        "cards": [
+          {
+            "rank": 1,
+            "farm_id": "IK-601",
+            "name": "천서농장",
+            "score": 77.5,
+            "components": {
+              "풍향 일치": 35.9,
+              "거리": 23.7,
+              "다중 측정 일치": 17.9,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 0.11,
+            "reference": {
+              "species": "소",
+              "eq": 28.5
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 9°), 거리 0.1 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 2,
+            "farm_id": "IK-612",
+            "name": "석왕농장",
+            "score": 66.4,
+            "components": {
+              "풍향 일치": 39.6,
+              "거리": 6.9,
+              "다중 측정 일치": 19.8,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.56,
+            "reference": {
+              "species": "소",
+              "eq": 68.4
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 1°), 거리 2.6 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 3,
+            "farm_id": "IK-987",
+            "name": "영농장",
+            "score": 66.4,
+            "components": {
+              "풍향 일치": 37.5,
+              "거리": 10.1,
+              "다중 측정 일치": 18.7,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 1.8,
+            "reference": {
+              "species": "소",
+              "eq": 22.8
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 6°), 거리 1.8 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 4,
+            "farm_id": "IK-270",
+            "name": "정O용 농장",
+            "score": 63.7,
+            "components": {
+              "풍향 일치": 39.6,
+              "거리": 4.3,
+              "다중 측정 일치": 19.8,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 3.51,
+            "reference": {
+              "species": "가금",
+              "eq": 5850.0
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 1°), 거리 3.5 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 5,
+            "farm_id": "IK-488",
+            "name": "주몽농장",
+            "score": 61.4,
+            "components": {
+              "풍향 일치": 35.8,
+              "거리": 7.7,
+              "다중 측정 일치": 17.9,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 2.36,
+            "reference": {
+              "species": "가금",
+              "eq": 3900.0
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 9°), 거리 2.4 km",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          }
+        ]
+      }
+    }
+  ]
+}

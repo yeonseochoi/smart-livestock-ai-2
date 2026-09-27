@@ -1,0 +1,11 @@
+k,모델,제외 변수,Hit@3,전체 대비 차이,차이 95% 하한,차이 95% 상한,평가 Event
+7,전체,,0.7634408602150538,0.0,0.0,0.0,93
+7,제외: 증가·최근 신고,"initial_count, observed_report_count, first15_count, growth",0.7634408602150538,0.0,-0.03225806451612903,0.03225806451612903,93
+7,제외: 반복·장소 수·공간,"min_distance, neighbor_count, radius3_count, centroid_distance, observed_grid_count",0.7419354838709677,-0.021505376344086023,-0.06451612903225806,0.021505376344086023,93
+7,제외: 강도,"initial_intensity, nearest_intensity, weighted_intensity",0.7419354838709677,-0.021505376344086023,-0.06451612903225806,0.021505376344086023,93
+7,제외: 과거 이력,"hist_total_3h, gap_before_t0_min, hist_cell_24h, hist_cell_7d, hist_same_hour_rate, hist_same_hour_30d, prev_night_cell_active, prev_night_total",0.7419354838709677,-0.021505376344086023,-0.07526881720430108,0.03225806451612903,93
+5,전체,,0.7150259067357513,0.0,0.0,0.0,193
+5,제외: 증가·최근 신고,"initial_count, observed_report_count, first15_count, growth",0.7253886010362695,0.010362694300518135,-0.005310880829015537,0.031088082901554404,193
+5,제외: 반복·장소 수·공간,"min_distance, neighbor_count, radius3_count, centroid_distance, observed_grid_count",0.6994818652849741,-0.015544041450777202,-0.04145077720207254,0.010362694300518135,193
+5,제외: 강도,"initial_intensity, nearest_intensity, weighted_intensity",0.7098445595854922,-0.0051813471502590676,-0.031088082901554404,0.02072538860103627,193
+5,제외: 과거 이력,"hist_total_3h, gap_before_t0_min, hist_cell_24h, hist_cell_7d, hist_same_hour_rate, hist_same_hour_30d, prev_night_cell_active, prev_night_total",0.6787564766839378,-0.03626943005181347,-0.07772020725388601,0.0,193

@@ -1,0 +1,262 @@
+{
+  "night_date": "2024-10-12",
+  "afternoon": {
+    "alert": false,
+    "season_rank": 79,
+    "risk_score": 2.0584922444367573,
+    "observed_complaints": 2,
+    "model_id": "hgb_poisson",
+    "night_wind": {
+      "direction": 45.726341907506026,
+      "speed": 0.52,
+      "station_id": 702
+    }
+  },
+  "standby": {
+    "chosen_point_id": "AWS-IK-7",
+    "reason": "밤 평균 풍향 45.7°, 도시 중심에서 대기 장소 방위와 차이 23.0°",
+    "points": [
+      {
+        "point_id": "AWS-IK-0",
+        "cluster_id": "IK-0",
+        "name": "왕궁 방면",
+        "grade": "주",
+        "lat": 35.95104026847338,
+        "lon": 127.0315317496597,
+        "lift_all": 1.467142129393785
+      },
+      {
+        "point_id": "AWS-IK-7",
+        "cluster_id": "IK-7",
+        "name": "춘포 방면",
+        "grade": "주",
+        "lat": 35.95749250601154,
+        "lon": 126.9869118997266,
+        "lift_all": 1.2825027085590464
+      },
+      {
+        "point_id": "AWS-IK-8",
+        "cluster_id": "IK-8",
+        "name": "IK-8",
+        "grade": "주",
+        "lat": 36.10625238083163,
+        "lon": 126.99724321447052,
+        "lift_all": 1.7900552486187842
+      },
+      {
+        "point_id": "AWS-YONGJI",
+        "cluster_id": "YONGJI",
+        "name": "용지 방면",
+        "grade": "주",
+        "lat": 35.850107569726404,
+        "lon": 126.98306306886404,
+        "lift_all": 1.718942533885964
+      }
+    ]
+  },
+  "events": [
+    {
+      "event_id": "EV2-0399",
+      "event_hour": "2024-10-12T20:26:00",
+      "trigger_rule": "30분 안 서로 다른 장소 5곳(확인) / 7곳(출동)",
+      "level": "확인",
+      "first30_complaints": [
+        {
+          "datetime": "2024-10-12T20:04:00",
+          "lat": 35.968952,
+          "lon": 127.09149
+        },
+        {
+          "datetime": "2024-10-12T20:11:00",
+          "lat": 35.96981,
+          "lon": 127.09017
+        },
+        {
+          "datetime": "2024-10-12T20:20:00",
+          "lat": 35.969227,
+          "lon": 127.0914
+        },
+        {
+          "datetime": "2024-10-12T20:25:00",
+          "lat": 35.968613,
+          "lon": 127.09141
+        }
+      ],
+      "top3": [
+        {
+          "rank": 1,
+          "region_name": null,
+          "lat": 35.97018224850733,
+          "lon": 127.08924752569042,
+          "score": 0.9688208699226379,
+          "hit": true
+        },
+        {
+          "rank": 2,
+          "region_name": null,
+          "lat": 35.97018224850733,
+          "lon": 127.10034515997363,
+          "score": 0.013704266399145126,
+          "hit": false
+        },
+        {
+          "rank": 3,
+          "region_name": null,
+          "lat": 35.97922874751221,
+          "lon": 127.08924752569042,
+          "score": 0.013704266399145126,
+          "hit": false
+        }
+      ],
+      "direction_overlap": {
+        "wind_direction": 108.2,
+        "wind_speed": 2.2,
+        "n_complaints": 4,
+        "per_point": [
+          {
+            "point_id": "AWS-IK-0",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-7",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-8",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-YONGJI",
+            "n_pointing": 0
+          }
+        ],
+        "suggested_point_id": "AWS-IK-8"
+      },
+      "field": {
+        "staff_point_id": "AWS-IK-7",
+        "mode": "sector",
+        "confidence": "보통",
+        "notes": [
+          "냄새 확인 측정 지점이 2곳 미만: 다중 측정 일치는 풍향 일치 비율로 대체"
+        ],
+        "cards": [
+          {
+            "rank": 1,
+            "farm_id": "IK-307",
+            "name": "한국유전자연구소",
+            "score": 63.6,
+            "components": {
+              "풍향 일치": 39.9,
+              "거리": 3.8,
+              "다중 측정 일치": 19.9,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 3.75,
+            "reference": {
+              "species": "돼지",
+              "eq": 345.0
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 0°), 거리 3.7 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 2,
+            "farm_id": "IK-826",
+            "name": "심암농장",
+            "score": 62.1,
+            "components": {
+              "풍향 일치": 37.7,
+              "거리": 5.5,
+              "다중 측정 일치": 18.9,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 3.02,
+            "reference": {
+              "species": "소",
+              "eq": 39.9
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 5°), 거리 3.0 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 3,
+            "farm_id": "IK-738",
+            "name": "정O락농장",
+            "score": 62.0,
+            "components": {
+              "풍향 일치": 37.8,
+              "거리": 5.3,
+              "다중 측정 일치": 18.9,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 3.09,
+            "reference": {
+              "species": "소",
+              "eq": 22.8
+            },
+            "coord_warning": false,
+            "reason": "현재 풍상 방향(차이 5°), 거리 3.1 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 4,
+            "farm_id": "IK-800",
+            "name": "혜인농장",
+            "score": 60.6,
+            "components": {
+              "풍향 일치": 38.1,
+              "거리": 3.5,
+              "다중 측정 일치": 19.1,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 3.96,
+            "reference": {
+              "species": "소",
+              "eq": 399.0
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 4°), 거리 4.0 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          },
+          {
+            "rank": 5,
+            "farm_id": "IK-145",
+            "name": "다니엘 농장",
+            "score": 60.0,
+            "components": {
+              "풍향 일치": 36.8,
+              "거리": 4.8,
+              "다중 측정 일치": 18.4,
+              "과거 반복": 0.0,
+              "규모": 0.0
+            },
+            "distance_km": 3.3,
+            "reference": {
+              "species": "돼지",
+              "eq": 6439.999999999999
+            },
+            "coord_warning": true,
+            "reason": "현재 풍상 방향(차이 7°), 거리 3.3 km",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"
+          }
+        ]
+      }
+    }
+  ]
+}
