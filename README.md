@@ -8,7 +8,7 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.62-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![XGBoost](https://img.shields.io/badge/XGBoost-3.x-EB5B25?style=flat-square)](https://xgboost.ai/)
 
-[🚀 데모 실행하기](https://smart-livestock-ai-2.streamlit.app/) · [▶️ 데모 영상 보기](https://www.youtube.com/watch?v=ZC-iM7M16fY) · [📘 프로젝트 상세 문서](PROJECT_CONTEXT.md)
+[🚀 데모 실행하기](https://smart-livestock-ai-2.streamlit.app/) · [🧭 현장 대응 데모 흐름](docs/field-response-demo.md) · [▶️ 데모 영상 보기](https://www.youtube.com/watch?v=ZC-iM7M16fY) · [📘 프로젝트 상세 문서](PROJECT_CONTEXT.md)
 
 </div>
 
