@@ -37,7 +37,7 @@
       {
         "point_id": "AWS-IK-8",
         "cluster_id": "IK-8",
-        "name": "IK-8",
+        "name": "익산 IK-8 군집 방면",
         "grade": "주",
         "lat": 36.10625238083163,
         "lon": 126.99724321447052,
@@ -64,12 +64,38 @@
         {
           "datetime": "2024-10-01T21:09:00",
           "lat": 35.96917,
-          "lon": 127.09097
+          "lon": 127.09097,
+          "intensity": 5.0
+        },
+        {
+          "datetime": "2024-10-01T21:17:00",
+          "lat": 35.969807,
+          "lon": 127.09016,
+          "intensity": 5.0
+        },
+        {
+          "datetime": "2024-10-01T21:18:00",
+          "lat": 35.968575,
+          "lon": 127.09012,
+          "intensity": 5.0
         },
         {
           "datetime": "2024-10-01T21:19:00",
           "lat": 35.96914,
-          "lon": 127.090904
+          "lon": 127.090904,
+          "intensity": 5.0
+        },
+        {
+          "datetime": "2024-10-01T21:21:00",
+          "lat": 35.968708,
+          "lon": 127.0911,
+          "intensity": 5.0
+        },
+        {
+          "datetime": "2024-10-01T21:25:00",
+          "lat": 35.969616,
+          "lon": 127.092026,
+          "intensity": 5.0
         }
       ],
       "top3": [
@@ -101,7 +127,7 @@
       "direction_overlap": {
         "wind_direction": null,
         "wind_speed": null,
-        "n_complaints": 2,
+        "n_complaints": 6,
         "per_point": [
           {
             "point_id": "AWS-IK-0",
@@ -122,12 +148,26 @@
         ],
         "suggested_point_id": null
       },
+      "weather": {
+        "observed_at": null,
+        "station_id": 702,
+        "humidity": null,
+        "rainfall": null
+      },
       "field": {
+        "method": "complaint_union",
+        "start_point_id": "AWS-IK-8",
         "staff_point_id": "AWS-IK-8",
         "mode": null,
         "confidence": null,
+        "selection": null,
+        "locations": 0,
+        "clusters": 0,
+        "stability": null,
+        "stability_label": null,
+        "route_km": null,
         "notes": [
-          "사건 시각과 밤 평균 풍향·풍속이 없어 방문 순서 카드를 생성할 수 없음"
+          "사건 시각 풍향·풍속 관측이 없어 방문 후보를 만들지 않음: 현장 풍향 확인 후 판단"
         ],
         "cards": []
       }

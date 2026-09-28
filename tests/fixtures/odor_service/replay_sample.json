@@ -45,15 +45,25 @@
         "suggested_point_id": "AWS-YONGJI"
       },
       "field": {
+        "method": "complaint_union",
+        "start_point_id": "AWS-YONGJI",
         "staff_point_id": "AWS-YONGJI",
         "mode": "sector",
         "confidence": "보통",
+        "selection": "교차 확인",
+        "locations": 2,
+        "clusters": 1,
+        "stability": 0.8,
+        "stability_label": "높음",
+        "route_km": 9.4,
         "notes": [],
         "cards": [
           {"rank": 1, "farm_id": "GJ-101", "name": "가짜농장A", "score": 71.2,
            "components": {"풍향 일치": 34.0, "거리": 16.1, "다중 측정 일치": 17.0, "과거 반복": 4.1, "규모": 0.0},
            "distance_km": 0.9, "reference": {"species": "돼지", "eq": null},
            "coord_warning": true, "reason": "현재 풍상 방향(차이 15°), 거리 0.9 km",
+           "tier": "교차 확인", "support": {"count": 2, "total": 2}, "complaint_km": 0.9, "cluster": 0,
+           "travel_km": 9.4, "visit_order": 1, "leg_km": 9.4,
            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료"}
         ]
       }

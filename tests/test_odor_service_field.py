@@ -120,6 +120,120 @@ class FieldEngineTest(unittest.TestCase):
         self.assertEqual(n[2], 2.0)  # C도 같은 선상 풍상
         self.assertEqual(n[4], 2.0)  # E 10 km 떨어져도 15 km 이내
 
+    def test_same_name_far_apart_preserved_nearby_registration_merged(self):
+        farms = _farms().iloc[[0, 1]].copy()
+        farms["name"] = "동명농장"  # 2 km 떨어져 있어 둘 다 보존한다.
+        nearby = farms.iloc[[0]].copy()
+        nearby["farm_id"] = "A-near"
+        nearby["lat"] += 0.2 / c.KM_PER_DEG_LAT
+        farms = pd.concat([farms, nearby], ignore_index=True)
+        cards = e.to_cards(e.score_candidates(farms, 35.90, 127.00, e.Wind(0, 1.5)))
+        self.assertEqual(len(cards), 2)
+        self.assertEqual([c["rank"] for c in cards], [1, 2])
+        self.assertEqual(cards[0]["merged_count"], 2)
+        self.assertIn("A-near", cards[0]["merged_farm_ids"])
+        self.assertEqual(cards[1]["farm_id"], "B")
+
+
+
+DLAT = 1.0 / c.KM_PER_DEG_LAT
+DLON = 1.0 / c.KM_PER_DEG_LON
+
+
+def _farm_table(rows):
+    """rows: (farm_id, 북쪽 km, 동쪽 km) — 기준점 (35.90, 127.00)."""
+    return pd.DataFrame({
+        "farm_id": [r[0] for r in rows], "name": [f"{r[0]}농장" for r in rows],
+        "lat": [35.90 + r[1] * DLAT for r in rows], "lon": [127.00 + r[2] * DLON for r in rows],
+        "status": ["정상"] * len(rows), "coord_precision": ["exact"] * len(rows),
+    })
+
+
+def _at(north_km, east_km):
+    return (35.90 + north_km * DLAT, 127.00 + east_km * DLON)
+
+
+class ComplaintAnchoredTest(unittest.TestCase):
+    """민원 지점 기준 후보 선정(A 절충안)."""
+
+    def test_repeated_same_place_has_one_vote(self):
+        locations = e.complaint_locations([_at(0, 0)] * 10 + [_at(1, 0)])
+        self.assertEqual(len(locations), 2)
+        self.assertEqual(sorted(x.n_reports for x in locations), [1, 10])
+
+    def test_split_reports_keep_candidates_for_each_group(self):
+        # 남북으로 22 km 떨어진 두 민원 무리. 평균 중심 하나로는 두 농가 모두 4 km 밖이다.
+        farms = _farm_table([("south", 1, 0), ("north", 23, 0)])
+        locations = e.complaint_locations([_at(0, 0), _at(0, 0.1), _at(22, 0), _at(22, 0.1)])
+        self.assertEqual(len({x.cluster for x in locations}), 2)
+        r = e.score_complaint_candidates(farms, locations, e.Wind(0.0, 2.0), sensitivity=False)
+        self.assertEqual(set(r.candidates["farm_id"]), {"south", "north"})
+        self.assertEqual(r.selection, e.TIER_CROSS)
+        self.assertEqual(r.clusters, 2)
+
+    def test_cross_support_excludes_single_location_farms(self):
+        farms = _farm_table([("both", 2, 0.5), ("east_only", 2, 2.8)])
+        locations = e.complaint_locations([_at(0, 0), _at(0, 1)])
+        r = e.score_complaint_candidates(farms, locations, e.Wind(0.0, 2.0), sensitivity=False)
+        self.assertEqual(r.candidates["farm_id"].tolist(), ["both"])
+        self.assertEqual(r.candidates.loc[0, "support_n"], 2)
+        self.assertAlmostEqual(float(r.candidates.loc[0, "s_multi"]), 20.0)
+
+    def test_single_location_fallback_is_flagged_and_not_padded(self):
+        farms = _farm_table([("east_only", 2, 2.8), ("downwind", -2, 0)])
+        locations = e.complaint_locations([_at(0, 0), _at(0, 1)])
+        r = e.score_complaint_candidates(farms, locations, e.Wind(0.0, 2.0), sensitivity=False)
+        self.assertEqual(r.selection, e.TIER_SINGLE)
+        self.assertEqual(r.candidates["farm_id"].tolist(), ["east_only"])  # 5개로 채우지 않는다
+        self.assertTrue(any("한 위치 기준" in note for note in r.notes))
+        card = e.to_cards(r)[0]
+        self.assertEqual(card["tier"], e.TIER_SINGLE)
+        self.assertIn("근거가 한 민원 위치뿐", card["next_action"])
+
+    def test_travel_distance_changes_route_not_ranking(self):
+        farms = _farm_table([("near", 1, 0), ("far", 3.5, 0.3)])
+        locations = e.complaint_locations([_at(0, 0), _at(0, 0.2)])
+        a = e.score_complaint_candidates(farms, locations, e.Wind(0.0, 2.0), start=_at(-10, 0), sensitivity=False)
+        b = e.score_complaint_candidates(farms, locations, e.Wind(0.0, 2.0), start=_at(15, 0), sensitivity=False)
+        self.assertEqual(a.candidates["farm_id"].tolist(), b.candidates["farm_id"].tolist())
+        np.testing.assert_allclose(a.candidates["score"], b.candidates["score"])
+        order_a = dict(zip(a.candidates["farm_id"], a.candidates["visit_order"]))
+        order_b = dict(zip(b.candidates["farm_id"], b.candidates["visit_order"]))
+        self.assertEqual(order_a, {"near": 1, "far": 2})
+        self.assertEqual(order_b, {"far": 1, "near": 2})
+        self.assertGreater(b.route_km, 0)
+
+    def test_small_complaint_group_keeps_a_representative(self):
+        # 큰 무리 가까이에 강한 후보 6곳, 20 km 떨어진 작은 무리에는 약한 후보 1곳
+        rows = [(f"big{i}", 1.0, -0.6 + 0.2 * i) for i in range(6)] + [("small", 23.5, 0.8)]
+        farms = _farm_table(rows)
+        locations = e.complaint_locations([_at(0, -0.3), _at(0, 0), _at(0, 0.3), _at(20, 0), _at(20, 0.1)])
+        r = e.score_complaint_candidates(farms, locations, e.Wind(0.0, 2.0), top_k=5, sensitivity=False)
+        self.assertEqual(len(r.candidates), 5)
+        self.assertIn("small", r.candidates["farm_id"].tolist())
+
+    def test_stability_and_weak_wind_notes(self):
+        farms = _farm_table([("a", 2, 0), ("b", 2, 1.5)])
+        locations = e.complaint_locations([_at(0, 0), _at(0, 0.3)])
+        r = e.score_complaint_candidates(farms, locations, e.Wind(0.0, 0.3))
+        self.assertIsNotNone(r.stability)
+        self.assertTrue(0.0 <= r.stability <= 1.0)
+        self.assertIn(r.stability_label, ("높음", "보통", "낮음"))
+        self.assertEqual(r.confidence, "매우 낮음")
+        self.assertTrue(any("0.5 m/s" in note for note in r.notes))
+
+    def test_score_components_bounded_and_cards_have_support(self):
+        farms = _farm_table([("a", 1, 0), ("b", 2.5, 0.4)])
+        locations = e.complaint_locations([_at(0, 0), _at(0, 0.2), _at(0.2, 0)])
+        r = e.score_complaint_candidates(farms, locations, e.Wind(0.0, 2.0), start=_at(-5, 0))
+        s = r.candidates
+        self.assertTrue((s["score"] <= 100.0 + 1e-9).all())
+        self.assertTrue((s["s_wind"] <= 40.0 + 1e-9).all())
+        for card in e.to_cards(r):
+            self.assertEqual(card["support"]["total"], 3)
+            self.assertIn("민원 위치", card["evidence"][0])
+            self.assertNotIn("확률", card["reason"])
+
 
 if __name__ == "__main__":
     unittest.main()
