@@ -20,6 +20,24 @@ class RiskArea:
 
 
 @dataclass(frozen=True)
+class FieldCandidate:
+    rank: int
+    display_name: str
+    address: str
+    score: float
+    components: dict[str, float]
+    selection_summary: str
+    coord_warning: bool = False
+    # 민원 지점 기준 선정 근거와 방문 동선(없으면 문서에서 생략)
+    tier: str | None = None
+    support_count: int | None = None
+    support_total: int | None = None
+    complaint_km: float | None = None
+    travel_km: float | None = None
+    visit_order: int | None = None
+
+
+@dataclass(frozen=True)
 class ForecastResult:
     event_id: str
     event_time: datetime
@@ -33,6 +51,8 @@ class ForecastResult:
     initial_intensity_average: float | None = None
     initial_intensity_maximum: float | None = None
     weather: dict[str, float | int | None] = field(default_factory=dict)
+    event_time_is_boundary: bool = False
+    field_candidates: tuple[FieldCandidate, ...] = ()
 
     def __post_init__(self) -> None:
         if self.grid_size_m != 1000:

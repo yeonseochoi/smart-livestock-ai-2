@@ -2,11 +2,44 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import logging
 import time
 
 import requests
 
 from .models import ForecastResult, ResponsePackage
+from .documents import field_candidate_body
+
+FIELD_RULES = (
+    "현장 확인 후보 농가 섹션은 안전 템플릿 그대로 복사한다. 후보의 순서·농가명·주소·점수·"
+    "근사 좌표 경고·경계 시료 판단 문구를 변경하지 않는다. 후보가 없다는 안내도 유지한다. "
+    "권역 표의 1순위는 가장 먼저 현장 확인, 2·3순위는 1순위 확인 후 순차 확인이다. "
+    "발생원 확률, 원인 농가 Top 5, 이 농가가 악취를 발생시켰다, "
+    "후보 안에 실제 발생원이 반드시 있다는 표현은 금지한다. "
+)
+
+
+def _validated_package(documents: dict, forecast: ForecastResult, fallback: ResponsePackage) -> ResponsePackage:
+    """사실 섹션 누락·변경 또는 금지 표현이면 검증된 전체 템플릿을 사용한다."""
+    keys = SCHEMA["required"]
+    forbidden = (r"발생원\s*확률", r"원인\s*농가\s*top\s*5",
+                 r"이\s*농가가\s*악취를\s*발생시켰다", r"후보\s*안에\s*실제\s*발생원이\s*반드시")
+    valid = all(isinstance(documents.get(key), str) for key in keys)
+    if valid:
+        valid = not any(re.search(pattern, documents[key], re.I) for key in keys for pattern in forbidden)
+    if valid:
+        section = field_candidate_body(forecast)
+        for key in ("briefing", "dispatch_order"):
+            valid = valid and section in documents[key]
+            # 권역 순서와 대응 문구도 템플릿 표와 동일해야 한다.
+            rows = [line for line in getattr(fallback, key).splitlines() if re.match(r"\|[123](?:순위)?\|", line)]
+            valid = valid and all(row in documents[key] for row in rows)
+    if not valid:
+        logging.getLogger(__name__).warning("LLM 문안 검증 실패: 안전 템플릿 유지")
+        return fallback
+    return ResponsePackage(event_id=forecast.event_id, review_required=True, forecast=forecast,
+                           **{key: documents[key] for key in keys})
 
 
 SCHEMA = {
@@ -71,7 +104,7 @@ def refine_with_openai(forecast: ForecastResult, fallback: ResponsePackage) -> R
     payload = {
         "model": model,
         "store": False,
-        "instructions": (
+        "instructions": FIELD_RULES + (
             "당신은 지자체 악취 민원 대응 문서 작성 보조자다. 입력의 수치, 권역, 순위를 절대 변경하거나 "
             "새 사실을 만들지 않는다. 악취 발생원·원인 시설·실제 악취 발생을 단정하지 않는다. "
             "세 문서를 간결한 한국어 Markdown으로 작성하고, 담당자 검토 필요와 상대 우선순위라는 한계를 포함한다. "
@@ -99,12 +132,7 @@ def refine_with_openai(forecast: ForecastResult, fallback: ResponsePackage) -> R
             for content in item.get("content", []) if content.get("type") == "output_text"
         )
     documents = json.loads(output_text)
-    return ResponsePackage(
-        event_id=forecast.event_id, review_required=True, forecast=forecast,
-        briefing=documents["briefing"], dispatch_order=documents["dispatch_order"],
-        followup_report_template=documents["followup_report_template"],
-        response_guide=documents["response_guide"],
-    )
+    return _validated_package(documents, forecast, fallback)
 
 
 def refine_with_gemini(forecast: ForecastResult, fallback: ResponsePackage) -> ResponsePackage:
@@ -112,7 +140,7 @@ def refine_with_gemini(forecast: ForecastResult, fallback: ResponsePackage) -> R
     model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
     if not _valid(api_key):
         return fallback
-    instructions = (
+    instructions = FIELD_RULES + (
         "당신은 지자체 악취 민원 대응 문서 작성 보조자다. 입력의 수치, 권역, 순위를 절대 변경하거나 "
         "새 사실을 만들지 않는다. 악취 발생원·원인 시설·실제 악취 발생을 단정하지 않는다. "
         "세 문서를 간결한 한국어 Markdown으로 작성하고 담당자 검토 필요와 상대 우선순위라는 한계를 포함한다. "
@@ -137,12 +165,7 @@ def refine_with_gemini(forecast: ForecastResult, fallback: ResponsePackage) -> R
     body = response.json()
     output_text = body["candidates"][0]["content"]["parts"][0]["text"]
     documents = json.loads(output_text)
-    return ResponsePackage(
-        event_id=forecast.event_id, review_required=True, forecast=forecast,
-        briefing=documents["briefing"], dispatch_order=documents["dispatch_order"],
-        followup_report_template=documents["followup_report_template"],
-        response_guide=documents["response_guide"],
-    )
+    return _validated_package(documents, forecast, fallback)
 
 
 def refine_with_llm(forecast: ForecastResult, fallback: ResponsePackage) -> ResponsePackage:

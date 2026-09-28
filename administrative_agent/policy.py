@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 
-def response_level(relative_risk: int) -> tuple[str, str]:
-    """상대 위험도에 따른 설명 가능한 대응 문구를 반환한다."""
-    if relative_risk >= 80:
-        return "우선 점검", "가용 인력 범위에서 가장 먼저 현장 확인"
-    if relative_risk >= 60:
-        return "순차 점검", "1순위 확인 후 순차적으로 현장 확인"
-    return "상황 관찰", "추가 민원 유입을 관찰하고 필요 시 점검"
+def response_level(rank: int) -> tuple[str, str]:
+    """점수 크기와 무관하게 권역 순위에 따라 점검 순서를 안내한다."""
+    if rank == 1:
+        return "우선 점검", "가장 먼저 현장 확인"
+    return "순차 점검", "1순위 확인 후 순차 확인"
 
 
 DISCLAIMER = (
