@@ -1,0 +1,222 @@
+{
+  "night_date": "2025-08-20",
+  "afternoon": {
+    "alert": true,
+    "season_rank": 25,
+    "risk_score": 6.089236189706663,
+    "observed_complaints": 11,
+    "model_id": "hgb_poisson",
+    "night_wind": {
+      "direction": 144.04999999999998,
+      "speed": 0.8500000000000001,
+      "station_id": 702
+    }
+  },
+  "standby": {
+    "chosen_point_id": "AWS-YONGJI",
+    "reason": "밤 평균 풍향 144.0°, 도시 중심에서 대기 장소 방위와 차이 23.7°",
+    "points": [
+      {
+        "point_id": "AWS-IK-0",
+        "cluster_id": "IK-0",
+        "name": "왕궁 방면",
+        "grade": "주",
+        "lat": 35.95104026847338,
+        "lon": 127.0315317496597,
+        "lift_all": 1.467142129393785
+      },
+      {
+        "point_id": "AWS-IK-7",
+        "cluster_id": "IK-7",
+        "name": "춘포 방면",
+        "grade": "주",
+        "lat": 35.95749250601154,
+        "lon": 126.9869118997266,
+        "lift_all": 1.2825027085590464
+      },
+      {
+        "point_id": "AWS-IK-8",
+        "cluster_id": "IK-8",
+        "name": "익산 IK-8 군집 방면",
+        "grade": "주",
+        "lat": 36.10625238083163,
+        "lon": 126.99724321447052,
+        "lift_all": 1.7900552486187842
+      },
+      {
+        "point_id": "AWS-YONGJI",
+        "cluster_id": "YONGJI",
+        "name": "용지 방면",
+        "grade": "주",
+        "lat": 35.850107569726404,
+        "lon": 126.98306306886404,
+        "lift_all": 1.718942533885964
+      }
+    ]
+  },
+  "events": [
+    {
+      "event_id": "EV2-0409",
+      "event_hour": "2025-08-21T00:08:00",
+      "trigger_rule": "30분 안 서로 다른 장소 5곳(확인) / 7곳(출동)",
+      "level": "확인",
+      "first30_complaints": [
+        {
+          "datetime": "2025-08-20T23:41:00",
+          "lat": 35.95702,
+          "lon": 126.98051,
+          "intensity": 4.0
+        },
+        {
+          "datetime": "2025-08-21T00:00:00",
+          "lat": 35.934128,
+          "lon": 126.970245,
+          "intensity": 4.0
+        },
+        {
+          "datetime": "2025-08-21T00:00:00",
+          "lat": 35.93315,
+          "lon": 126.946625,
+          "intensity": 4.0
+        },
+        {
+          "datetime": "2025-08-21T00:04:00",
+          "lat": 35.93441,
+          "lon": 126.971565,
+          "intensity": 4.0
+        },
+        {
+          "datetime": "2025-08-21T00:07:00",
+          "lat": 35.940254,
+          "lon": 126.9518,
+          "intensity": 4.0
+        }
+      ],
+      "top3": [
+        {
+          "rank": 1,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.9893688171416,
+          "score": 0.9680411219596863,
+          "hit": false
+        },
+        {
+          "rank": 2,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.97827118285839,
+          "score": 0.9525474905967712,
+          "hit": false
+        },
+        {
+          "rank": 3,
+          "region_name": null,
+          "lat": 35.95208925049756,
+          "lon": 126.9893688171416,
+          "score": 0.9338144659996033,
+          "hit": false
+        }
+      ],
+      "direction_overlap": {
+        "wind_direction": 0.0,
+        "wind_speed": 0.0,
+        "n_complaints": 5,
+        "per_point": [
+          {
+            "point_id": "AWS-IK-0",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-7",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-8",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-YONGJI",
+            "n_pointing": 0
+          }
+        ],
+        "suggested_point_id": null
+      },
+      "weather": {
+        "observed_at": "2025-08-21T00:00:00",
+        "station_id": 702,
+        "humidity": 92.6,
+        "rainfall": 0.0
+      },
+      "field": {
+        "method": "complaint_union",
+        "start_point_id": "AWS-YONGJI",
+        "staff_point_id": "AWS-YONGJI",
+        "mode": "gradient",
+        "confidence": "매우 낮음",
+        "selection": "교차 확인",
+        "locations": 5,
+        "clusters": 2,
+        "stability": 1.0,
+        "stability_label": "높음",
+        "route_km": 12.98,
+        "notes": [
+          "후보 범위: 익산시 정상 영업·정확 좌표 농가",
+          "후보 근거: 가축 분뇨 냄새 민원 5건(초기 30분 신고 전체 5건)",
+          "풍속 0.5 m/s 미만: 관측 풍향을 신뢰하기 어려워 후보 순서는 참고용이며 현장 풍향 확인이 우선",
+          "민원이 2개 무리로 떨어져 있음: 실제 후보에 대표가 포함된 무리 1개(모든 무리의 후보 포함을 보장하지 않음)"
+        ],
+        "cards": [
+          {
+            "rank": 1,
+            "farm_id": "IK-128",
+            "name": "게바 1농장",
+            "score": 76.0,
+            "components": {
+              "풍향 일치": 32.4,
+              "거리": 12.6,
+              "다중 측정 일치": 16.0,
+              "과거 반복": 15.0,
+              "규모": 0.0
+            },
+            "distance_km": 12.98,
+            "lat": 35.9671658382589,
+            "lon": 126.971919838882,
+            "reference": {
+              "species": "소",
+              "eq": 490.2
+            },
+            "coord_warning": false,
+            "merged_count": 1,
+            "merged_farm_ids": "IK-128",
+            "merged_names": "게바 1농장",
+            "address": "전북특별자치도 익산시 영등동 502번지 4호  ",
+            "merged_addresses": "전북특별자치도 익산시 영등동 502번지 4호",
+            "reason": "민원 위치 4곳이 함께 이 농가 쪽을 바람 상류로 가리켜 우선 확인할 후보입니다. 민원 위치 5곳 중 4곳에서 이 농가가 바람이 불어오는 쪽(±45°, 4 km 안)에 있습니다. 그 위치들에서 본 농가 방향과 풍향의 차이는 평균 17°입니다. 가장 가까운 민원 위치에서 1.4 km 떨어져 있습니다. 같은 달·비슷한 풍향에서 이 농가의 바람 아랫방향 민원이 과거 16건 있었습니다. 인과관계가 아닌 참고 이력입니다.",
+            "selection_summary": "민원 위치 4곳이 함께 이 농가 쪽을 바람 상류로 가리켜 우선 확인할 후보입니다.",
+            "evidence": [
+              "민원 위치 5곳 중 4곳에서 이 농가가 바람이 불어오는 쪽(±45°, 4 km 안)에 있습니다.",
+              "그 위치들에서 본 농가 방향과 풍향의 차이는 평균 17°입니다.",
+              "가장 가까운 민원 위치에서 1.4 km 떨어져 있습니다.",
+              "같은 달·비슷한 풍향에서 이 농가의 바람 아랫방향 민원이 과거 16건 있었습니다. 인과관계가 아닌 참고 이력입니다."
+            ],
+            "next_action": "농가 경계에서 실제 풍향과 냄새를 먼저 확인하고, 두 조건이 일치할 때 시료를 채취하세요.",
+            "mode": "gradient",
+            "confidence": "매우 낮음",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료",
+            "tier": "교차 확인",
+            "support": {
+              "count": 4,
+              "total": 5
+            },
+            "complaint_km": 1.36,
+            "cluster": 0,
+            "travel_km": 12.98,
+            "visit_order": 1,
+            "leg_km": 12.98
+          }
+        ]
+      }
+    }
+  ]
+}

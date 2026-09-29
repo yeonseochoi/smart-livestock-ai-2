@@ -1,0 +1,154 @@
+{
+  "2022": {
+    "hgb_poisson": {
+      "empty_night_rate": 0.2,
+      "burst_capture_rate": 0.43478260869565216,
+      "empty_night_ci95": [
+        0.06896551724137931,
+        0.35714285714285715
+      ],
+      "burst_capture_ci95": [
+        0.23809523809523808,
+        0.6670454545454542
+      ]
+    },
+    "calendar": {
+      "empty_night_rate": 0.4,
+      "burst_capture_rate": 0.30434782608695654,
+      "empty_night_ci95": [
+        0.22727272727272727,
+        0.5834051724137931
+      ],
+      "burst_capture_ci95": [
+        0.1,
+        0.5238095238095238
+      ]
+    },
+    "random": {
+      "empty_night_rate": 0.6590333333333332,
+      "burst_capture_rate": 0.16165217391304346,
+      "empty_night_ci95": [
+        0.4073784722222222,
+        0.8709677419354839
+      ],
+      "burst_capture_ci95": [
+        0.0,
+        0.4093899521531098
+      ]
+    }
+  },
+  "2023": {
+    "hgb_poisson": {
+      "empty_night_rate": 0.4,
+      "burst_capture_rate": 0.3333333333333333,
+      "empty_night_ci95": [
+        0.23076923076923078,
+        0.5652536231884058
+      ],
+      "burst_capture_ci95": [
+        0.10526315789473684,
+        0.521790890269151
+      ]
+    },
+    "calendar": {
+      "empty_night_rate": 0.5666666666666667,
+      "burst_capture_rate": 0.20833333333333334,
+      "empty_night_ci95": [
+        0.3870967741935484,
+        0.7407407407407407
+      ],
+      "burst_capture_ci95": [
+        0.047619047619047616,
+        0.375
+      ]
+    },
+    "random": {
+      "empty_night_rate": 0.6742333333333332,
+      "burst_capture_rate": 0.164625,
+      "empty_night_ci95": [
+        0.42846320346320343,
+        0.8888888888888888
+      ],
+      "burst_capture_ci95": [
+        0.0,
+        0.42857142857142855
+      ]
+    }
+  },
+  "2024": {
+    "hgb_poisson": {
+      "empty_night_rate": 0.3,
+      "burst_capture_rate": 0.42105263157894735,
+      "empty_night_ci95": [
+        0.13618035190615835,
+        0.47834138486312394
+      ],
+      "burst_capture_ci95": [
+        0.2,
+        0.631578947368421
+      ]
+    },
+    "calendar": {
+      "empty_night_rate": 0.5333333333333333,
+      "burst_capture_rate": 0.21052631578947367,
+      "empty_night_ci95": [
+        0.3569099378881988,
+        0.6970454545454545
+      ],
+      "burst_capture_ci95": [
+        0.05,
+        0.4074494949494949
+      ]
+    },
+    "random": {
+      "empty_night_rate": 0.5556666666666666,
+      "burst_capture_rate": 0.16042105263157894,
+      "empty_night_ci95": [
+        0.3043148880105402,
+        0.7879186602870812
+      ],
+      "burst_capture_ci95": [
+        0.0,
+        0.42105263157894735
+      ]
+    }
+  },
+  "2025": {
+    "hgb_poisson": {
+      "empty_night_rate": 0.2,
+      "burst_capture_rate": 0.4782608695652174,
+      "empty_night_ci95": [
+        0.06666666666666667,
+        0.36846978557504867
+      ],
+      "burst_capture_ci95": [
+        0.23809523809523808,
+        0.6842105263157895
+      ]
+    },
+    "calendar": {
+      "empty_night_rate": 0.5666666666666667,
+      "burst_capture_rate": 0.17391304347826086,
+      "empty_night_ci95": [
+        0.4,
+        0.75
+      ],
+      "burst_capture_ci95": [
+        0.0,
+        0.3181818181818182
+      ]
+    },
+    "random": {
+      "empty_night_rate": 0.5611999999999999,
+      "burst_capture_rate": 0.15960869565217387,
+      "empty_night_ci95": [
+        0.3103448275862069,
+        0.7931034482758621
+      ],
+      "burst_capture_ci95": [
+        0.0,
+        0.42105263157894735
+      ]
+    }
+  }
+}

@@ -4,7 +4,7 @@ __pycache__/
 .python/
 venv/
 .env
-/v2/.env
+/odor_service/region_prediction/.env
 .streamlit/secrets.toml
 .DS_Store
 Thumbs.db
@@ -18,5 +18,5 @@ demo/server.log
 demo/server.pid
 outputs/grid_compare.*
 outputs/severity_expansion.*
-/v2/data_ext/cache/
-/v2/data_ext/*.tmp
+/odor_service/region_prediction/data_ext/cache/
+/odor_service/region_prediction/data_ext/*.tmp

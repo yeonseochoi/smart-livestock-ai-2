@@ -1,0 +1,176 @@
+{
+  "night_date": "2024-09-29",
+  "afternoon": {
+    "alert": false,
+    "season_rank": 68,
+    "risk_score": 2.447081749379656,
+    "observed_complaints": 4,
+    "model_id": "hgb_poisson",
+    "night_wind": {
+      "direction": null,
+      "speed": null,
+      "station_id": 702
+    }
+  },
+  "standby": {
+    "chosen_point_id": "AWS-IK-8",
+    "reason": "밤 평균 풍향 없음; lift_all이 가장 큰 주 대기 장소 선택",
+    "points": [
+      {
+        "point_id": "AWS-IK-0",
+        "cluster_id": "IK-0",
+        "name": "왕궁 방면",
+        "grade": "주",
+        "lat": 35.95104026847338,
+        "lon": 127.0315317496597,
+        "lift_all": 1.467142129393785
+      },
+      {
+        "point_id": "AWS-IK-7",
+        "cluster_id": "IK-7",
+        "name": "춘포 방면",
+        "grade": "주",
+        "lat": 35.95749250601154,
+        "lon": 126.9869118997266,
+        "lift_all": 1.2825027085590464
+      },
+      {
+        "point_id": "AWS-IK-8",
+        "cluster_id": "IK-8",
+        "name": "익산 IK-8 군집 방면",
+        "grade": "주",
+        "lat": 36.10625238083163,
+        "lon": 126.99724321447052,
+        "lift_all": 1.7900552486187842
+      },
+      {
+        "point_id": "AWS-YONGJI",
+        "cluster_id": "YONGJI",
+        "name": "용지 방면",
+        "grade": "주",
+        "lat": 35.850107569726404,
+        "lon": 126.98306306886404,
+        "lift_all": 1.718942533885964
+      }
+    ]
+  },
+  "events": [
+    {
+      "event_id": "EV2-0396",
+      "event_hour": "2024-09-29T20:32:00",
+      "trigger_rule": "30분 안 서로 다른 장소 5곳(확인) / 7곳(출동)",
+      "level": "확인",
+      "first30_complaints": [
+        {
+          "datetime": "2024-09-29T20:06:00",
+          "lat": 35.968693,
+          "lon": 127.0905,
+          "intensity": 3.0
+        },
+        {
+          "datetime": "2024-09-29T20:11:00",
+          "lat": 35.96858,
+          "lon": 127.091286,
+          "intensity": 5.0
+        },
+        {
+          "datetime": "2024-09-29T20:14:00",
+          "lat": 35.96849,
+          "lon": 127.09136,
+          "intensity": 3.0
+        },
+        {
+          "datetime": "2024-09-29T20:20:00",
+          "lat": 35.950928,
+          "lon": 126.98348,
+          "intensity": 3.0
+        },
+        {
+          "datetime": "2024-09-29T20:27:00",
+          "lat": 35.95374,
+          "lon": 126.98417,
+          "intensity": 4.0
+        },
+        {
+          "datetime": "2024-09-29T20:31:00",
+          "lat": 35.96979,
+          "lon": 127.09011,
+          "intensity": 4.0
+        }
+      ],
+      "top3": [
+        {
+          "rank": 1,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.9893688171416,
+          "score": 0.9761838912963867,
+          "hit": false
+        },
+        {
+          "rank": 2,
+          "region_name": null,
+          "lat": 35.95208925049756,
+          "lon": 126.9893688171416,
+          "score": 0.9393405914306641,
+          "hit": false
+        },
+        {
+          "rank": 3,
+          "region_name": null,
+          "lat": 35.97018224850733,
+          "lon": 127.08924752569042,
+          "score": 0.9144403338432312,
+          "hit": false
+        }
+      ],
+      "direction_overlap": {
+        "wind_direction": null,
+        "wind_speed": null,
+        "n_complaints": 6,
+        "per_point": [
+          {
+            "point_id": "AWS-IK-0",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-7",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-8",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-YONGJI",
+            "n_pointing": 0
+          }
+        ],
+        "suggested_point_id": null
+      },
+      "weather": {
+        "observed_at": null,
+        "station_id": 702,
+        "humidity": null,
+        "rainfall": null
+      },
+      "field": {
+        "method": "complaint_union",
+        "start_point_id": "AWS-IK-8",
+        "staff_point_id": "AWS-IK-8",
+        "mode": null,
+        "confidence": null,
+        "selection": null,
+        "locations": 0,
+        "clusters": 0,
+        "stability": null,
+        "stability_label": null,
+        "route_km": null,
+        "notes": [
+          "사건 시각 풍향·풍속 관측이 없어 방문 후보를 만들지 않음: 현장 풍향 확인 후 판단"
+        ],
+        "cards": []
+      }
+    }
+  ]
+}

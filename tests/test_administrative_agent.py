@@ -1,11 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone
+from dataclasses import replace
 import json
 import os
 import unittest
 from unittest.mock import Mock, patch
 
-from administrative_agent.llm import llm_configured, provider_name, refine_with_gemini
-from administrative_agent.models import ForecastResult, RiskArea
+from administrative_agent.llm import llm_configured, provider_name, refine_with_gemini, _validated_package
+from administrative_agent.models import FieldCandidate, ForecastResult, RiskArea
+from administrative_agent.documents import field_candidate_body
 from administrative_agent.service import build_response_package, create_completed_followup
 
 
@@ -29,7 +31,7 @@ class AdministrativeAgentTest(unittest.TestCase):
         self.assertIn("담당자 검토 필요", package.response_guide)
         self.assertIn("원인 시설을 확정하지 않", package.briefing)
         self.assertIn("## 1. 민원 발생 현황", package.briefing)
-        self.assertIn("## 2. 현장 확인 항목", package.dispatch_order)
+        self.assertIn("## 3. 현장 확인 항목", package.dispatch_order)
         self.assertIn("## 5. AI 예측 결과와 실제 결과 비교", package.followup_report_template)
 
     def test_rejects_non_operational_grid(self):
@@ -78,11 +80,52 @@ class AdministrativeAgentTest(unittest.TestCase):
         fallback = build_response_package(self.forecast)
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key", "GEMINI_MODEL": "gemini-3.6-flash"}, clear=False):
             package = refine_with_gemini(self.forecast, fallback)
-        self.assertEqual(package.briefing, "# Gemini 브리핑")
-        self.assertEqual(package.response_guide, "# Gemini 대응 가이드")
+        # 후보 섹션과 원래 권역 표가 사라진 응답은 채택하지 않는다.
+        self.assertEqual(package, fallback)
         request = post.call_args.kwargs
         self.assertIn("gemini-3.6-flash:generateContent", post.call_args.args[0])
         self.assertEqual(request["json"]["generationConfig"]["responseMimeType"], "application/json")
+
+    def test_field_candidates_and_rank_actions(self):
+        candidate = FieldCandidate(1, "가 농장 | 나 농장", "시험 주소", 72.3,
+                                   {"풍향 일치": 35, "거리": 12, "다중 측정 일치": 15, "과거 반복": 10.3},
+                                   "현장 확인 필요", True, tier="교차 확인", support_count=3, support_total=4,
+                                   complaint_km=1.8, travel_km=7.4, visit_order=2)
+        forecast = replace(self.forecast, field_candidates=(candidate,),
+                           generated_at=datetime(2026, 9, 28, 18, 0, tzinfo=timezone.utc))
+        package = build_response_package(forecast)
+        for document in (package.briefing, package.dispatch_order):
+            self.assertIn("가 농장 / 나 농장", document)
+            self.assertIn("시험 주소", document)
+            self.assertIn("방문 전 주소 확인", document)
+            self.assertIn("최종 판단은 농가 경계에서 채취한 시료로 합니다", document)
+            self.assertIn("교차 확인 (민원 위치 4곳 중 3곳이 풍상으로 가리킴)", document)
+            self.assertIn("민원 근접 12.0/25", document)
+            self.assertIn("방문 동선 제안: 2번째 (대기 장소에서 직선 7.4 km, 도로 이동시간 미반영)", document)
+        order = package.dispatch_order
+        self.assertLess(order.index("## 2. 현장 확인 후보 농가"), order.index("## 3. 현장 확인 항목"))
+        self.assertLess(order.index("## 1. 점검 대상"), order.index("## 2. 현장 확인 후보 농가"))
+        self.assertIn("## 5. 현장 확인 후보 농가", package.briefing)
+        self.assertIn("2026.09.29. 03:00", package.dispatch_order)
+        for line in package.dispatch_order.splitlines():
+            if line.startswith(("|2순위|", "|3순위|")):
+                self.assertNotIn("가장 먼저", line)
+                self.assertIn("1순위 확인 후 순차 확인", line)
+        self.assertNotIn("주요 우선확인 지역", package.briefing)
+
+    def test_empty_candidates_and_llm_safety(self):
+        fallback = build_response_package(self.forecast)
+        self.assertIn("조건에 맞는 방문 후보 없음", fallback.briefing)
+        safe = fallback.to_dict()["documents"]
+        self.assertEqual(_validated_package(safe, self.forecast, fallback), fallback)
+        revised = {**safe, "response_guide": safe["response_guide"] + "\n현장 상황을 기록하세요."}
+        self.assertNotEqual(_validated_package(revised, self.forecast, fallback), fallback)
+        for forbidden in ("발생원 확률 78%", "원인 농가 Top 5", "이 농가가 악취를 발생시켰다", "후보 안에 실제 발생원이 반드시 있다"):
+            with self.subTest(forbidden=forbidden):
+                bad = {**safe, "response_guide": forbidden}
+                self.assertEqual(_validated_package(bad, self.forecast, fallback), fallback)
+        missing = {**safe, "briefing": safe["briefing"].replace(field_candidate_body(self.forecast), "")}
+        self.assertEqual(_validated_package(missing, self.forecast, fallback), fallback)
 
 
 if __name__ == "__main__":

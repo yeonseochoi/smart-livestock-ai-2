@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from administrative_agent.models import ForecastResult, RiskArea
+from administrative_agent.time_utils import now_kst
 from administrative_agent.service import build_response_package, write_response_package
 
 DEFAULT_PREDICTIONS = Path("outputs/operational_grid_comparison/test_predictions.csv")
@@ -77,7 +78,7 @@ def forecast_from_csv(
         event_id=str(selected_id), event_time=event.iloc[0]["event_hour"].to_pydatetime(),
         forecast_minutes=30, grid_size_m=1000, areas=areas,
         model_metrics=_load_metrics(metrics_path),
-        generated_at=datetime.now(),
+        generated_at=now_kst(),
     )
 
 

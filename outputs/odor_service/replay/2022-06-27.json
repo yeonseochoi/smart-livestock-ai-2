@@ -1,0 +1,268 @@
+{
+  "night_date": "2022-06-27",
+  "afternoon": {
+    "alert": false,
+    "season_rank": 54,
+    "risk_score": 3.389255387428365,
+    "observed_complaints": 2,
+    "model_id": "hgb_poisson",
+    "night_wind": {
+      "direction": 165.52921832438815,
+      "speed": 4.5875,
+      "station_id": 702
+    }
+  },
+  "standby": {
+    "chosen_point_id": "AWS-YONGJI",
+    "reason": "밤 평균 풍향 165.5°, 도시 중심에서 대기 장소 방위와 차이 2.2°",
+    "points": [
+      {
+        "point_id": "AWS-IK-0",
+        "cluster_id": "IK-0",
+        "name": "왕궁 방면",
+        "grade": "주",
+        "lat": 35.95104026847338,
+        "lon": 127.0315317496597,
+        "lift_all": 1.467142129393785
+      },
+      {
+        "point_id": "AWS-IK-7",
+        "cluster_id": "IK-7",
+        "name": "춘포 방면",
+        "grade": "주",
+        "lat": 35.95749250601154,
+        "lon": 126.9869118997266,
+        "lift_all": 1.2825027085590464
+      },
+      {
+        "point_id": "AWS-IK-8",
+        "cluster_id": "IK-8",
+        "name": "익산 IK-8 군집 방면",
+        "grade": "주",
+        "lat": 36.10625238083163,
+        "lon": 126.99724321447052,
+        "lift_all": 1.7900552486187842
+      },
+      {
+        "point_id": "AWS-YONGJI",
+        "cluster_id": "YONGJI",
+        "name": "용지 방면",
+        "grade": "주",
+        "lat": 35.850107569726404,
+        "lon": 126.98306306886404,
+        "lift_all": 1.718942533885964
+      }
+    ]
+  },
+  "events": [
+    {
+      "event_id": "EV2-0290",
+      "event_hour": "2022-06-27T20:47:00",
+      "trigger_rule": "30분 안 서로 다른 장소 5곳(확인) / 7곳(출동)",
+      "level": "확인",
+      "first30_complaints": [
+        {
+          "datetime": "2022-06-27T20:20:00",
+          "lat": 35.95596,
+          "lon": 126.97792,
+          "intensity": 5.0
+        },
+        {
+          "datetime": "2022-06-27T20:35:00",
+          "lat": 35.930332,
+          "lon": 126.96145,
+          "intensity": 5.0
+        },
+        {
+          "datetime": "2022-06-27T20:37:00",
+          "lat": 35.928123,
+          "lon": 126.96073,
+          "intensity": 4.0
+        },
+        {
+          "datetime": "2022-06-27T20:41:00",
+          "lat": 35.9464,
+          "lon": 126.96382,
+          "intensity": 5.0
+        },
+        {
+          "datetime": "2022-06-27T20:46:00",
+          "lat": 35.93454,
+          "lon": 126.96248,
+          "intensity": 5.0
+        }
+      ],
+      "top3": [
+        {
+          "rank": 1,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.9893688171416,
+          "score": 0.9661298394203186,
+          "hit": false
+        },
+        {
+          "rank": 2,
+          "region_name": null,
+          "lat": 35.96113574950244,
+          "lon": 126.97827118285839,
+          "score": 0.9479517936706543,
+          "hit": false
+        },
+        {
+          "rank": 3,
+          "region_name": null,
+          "lat": 35.95208925049756,
+          "lon": 126.9893688171416,
+          "score": 0.9336223602294922,
+          "hit": false
+        }
+      ],
+      "direction_overlap": {
+        "wind_direction": 162.0,
+        "wind_speed": 3.6,
+        "n_complaints": 5,
+        "per_point": [
+          {
+            "point_id": "AWS-IK-0",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-7",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-IK-8",
+            "n_pointing": 0
+          },
+          {
+            "point_id": "AWS-YONGJI",
+            "n_pointing": 5
+          }
+        ],
+        "suggested_point_id": "AWS-YONGJI"
+      },
+      "weather": {
+        "observed_at": "2022-06-27T20:00:00",
+        "station_id": 702,
+        "humidity": 79.3,
+        "rainfall": 0.0
+      },
+      "field": {
+        "method": "complaint_union",
+        "start_point_id": "AWS-YONGJI",
+        "staff_point_id": "AWS-YONGJI",
+        "mode": "sector",
+        "confidence": "보통",
+        "selection": "교차 확인",
+        "locations": 3,
+        "clusters": 1,
+        "stability": 1.0,
+        "stability_label": "높음",
+        "route_km": 7.81,
+        "notes": [
+          "후보 범위: 익산시 정상 영업·정확 좌표 농가",
+          "후보 근거: 가축 분뇨 냄새 민원 3건(초기 30분 신고 전체 5건)"
+        ],
+        "cards": [
+          {
+            "rank": 1,
+            "farm_id": "IK-348",
+            "name": "형제농장",
+            "score": 65.9,
+            "components": {
+              "풍향 일치": 31.0,
+              "거리": 6.6,
+              "다중 측정 일치": 13.3,
+              "과거 반복": 15.0,
+              "규모": 0.0
+            },
+            "distance_km": 6.71,
+            "lat": 35.9108063458222,
+            "lon": 126.981172680881,
+            "reference": {
+              "species": "소",
+              "eq": 256.5
+            },
+            "coord_warning": false,
+            "merged_count": 2,
+            "merged_farm_ids": "IK-348 | IK-787",
+            "merged_names": "형제농장",
+            "address": "전북특별자치도 익산시 석탄동 92번지 1호  ",
+            "merged_addresses": "전북특별자치도 익산시 석탄동 92번지 1호 | 전북특별자치도 익산시 석탄동 91번지 4호",
+            "reason": "민원 위치 2곳이 함께 이 농가 쪽을 바람 상류로 가리켜 우선 확인할 후보입니다. 민원 위치 3곳 중 2곳에서 이 농가가 바람이 불어오는 쪽(±45°, 4 km 안)에 있습니다. 그 위치들에서 본 농가 방향과 풍향의 차이는 평균 20°입니다. 가장 가까운 민원 위치에서 2.7 km 떨어져 있습니다. 같은 달·비슷한 풍향에서 이 농가의 바람 아랫방향 민원이 과거 28건 있었습니다. 인과관계가 아닌 참고 이력입니다.",
+            "selection_summary": "민원 위치 2곳이 함께 이 농가 쪽을 바람 상류로 가리켜 우선 확인할 후보입니다.",
+            "evidence": [
+              "민원 위치 3곳 중 2곳에서 이 농가가 바람이 불어오는 쪽(±45°, 4 km 안)에 있습니다.",
+              "그 위치들에서 본 농가 방향과 풍향의 차이는 평균 20°입니다.",
+              "가장 가까운 민원 위치에서 2.7 km 떨어져 있습니다.",
+              "같은 달·비슷한 풍향에서 이 농가의 바람 아랫방향 민원이 과거 28건 있었습니다. 인과관계가 아닌 참고 이력입니다."
+            ],
+            "next_action": "농가 경계에서 실제 풍향과 냄새를 먼저 확인하고, 두 조건이 일치할 때 시료를 채취하세요.",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료",
+            "tier": "교차 확인",
+            "support": {
+              "count": 2,
+              "total": 3
+            },
+            "complaint_km": 2.66,
+            "cluster": 0,
+            "travel_km": 6.71,
+            "visit_order": 1,
+            "leg_km": 6.71
+          },
+          {
+            "rank": 2,
+            "farm_id": "IK-1072",
+            "name": "형제농장",
+            "score": 64.9,
+            "components": {
+              "풍향 일치": 30.1,
+              "거리": 7.6,
+              "다중 측정 일치": 13.3,
+              "과거 반복": 13.8,
+              "규모": 0.0
+            },
+            "distance_km": 7.8,
+            "lat": 35.9206139249764,
+            "lon": 126.982599435218,
+            "reference": {
+              "species": "가금",
+              "eq": 13.0
+            },
+            "coord_warning": false,
+            "merged_count": 1,
+            "merged_farm_ids": "IK-1072",
+            "merged_names": "형제농장",
+            "address": "전북특별자치도 익산시 금강동 1114번지 16호  ",
+            "merged_addresses": "전북특별자치도 익산시 금강동 1114번지 16호",
+            "reason": "민원 위치 2곳이 함께 이 농가 쪽을 바람 상류로 가리켜 우선 확인할 후보입니다. 민원 위치 3곳 중 2곳에서 이 농가가 바람이 불어오는 쪽(±45°, 4 km 안)에 있습니다. 그 위치들에서 본 농가 방향과 풍향의 차이는 평균 22°입니다. 가장 가까운 민원 위치에서 2.4 km 떨어져 있습니다. 같은 달·비슷한 풍향에서 이 농가의 바람 아랫방향 민원이 과거 21건 있었습니다. 인과관계가 아닌 참고 이력입니다.",
+            "selection_summary": "민원 위치 2곳이 함께 이 농가 쪽을 바람 상류로 가리켜 우선 확인할 후보입니다.",
+            "evidence": [
+              "민원 위치 3곳 중 2곳에서 이 농가가 바람이 불어오는 쪽(±45°, 4 km 안)에 있습니다.",
+              "그 위치들에서 본 농가 방향과 풍향의 차이는 평균 22°입니다.",
+              "가장 가까운 민원 위치에서 2.4 km 떨어져 있습니다.",
+              "같은 달·비슷한 풍향에서 이 농가의 바람 아랫방향 민원이 과거 21건 있었습니다. 인과관계가 아닌 참고 이력입니다."
+            ],
+            "next_action": "농가 경계에서 실제 풍향과 냄새를 먼저 확인하고, 두 조건이 일치할 때 시료를 채취하세요.",
+            "mode": "sector",
+            "confidence": "보통",
+            "disclaimer": "발생원 확정 또는 위반 판정이 아닌 현장 확인 참고자료",
+            "tier": "교차 확인",
+            "support": {
+              "count": 2,
+              "total": 3
+            },
+            "complaint_km": 2.38,
+            "cluster": 0,
+            "travel_km": 7.8,
+            "visit_order": 2,
+            "leg_km": 1.09
+          }
+        ]
+      }
+    }
+  ]
+}
