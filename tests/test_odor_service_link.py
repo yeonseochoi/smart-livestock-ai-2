@@ -12,6 +12,32 @@ SAMPLE = Path(__file__).parent / "fixtures/odor_service/replay_sample.json"
 
 
 class ReplayTest(unittest.TestCase):
+    def test_farm_candidates_use_livestock_complaints_only(self):
+        from odor_service import common
+        from odor_service.field.engine import complaint_locations
+        live = common.load_livestock_complaints()
+        for entry in self.index:
+            replay = json.loads((OUT / f"{entry['night_date']}.json").read_text(encoding="utf-8"))
+            for event in replay["events"]:
+                end = pd.Timestamp(event["event_hour"])
+                first = live.loc[(live["datetime"] >= end - pd.Timedelta(minutes=30)) & (live["datetime"] < end)]
+                field = event["field"]
+                with self.subTest(event=event["event_id"]):
+                    if first.empty:
+                        self.assertEqual(field["cards"], [])
+                    self.assertLessEqual(field["locations"], len(first))
+                    if field["cards"]:
+                        locations = complaint_locations([(r.latitude, r.longitude) for r in first.itertuples()])
+                        self.assertEqual(field["locations"], len(locations))
+                        for card in field["cards"]:
+                            support = sum(
+                                float(common.distance_km(loc.lat, loc.lon, card["lat"], card["lon"])) <= 4
+                                and float(common.angle_diff(common.bearing_deg(loc.lat, loc.lon, card["lat"], card["lon"]),
+                                                            event["direction_overlap"]["wind_direction"])) <= 45
+                                for loc in locations
+                            )
+                            self.assertEqual(card["support"]["count"], support)
+
     @classmethod
     def setUpClass(cls):
         cls.index, _ = make_replays()

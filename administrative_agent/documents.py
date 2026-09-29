@@ -13,9 +13,17 @@ def field_candidate_body(forecast: ForecastResult) -> str:
         return " ".join(str(value).replace("|", " / ").split())
 
     lines = [
-        "민원 위치마다 바람이 불어오는 쪽 4 km 안의 농가를 찾고, 여러 민원 위치가 함께 가리키는 농가를 우선했습니다. "
+        "가축 분뇨 냄새 민원 위치마다 바람이 불어오는 쪽 4 km 안의 농가를 찾고, 여러 민원 위치가 함께 가리키는 농가를 우선했습니다. "
         "대기 장소에서의 이동 거리는 순위에 넣지 않고 방문 동선 제안에만 사용했습니다.", "",
     ]
+    lines.append(f"- 풍향 신뢰도: {clean(forecast.field_confidence or '미제공')}")
+    if forecast.field_stability is not None:
+        label = f" ({clean(forecast.field_stability_label)})" if forecast.field_stability_label else ""
+        lines.append(f"- 풍향 ±20° 변화 시 후보 유지율: {forecast.field_stability:.0%}{label} · 발생원 적중률이나 추천 정확도가 아님")
+    else:
+        lines.append("- 풍향 ±20° 변화 시 후보 유지율: 미제공")
+    lines.extend(f"- {clean(note)}" for note in forecast.field_notes)
+    lines.append("")
     if not forecast.field_candidates:
         lines += ["조건에 맞는 방문 후보 없음", ""]
     for candidate in forecast.field_candidates:

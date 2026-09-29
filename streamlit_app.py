@@ -239,7 +239,7 @@ def render_operation_header(event: dict, field_context: dict | None) -> None:
 
 def render_field_candidates(field_context: dict | None) -> None:
     st.markdown("#### 먼저 확인할 농가")
-    st.caption("민원 위치마다 바람이 불어오는 쪽 4 km 안의 농가를 찾고, 여러 민원 위치가 함께 가리키는 농가를 우선했습니다. "
+    st.caption("가축 분뇨 냄새 민원 위치마다 바람이 불어오는 쪽 4 km 안의 농가를 찾고, 여러 민원 위치가 함께 가리키는 농가를 우선했습니다. "
                "대기 장소에서의 이동 거리는 순위에 넣지 않고 방문 동선 제안에만 씁니다.")
     if field_context is None:
         st.info("동일 사건 ID의 현장 후보 재현 자료가 없습니다.")
@@ -266,7 +266,7 @@ def render_field_candidates(field_context: dict | None) -> None:
         unsafe_allow_html=True,
     )
     if field.get("locations"):
-        st.caption(f'고유 민원 위치 {field["locations"]}곳(30m 이내 반복 신고는 1곳) · 민원 무리 {field.get("clusters", 1)}개 기준입니다.')
+        st.caption(f'가축 분뇨 냄새 민원의 고유 위치 {field["locations"]}곳(30m 이내 반복 신고는 1곳) · 민원 무리 {field.get("clusters", 1)}개 기준입니다. 권역 Top 3는 전체 신고로 계산합니다.')
     if field.get("selection") == "단일 지점 참고":
         st.warning("2곳 이상의 민원 위치가 함께 가리키는 농가가 없습니다. 아래 후보는 한 민원 위치 기준 참고 후보입니다.")
     st.caption(f'현재 민원 집중 사건 {field_event.get("event_id", "")}의 흐름을 이어서 표시합니다.')
@@ -274,7 +274,7 @@ def render_field_candidates(field_context: dict | None) -> None:
     if field.get("confidence") in ("낮음", "매우 낮음"):
         st.warning("바람이 약합니다. 방향 근거의 신뢰도가 낮으니 현장에서 바람과 냄새를 먼저 확인하세요.")
     if not cards:
-        st.info("현재 조건에 맞는 방문 후보가 없습니다. 담당자 위치와 기상 조건을 확인하세요.")
+        st.info("현재 조건에 맞는 방문 후보가 없습니다. 가축 분뇨 냄새 민원과 사건 시각 기상 자료를 확인하세요. 구체적인 사유는 아래 안내를 참고하세요.")
 
     for card in cards[:5]:
         components = card.get("components", {})
@@ -351,7 +351,12 @@ def render_field_candidates(field_context: dict | None) -> None:
 
 
 def current_forecast(event: dict, field_context: dict | None = None):
-    cards = field_context["event"].get("field", {}).get("cards", []) if field_context else []
+    field = field_context["event"].get("field", {}) if field_context else {}
+    cards = field.get("cards", [])
+    field_details = dict(field_confidence=field.get("confidence"),
+                         field_stability=field.get("stability"),
+                         field_stability_label=field.get("stability_label"),
+                         field_notes=tuple(field.get("notes") or ()))
     candidates = tuple(FieldCandidate(
         rank=card["rank"],
         display_name=str(card.get("merged_names") or card.get("name") or card.get("farm_id")),
@@ -389,6 +394,7 @@ def current_forecast(event: dict, field_context: dict | None = None):
             weather=event.get("weather", {}),
             event_time_is_boundary=True,
             field_candidates=candidates,
+            **field_details,
         )
     legacy_id = event.get("legacy_id", event["id"])
     legacy_hour = event.get("legacy_hour", event["hour"])
@@ -413,6 +419,7 @@ def current_forecast(event: dict, field_context: dict | None = None):
         initial_intensity_maximum=round(max(intensities), 1) if intensities else None,
         weather=event.get("weather", {}),
         field_candidates=candidates,
+        **field_details,
     )
 
 
@@ -663,8 +670,8 @@ with map_column.container(key="map_panel"):
     with st.expander("자료와 계산 기준 확인"):
         st.write("이 화면은 하나의 민원 집중 사건을 기준으로, 민원 발생 예측 권역 Top 3 → 대기 장소 → 방문 농가 후보 순서로 연결해 보여줍니다.")
         st.write("농가 점수는 발생원일 확률이 아닙니다. 담당자가 어디부터 확인할지 정하는 참고 순위이며, 풍향 일치 40점·민원 근접 25점·여러 민원 위치 교차 20점·과거 반복 이력 15점으로 계산합니다.")
-        st.write("후보는 30m로 묶은 고유 민원 위치마다 바람이 불어오는 쪽(±45°) 4 km 안의 농가입니다. 2곳 이상의 민원 위치가 함께 가리키는 농가를 우선하고, 그런 농가가 없을 때만 한 위치 기준 후보를 참고로 보여 줍니다. 후보 수를 5곳으로 억지로 채우지 않습니다.")
-        st.write("민원이 2 km 이상 떨어진 여러 무리로 나뉘면 무리마다 대표 후보를 먼저 포함합니다. 풍향 ±20° 후보 안정성은 풍향이 조금 달라져도 같은 후보가 유지되는 비율입니다.")
+        st.write("후보는 가축 분뇨 냄새 신고를 30m로 묶은 고유 민원 위치마다 바람이 불어오는 쪽(±45°) 4 km 안의 농가입니다. 공장·하수구·소각·음식·기타 신고는 농가 후보 근거에서 제외하며, 권역 Top 3는 전체 신고로 계산합니다. 2곳 이상의 민원 위치가 함께 가리키는 농가를 우선하고, 그런 농가가 없을 때만 한 위치 기준 후보를 참고로 보여 줍니다. 후보 수를 5곳으로 억지로 채우지 않습니다.")
+        st.write("민원이 2 km 이상 떨어진 여러 무리로 나뉘면, 후보가 남은 무리의 대표를 우선합니다. 교차 확인 조건·지점 병합·최대 5곳 제한 때문에 모든 무리의 후보가 포함되지는 않을 수 있습니다. 풍향 ±20° 후보 안정성은 풍향이 조금 달라져도 같은 후보가 유지되는 비율입니다.")
         st.write("대기 장소의 위치·등급은 전체 기간 자료, 대기 방면은 밤 전체 관측 평균 바람으로 계산했습니다. 사건 이후 정보가 포함된 과거 재현이며 실시간 운영 성능이 아닙니다. 사후 확인 등급은 현재 출동 판단에 사용하지 않습니다.")
 
 with agent_column.container(key="agent_panel"):

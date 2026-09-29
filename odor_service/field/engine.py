@@ -296,9 +296,9 @@ def _complaint_scored(farms: pd.DataFrame, locations: list[ComplaintLocation], w
 
 
 def _pick_with_cluster_coverage(scored: pd.DataFrame, top_k: int) -> pd.DataFrame:
-    """동일 지점을 합친 뒤, 민원 무리마다 최고 후보 1곳을 먼저 확보하고 나머지를 점수순으로 채운다.
+    """교차 지지 필터·병합 후 후보가 남은 무리마다 최고 후보 1곳을 우선하고 나머지를 점수순으로 채운다.
 
-    민원이 멀리 떨어진 두 무리로 나뉘면 큰 무리의 후보만 5곳을 차지해 작은 무리가 빠지는 것을 막는다.
+    필터·병합·최대 후보 수 제한 때문에 모든 무리의 포함을 보장하지는 않는다.
     """
     merged = select_visit_points(scored, top_k=len(scored))
     if merged.empty:
@@ -374,7 +374,9 @@ def score_complaint_candidates(
     if selection == TIER_SINGLE:
         notes.append("2곳 이상의 민원 위치가 함께 가리키는 농가가 없어 한 위치 기준 참고 후보만 제시")
     if n_clusters > 1:
-        notes.append(f"민원이 {n_clusters}개 무리로 떨어져 있어 무리마다 대표 후보를 먼저 포함")
+        covered = int(candidates["cluster"].nunique()) if not candidates.empty else 0
+        notes.append(f"민원이 {n_clusters}개 무리로 떨어져 있음: 실제 후보에 대표가 포함된 무리 {covered}개"
+                     "(모든 무리의 후보 포함을 보장하지 않음)")
     stability = None
     if sensitivity and not candidates.empty:
         base = set(candidates["farm_id"])

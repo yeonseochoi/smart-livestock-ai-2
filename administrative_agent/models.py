@@ -53,6 +53,10 @@ class ForecastResult:
     weather: dict[str, float | int | None] = field(default_factory=dict)
     event_time_is_boundary: bool = False
     field_candidates: tuple[FieldCandidate, ...] = ()
+    field_confidence: str | None = None
+    field_stability: float | None = None
+    field_stability_label: str | None = None
+    field_notes: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.grid_size_m != 1000:

@@ -119,7 +119,7 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     results.to_csv(OUT / "night_risk.csv", index=False)
     (OUT / "backtest_metrics.json").write_text(json.dumps(metrics, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    lines = ["# A 폭주 밤 예보 백테스트", "", "관측 기상 기준, 운영 시 저하 가능", "", "| 시즌 | 기준 | 공친 밤 비율 (95% CI) | 폭주 밤 포착률 (95% CI) |", "|---|---|---:|---:|"]
+    lines = ["# A 폭주 밤 사후 상위 30일 선정 실험", "", "관측 기상 기준. 경보일은 시즌 184일 전체 점수 상위 30일을 사후에 고른 것이며, 당일 오후에 계산할 수 있는 경보 규칙이 아님", "", "| 시즌 | 기준 | 공친 밤 비율 (95% CI) | 폭주 밤 포착률 (95% CI) |", "|---|---|---:|---:|"]
     for season, group in metrics.items():
         for name, value in group.items():
             fmt = lambda x: f"{x:.1%}"

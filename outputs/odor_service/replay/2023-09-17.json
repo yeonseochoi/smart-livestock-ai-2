@@ -7,7 +7,7 @@
     "observed_complaints": 9,
     "model_id": "hgb_poisson",
     "night_wind": {
-      "direction": 124.38103701581214,
+      "direction": 124.38103701581217,
       "speed": 1.3166666666666667,
       "station_id": 702
     }
@@ -161,7 +161,8 @@
         "stability_label": "보통",
         "route_km": 3.87,
         "notes": [
-          "후보 범위: 익산시 정상 영업·정확 좌표 농가"
+          "후보 범위: 익산시 정상 영업·정확 좌표 농가",
+          "후보 근거: 가축 분뇨 냄새 민원 5건(초기 30분 신고 전체 5건)"
         ],
         "cards": [
           {

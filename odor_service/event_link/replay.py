@@ -159,6 +159,8 @@ def make_replays(events_source: str = "v2") -> tuple[list[dict], str]:
         for stamp, rows in night_rows.groupby("event_hour", sort=True):
             input_start = stamp - pd.Timedelta(minutes=30) if events_source == "v2" else stamp
             first = event_complaints.loc[(event_complaints["datetime"] >= input_start) & (event_complaints["datetime"] < input_start + pd.Timedelta(minutes=30))]
+            # 사건 발동·초기 신고·권역 예측은 전체 민원을 유지하고, 농가 후보 근거만 분리한다.
+            field_first = complaints.loc[(complaints["datetime"] >= input_start) & (complaints["datetime"] < input_start + pd.Timedelta(minutes=30))]
             direction, speed = wind_at(weather, stamp)
             related = overlap(first, points, direction, speed)
             if related["suggested_point_id"] is not None:
@@ -183,9 +185,16 @@ def make_replays(events_source: str = "v2") -> tuple[list[dict], str]:
                          "stability_label": None, "route_km": None,
                          "notes": ["사건 시각 풍향·풍속 관측이 없어 방문 후보를 만들지 않음: 현장 풍향 확인 후 판단"],
                          "cards": []}
+            elif field_first.empty:
+                field = {"method": "complaint_union", "start_point_id": chosen["point_id"],
+                         "staff_point_id": chosen["point_id"], "mode": None, "confidence": None,
+                         "selection": None, "locations": 0, "clusters": 0, "stability": None,
+                         "stability_label": None, "route_km": None,
+                         "notes": [f"초기 30분 신고 {len(first)}건 중 가축 분뇨 냄새 민원이 없어 농가 후보를 만들지 않음(권역 Top 3는 전체 신고로 계산)"],
+                         "cards": []}
             else:
                 wind = Wind(direction, speed, 20.0)
-                locations = complaint_locations([(r.latitude, r.longitude) for r in first.itertuples()])
+                locations = complaint_locations([(r.latitude, r.longitude) for r in field_first.itertuples()])
                 # 현재 사건 입력창 이전 자료만 써서 미래 민원이나 현재 사건이 과거 반복 점수에 섞이지 않게 한다.
                 past_complaints = complaints_with_weather.loc[complaints_with_weather["datetime"] < input_start]
                 # 익산의 정상 영업·정확 좌표 농가가 우선이다. 민원 위치 기준으로 익산 후보가 전혀 없을 때만
@@ -212,7 +221,9 @@ def make_replays(events_source: str = "v2") -> tuple[list[dict], str]:
                          "stability": None if result.stability is None else round(result.stability, 3),
                          "stability_label": result.stability_label,
                          "route_km": None if result.route_km is None else round(result.route_km, 2),
-                         "notes": [f"후보 범위: {candidate_scope}"] + result.notes, "cards": to_cards(result)}
+                         "notes": [f"후보 범위: {candidate_scope}",
+                                   f"후보 근거: 가축 분뇨 냄새 민원 {len(field_first)}건(초기 30분 신고 전체 {len(first)}건)"] + result.notes,
+                         "cards": to_cards(result)}
             event_ids = rows["event_id"].dropna().unique()
             if len(event_ids) != 1:
                 raise ValueError(f"{stamp}: event_id 유일하지 않음")
@@ -244,15 +255,15 @@ def make_replays(events_source: str = "v2") -> tuple[list[dict], str]:
         (OUT / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     chosen_text = ", ".join(f"{point_id} {count}회" for point_id, count in sorted(chosen_counts.items())) or "없음"
     ratio = f"{suggested_same}/{suggested_total} ({suggested_same / suggested_total:.1%})" if suggested_total else "산출 불가 (유효 풍향 사건 0건)"
-    summary = (f"# 과거 하루 다시 보기 요약\n\n대상 밤 수: {len(index)}\n\n경보 난 밤 수: {sum(x['alert'] for x in index)}\n\n"
-               f"경보 난 밤의 사건 수/전체 사건 수: {alert_events}/{total_events}\n\n선택된 대기 장소별 횟수: {chosen_text}\n\n"
+    summary = (f"# 과거 하루 다시 보기 요약\n\n대상 밤 수: {len(index)}\n\n사후 선정 30일에 포함된 밤 수: {sum(x['alert'] for x in index)}\n\n"
+               f"사후 선정 밤의 사건 수/전체 사건 수: {alert_events}/{total_events}\n\n선택된 대기 장소별 횟수(밤 전체 관측 바람 기준): {chosen_text}\n\n"
                f"suggested와 chosen 일치 비율: {ratio}\n")
     if events_source == "v2":
         _, legacy = make_replays("legacy")
         level_text = "\n".join(f"{level}: {level_alert[level]}/{level_total[level]} ({level_alert[level] / level_total[level]:.1%})"
                                for level in ("확인", "출동") if level_total[level])
         summary = ("# 과거 하루 다시 보기 요약\n\n## v2 기준\n\n" + summary.split("\n\n", 1)[1]
-                   + "\n경보 난 밤의 사건 비율(사후 확인 등급별, 사건 시점 판단에 사용 불가):\n\n" + level_text + "\n\n"
+                   + "\n사후 선정 밤의 사건 비율(사후 확인 등급별, 사건 시점 판단에 사용 불가):\n\n" + level_text + "\n\n"
                    + "## 옛 기준 (--events legacy)\n\n" + legacy.split("\n\n", 1)[1])
         (OUT / "summary.md").write_text(summary, encoding="utf-8")
     return index, summary

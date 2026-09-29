@@ -82,11 +82,11 @@ def show_map(replay: dict, event: dict | None = None) -> None:
 
 def render_afternoon(replay: dict) -> None:
     afternoon = replay["afternoon"]
-    st.header("오늘 밤 경보" if afternoon.get("alert") else "평상")
-    st.write(f"5~10월 예측 순위: {afternoon.get('season_rank', '정보 없음')}위")
+    st.header("사후 선정 30일에 포함된 밤" if afternoon.get("alert") else "사후 선정 30일 밖의 밤")
+    st.write(f"시즌 전체 점수 순위(사후): {afternoon.get('season_rank', '정보 없음')}위 · 당일 오후에는 알 수 없는 순위")
     st.write(f"다시 보기용 실제 값 · 밤 민원 수: {afternoon.get('observed_complaints', '정보 없음')}")
     wind = afternoon.get("night_wind", {})
-    st.write(f"밤 평균 바람: {compass_ko(wind.get('direction'))}에서 불어옴 · 풍속 {wind.get('speed', '정보 없음')} m/s")
+    st.write(f"밤 전체 관측 평균 바람(사건 이후 포함): {compass_ko(wind.get('direction'))}에서 불어옴 · 풍속 {wind.get('speed', '정보 없음')} m/s")
     st.subheader("대기 장소")
     show_map(replay)
     chosen = replay.get("standby", {}).get("chosen_point_id")
@@ -95,7 +95,7 @@ def render_afternoon(replay: dict) -> None:
             label = "선택 · " if point.get("point_id") == chosen else ""
             st.write(f"{label}{point.get('name', point.get('point_id'))}")
     st.write(easy_text(replay.get("standby", {}).get("reason", "")))
-    st.info("기존 24시간 상황실 인력이 저녁 6시~새벽 6시에 선택된 대기 장소에서 대기")
+    st.info("과거 재현: 대기 장소는 밤 전체 관측 바람과 전체 기간 통계로 고른 것이며, 사전 배치 결과가 아님")
 
 
 def render_direction(event: dict, replay: dict) -> None:
@@ -159,7 +159,7 @@ def main() -> None:
         st.warning("화면 개발용 샘플 · 실제 결과가 아님")
     if replay.get("_note"):
         st.caption(easy_text(replay["_note"]))
-    afternoon_tab, night_tab = st.tabs(["오후 브리핑", "밤 현장"])
+    afternoon_tab, night_tab = st.tabs(["사후 실험·대기 장소", "밤 현장"])
     with afternoon_tab:
         render_afternoon(replay)
     with night_tab:

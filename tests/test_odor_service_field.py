@@ -7,6 +7,22 @@ from odor_service import common as c
 from odor_service.field import engine as e
 
 
+class ClusterNoteTest(unittest.TestCase):
+    def test_cluster_note_counts_only_returned_representatives(self):
+        farms = pd.DataFrame({"farm_id": ["west", "east"], "name": ["A농장", "B농장"],
+                              "lat": [35.910, 35.910], "lon": [126.900, 127.000], "status": ["정상", "정상"]})
+        locations = e.complaint_locations([(35.900, 126.900), (35.901, 126.900), (35.900, 127.000)])
+        result = e.score_complaint_candidates(farms, locations, e.Wind(0.0, 1.5))
+        self.assertEqual(result.clusters, 2)
+        self.assertEqual(result.candidates["farm_id"].tolist(), ["west"])
+        note = next(n for n in result.notes if "무리" in n)
+        self.assertIn("대표가 포함된 무리 1개", note)
+        self.assertIn("보장하지 않음", note)
+        empty = e.score_complaint_candidates(farms, locations, e.Wind(180.0, 1.5))
+        self.assertTrue(empty.candidates.empty)
+        self.assertIn("대표가 포함된 무리 0개", next(n for n in empty.notes if "무리" in n))
+
+
 def _farms():
     # 담당자(35.90, 127.00) 기준: A 북쪽 1 km, B 북쪽 3 km, C 남쪽 1 km, D 동쪽 1 km, E 북쪽 6 km
     dlat = 1.0 / c.KM_PER_DEG_LAT
