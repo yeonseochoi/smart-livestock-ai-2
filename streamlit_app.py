@@ -62,15 +62,6 @@ def replay_revision() -> int:
 
 
 @st.cache_data
-def model_hit_at_3() -> float | None:
-    try:
-        metrics = json.loads((ROOT / DEFAULT_METRICS).read_text(encoding="utf-8"))
-        return float(metrics["grids"]["1000"]["test"]["event_hit_rate_at_3"])
-    except (OSError, KeyError, TypeError, ValueError):
-        return None
-
-
-@st.cache_data
 def load_field_replays(revision: int) -> list[dict]:
     """과거 Event 시각과 가장 가까운 현장 후보 replay를 찾기 위한 색인."""
     rows = []
@@ -232,11 +223,6 @@ def render_operation_header(event: dict, field_context: dict | None) -> None:
         '</div>',
         unsafe_allow_html=True,
     )
-    hit = model_hit_at_3()
-    hit_text = "미산출" if hit is None else f"{hit:.2%}"
-    st.caption(f"민원 권역 Hit@3 {hit_text}는 가축 관련 악취 민원만 사용한 시간순 70/30 자체평가 기준입니다. 과거 관측 날씨로 재현한 시연이며 실제 현장 성능을 의미하지 않습니다.")
-
-
 def change_candidate(offset: int, candidate_count: int) -> None:
     current = int(st.session_state.get("candidate_index", 0))
     st.session_state.candidate_index = min(max(0, current + offset), candidate_count - 1)
@@ -358,8 +344,6 @@ def render_field_candidates(field_context: dict | None) -> None:
                 st.markdown("**선정 근거**")
                 for item in evidence:
                     st.markdown(f'- {escape(str(item))}')
-            if card.get("next_action"):
-                st.markdown(f'**현장 확인:** {escape(str(card["next_action"]))}')
     st.caption("※ 현장 확인 우선순위이며 발생원 확정이나 위반 판정이 아닙니다.")
 
 
@@ -523,7 +507,7 @@ def apply_styles() -> None:
     .operation-steps{border-radius:12px;margin-top:1rem;overflow:hidden}
     .step{padding:1rem 1rem 1rem 2.8rem}.step b{font-size:.9rem}.step small{font-size:.78rem}
     .step>span{top:1.1rem}
-    .st-key-map_panel,.st-key-agent_panel{position:static;height:auto;overflow:visible;background:white;border:1px solid #e0e7ec;border-radius:14px;padding:1.1rem;min-width:0}
+    .st-key-map_panel,.st-key-field_panel,.st-key-agent_panel{position:static;height:auto;overflow:visible;background:white;border:1px solid #e0e7ec;border-radius:14px;padding:1.1rem;min-width:0}
     .farm-card{border-radius:10px;margin:.8rem 0;padding:1rem;border-left:4px solid #829aa3}
     .farm-card.first{background:#edf8f5;border-color:#b6dbd0;border-left-color:#167b64}
     .farm-title b{font-size:1.05rem}.farm-title strong{font-size:1.35rem}.farm-title strong small{font-size:.8rem}
@@ -542,7 +526,7 @@ def apply_styles() -> None:
       .operation-hero{padding:1.3rem;align-items:flex-start}.operation-hero h2{font-size:1.35rem!important}
       .operation-steps{grid-template-columns:repeat(2,minmax(0,1fr))}
       .step:nth-child(2){border-right:0}.step:nth-child(-n+2){border-bottom:1px solid #e6ebed}
-      .st-key-map_panel,.st-key-agent_panel{padding:.9rem;border-radius:12px}
+      .st-key-map_panel,.st-key-field_panel,.st-key-agent_panel{padding:.9rem;border-radius:12px}
       iframe[title="streamlit_folium.st_folium"]{height:500px!important}
     }
     @media(max-width:600px){
@@ -554,7 +538,7 @@ def apply_styles() -> None:
       .weather-cards{grid-template-columns:1fr 1fr;gap:.4rem}.weather-card{padding:.55rem .45rem}
       .field-summary{grid-template-columns:1fr 1fr}.farm-title{align-items:flex-start}.farm-title b{font-size:.95rem}.farm-title strong{font-size:1.15rem;white-space:nowrap}
       .field-flow{align-items:flex-start;line-height:1.55}.legend-row{display:grid;grid-template-columns:1fr;gap:.4rem}
-      .st-key-map_panel,.st-key-agent_panel{padding:.7rem;border-radius:10px}
+      .st-key-map_panel,.st-key-field_panel,.st-key-agent_panel{padding:.7rem;border-radius:10px}
       iframe[title="streamlit_folium.st_folium"]{height:420px!important}
       div[data-testid="stTabs"] button{font-size:.74rem!important;padding-left:.45rem!important;padding-right:.45rem!important}
     }
@@ -667,11 +651,10 @@ with st.sidebar:
       {optional_weather}
     </div>''', unsafe_allow_html=True)
     st.markdown('<div class="eyebrow">점검 권역</div>', unsafe_allow_html=True)
-    relative_scores = _relative_scores(pd.Series([grid["score"] for grid in grids[:3]])) if grids else []
     for idx, grid in enumerate(grids[:3], 1):
         cls = "priority first" if idx == 1 else "priority"
         action = "가장 먼저 현장 확인" if idx == 1 else "1순위 확인 후 순차 확인"
-        st.markdown(f'<div class="{cls}"><b>{idx}순위 · 1km 권역</b><br><small>{action} · 상대점수 {relative_scores[idx - 1]}/100</small></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="{cls}"><b>{idx}순위 · 1km 권역</b><br><small>{action}</small></div>', unsafe_allow_html=True)
 
     if st.button("대응 문서 생성", type="primary", use_container_width=True):
         store_generated_documents(event, field_context)
@@ -685,9 +668,10 @@ with map_column.container(key="map_panel"):
     st_folium(event_map(event, show_actual, field_context), use_container_width=True, height=650, returned_objects=[])
     st.markdown('<div class="legend-row"><span><b style="color:#dd3e36">■</b>추가 민원 예상 권역</span><span><b style="color:#15866f">●</b>방문 후보 1–3</span></div>', unsafe_allow_html=True)
 
-with agent_column.container(key="agent_panel"):
+with agent_column.container(key="field_panel"):
     render_field_candidates(field_context)
-    st.divider()
+
+with st.container(key="agent_panel"):
     st.markdown("#### 행정 대응 Agent")
     if st.session_state.documents is None or st.session_state.document_event != event["id"]:
         st.markdown(

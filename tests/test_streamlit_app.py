@@ -75,8 +75,7 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIn("먼저 확인할 농가", rendered)
         self.assertIn("민원 확산 예측에서 현장 확인까지", rendered)
         captions = "\n".join(item.value for item in app.caption)
-        self.assertIn("Hit@3 81.25%", captions)
-        self.assertIn("가축 관련 악취 민원만 사용", captions)
+        self.assertNotIn("Hit@3", captions)
         self.assertIn("예측 Top 3 권역으로 농가를 다시 고르는 방식이 아닙니다", captions)
         self.assertNotIn("방문 동선", rendered)
         self.assertNotIn("자료와 계산 기준 확인", rendered)
@@ -101,7 +100,7 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIn("nanum-square-neo.css", rendered)
         self.assertIn("NanumSquareNeoVariable", rendered)
         self.assertNotIn("position:sticky", rendered)
-        self.assertIn(".st-key-map_panel,.st-key-agent_panel{position:static;height:auto;overflow:visible", rendered)
+        self.assertIn(".st-key-map_panel,.st-key-field_panel,.st-key-agent_panel{position:static;height:auto;overflow:visible", rendered)
         self.assertEqual(app.session_state["document_schema_version"], 4)
         priority_cards = [item.value for item in app.markdown if 'class="priority' in item.value]
         self.assertEqual(len(priority_cards), 3)
