@@ -72,8 +72,8 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertIn("padding-top:4.6rem", rendered)
         self.assertIn("💨", rendered)
         self.assertIn("🌧️", rendered)
-        self.assertIn("먼저 확인할 농가", rendered)
-        self.assertIn("민원 확산 예측에서 현장 확인까지", rendered)
+        self.assertIn("발생원으로 예측되는 농가", rendered)
+        self.assertIn("이후 민원 발생 예측부터 발생원 후보까지", rendered)
         captions = "\n".join(item.value for item in app.caption)
         self.assertNotIn("Hit@3", captions)
         self.assertIn("예측 Top 3 권역으로 농가를 다시 고르는 방식이 아닙니다", captions)
@@ -153,17 +153,17 @@ class StreamlitAppTest(unittest.TestCase):
         boundary = package.forecast.event_time
         self.assertIn(f'{boundary:%H:%M}~{boundary + timedelta(minutes=30):%H:%M}', package.briefing)
         tabs = [tab.label for tab in app.tabs]
-        self.assertEqual(tabs, ["① 상황 브리핑", "② 점검 지시서", "③ 사후 결과 입력", "④ AI 대응 가이드"])
+        self.assertEqual(tabs, ["① 상황 확인", "② 출동 지시", "③ 현장 결과 기록"])
         rendered = "\n".join(item.value for item in app.markdown)
         self.assertIn("악취 민원 확산 상황 브리핑", rendered)
         self.assertIn("악취 민원 현장점검 지시서", rendered)
         self.assertIn("참고 기상정보", rendered)
         self.assertIn("AI 예측 결과와 실제 결과 비교", rendered)
-        self.assertIn("AI 현장 대응 참고 가이드", rendered)
+        self.assertNotIn("AI 현장 대응 참고 가이드", rendered)
         inputs = [item.label for item in app.text_input]
         self.assertIn("작성자", inputs)
         self.assertIn("현장 도착시각", inputs)
-        self.assertIn("실제 우선 점검 권역", inputs)
+        self.assertIn("실제 확인 권역", inputs)
         self.assertTrue(any(button.label == "입력값으로 결과보고서 완성" for button in app.button))
 
 

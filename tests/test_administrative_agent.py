@@ -101,11 +101,11 @@ class AdministrativeAgentTest(unittest.TestCase):
             self.assertIn("최종 판단은 농가 경계에서 채취한 시료로 합니다", document)
             self.assertIn("교차 확인 (민원 위치 4곳 중 3곳이 풍상으로 가리킴)", document)
             self.assertIn("민원 근접 12.0/25", document)
-            self.assertIn("방문 동선 제안: 2번째 (대기 장소에서 직선 7.4 km, 도로 이동시간 미반영)", document)
+            self.assertNotIn("방문 동선 제안", document)
         order = package.dispatch_order
-        self.assertLess(order.index("## 2. 현장 확인 후보 농가"), order.index("## 3. 현장 확인 항목"))
-        self.assertLess(order.index("## 1. 점검 대상"), order.index("## 2. 현장 확인 후보 농가"))
-        self.assertIn("## 5. 현장 확인 후보 농가", package.briefing)
+        self.assertLess(order.index("## 2. 발생원으로 예측되는 농가 후보"), order.index("## 3. 현장 확인 항목"))
+        self.assertLess(order.index("## 1. 점검 대상"), order.index("## 2. 발생원으로 예측되는 농가 후보"))
+        self.assertIn("## 5. 발생원으로 예측되는 농가 후보", package.briefing)
         self.assertIn("2026.09.29. 03:00", package.dispatch_order)
         for line in package.dispatch_order.splitlines():
             if line.startswith(("|2순위|", "|3순위|")):

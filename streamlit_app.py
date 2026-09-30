@@ -16,7 +16,6 @@ import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
 
-from administrative_agent.documents import create_response_guide
 from administrative_agent.models import FieldCandidate, ForecastResult, RiskArea
 from administrative_agent.time_utils import KST, now_kst
 from administrative_agent.llm import llm_configured, provider_name, refine_with_llm
@@ -216,8 +215,8 @@ def render_operation_header(event: dict, field_context: dict | None) -> None:
     st.markdown(
         '<div class="operation-hero">'
         '<div><span class="status-badge">과거 상황 재현</span>'
-        '<h2>민원 확산 예측에서 현장 확인까지</h2>'
-        '<p>예상 권역을 보여주는 데서 끝나지 않고, 담당자가 먼저 확인할 농가 순서까지 연결합니다.</p></div>'
+        '<h2>이후 민원 발생 예측부터 발생원 후보까지</h2>'
+        '<p>이후 민원이 발생할 것으로 예측되는 권역과 발생원으로 예측되는 농가 후보를 함께 보여줍니다.</p></div>'
         f'<div class="hero-event"><small>현재 Event</small><b>{escape(str(event["id"]))}</b>'
         f'<span>{escape(str(event["hour"]))}</span></div>'
         '</div>',
@@ -229,8 +228,8 @@ def change_candidate(offset: int, candidate_count: int) -> None:
 
 
 def render_field_candidates(field_context: dict | None) -> None:
-    st.markdown("#### 먼저 확인할 농가")
-    st.caption("예측 Top 3 권역으로 농가를 다시 고르는 방식이 아닙니다. 이 사건의 초기 30분에 실제 접수된 가축 악취 민원 위치와 당시 풍향으로 계산한 현장 확인 우선순위입니다.")
+    st.markdown("#### 발생원으로 예측되는 농가")
+    st.caption("예측 Top 3 권역으로 농가를 다시 고르는 방식이 아닙니다. 이 사건의 초기 30분에 실제 접수된 가축 악취 민원 위치와 당시 풍향으로 계산한 발생원 후보 순위입니다.")
     if field_context is None:
         st.info("동일 사건 ID의 현장 후보 재현 자료가 없습니다.")
         return
@@ -427,20 +426,20 @@ def generate_documents(event: dict, field_context: dict | None = None, update_pr
     update(35, "행정문서 기본 양식을 작성하고 있습니다.")
     safe = build_response_package(forecast)
     if not llm_configured():
-        update(100, "안전 템플릿 문서 생성이 완료되었습니다.")
-        return safe, "안전 템플릿", None
+        update(100, "기본 양식 문서 생성이 완료되었습니다.")
+        return safe, "기본 양식", None
     try:
         update(60, f"{provider_name()}가 문안을 보정하고 있습니다.")
         refined = refine_with_llm(forecast, safe)
         if refined is safe:
-            update(100, "검증된 안전 템플릿을 사용했습니다.")
-            return safe, "안전 템플릿", "LLM 보정 결과를 검증하지 못해 안전 템플릿을 사용했습니다"
+            update(100, "검증된 기본 양식을 사용했습니다.")
+            return safe, "기본 양식", "LLM 보정 결과를 검증하지 못해 기본 양식을 사용했습니다"
         update(100, "대응 문서 생성이 완료되었습니다.")
         return refined, provider_name(), None
     except Exception:
         logging.getLogger(__name__).exception("LLM 문서 보정 호출 실패")
-        update(100, "LLM 대신 안전 템플릿으로 생성을 완료했습니다.")
-        return safe, "안전 템플릿", "LLM 호출 실패로 안전 템플릿을 사용했습니다"
+        update(100, "LLM 대신 기본 양식으로 생성을 완료했습니다.")
+        return safe, "기본 양식", "LLM 호출 실패로 기본 양식을 사용했습니다"
 
 
 def store_generated_documents(event: dict, field_context: dict | None = None) -> None:
@@ -474,6 +473,7 @@ def apply_styles() -> None:
     .risk-box{background:#fff8e8;border-left:4px solid #e9a11b;padding:.8rem .9rem;margin:.4rem 0 .8rem;font-size:.84rem}
     .risk-box small{color:#8a6827}.priority{background:#f7f8f8;border-left:3px solid #e9a11b;padding:.55rem .65rem;margin:.35rem 0;font-size:.8rem}.priority.first{border-color:#dd3e36}
     .notice{background:#fff6dc;border-left:3px solid #e9a11b;padding:.65rem .8rem;font-size:.8rem;margin-bottom:.7rem}
+    .agent-workflow{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;background:#edf5f3;border:1px solid #c7ded8;border-radius:9px;padding:.7rem .85rem;color:#28574f;margin:.2rem 0 .55rem;font-size:.84rem}.agent-workflow b{color:#173e49;margin-right:.25rem}.agent-workflow span{font-weight:700}.agent-workflow i{font-style:normal;color:#8aa59e}.agent-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem;margin:0 0 1rem}.agent-summary span{border:1px solid #e0e7ec;background:#fafcfc;border-radius:8px;padding:.6rem .7rem;min-width:0}.agent-summary small,.agent-summary b{display:block}.agent-summary small{font-size:.69rem;color:#68757c;margin-bottom:.18rem}.agent-summary b{font-size:.85rem;color:#243a43;overflow-wrap:anywhere}
     .operation-hero{display:flex;justify-content:space-between;align-items:center;gap:1rem;background:linear-gradient(120deg,#173b47,#245f59);color:white;padding:1.1rem 1.25rem;border-radius:8px 8px 0 0}.operation-hero h2{font-size:1.35rem!important;margin:.35rem 0 .2rem!important;color:white}.operation-hero p{font-size:.82rem;margin:0;color:#d7e7e4}.status-badge{display:inline-block;background:#d9a441;color:#172e3d;font-size:.65rem;font-weight:850;padding:.22rem .48rem;border-radius:999px}.hero-event{min-width:165px;border-left:1px solid #ffffff44;padding-left:1rem}.hero-event small,.hero-event span{display:block;color:#c8dcd8;font-size:.67rem}.hero-event b{display:block;font-size:1.05rem;margin:.15rem 0}
     .operation-steps{display:grid;grid-template-columns:repeat(4,1fr);background:white;border:1px solid #dce2e5;border-top:0;margin-bottom:1rem}.step{position:relative;padding:.7rem .65rem .7rem 2.5rem;border-right:1px solid #e6ebed}.step:last-child{border-right:0}.step>span{position:absolute;left:.7rem;top:.75rem;width:1.35rem;height:1.35rem;border-radius:50%;background:#dce2e5;color:#68757c;text-align:center;line-height:1.35rem;font-size:.68rem;font-weight:800}.step b,.step small{display:block}.step b{font-size:.76rem;color:#304047}.step small{font-size:.63rem;color:#7c898f;margin-top:.12rem}.step.done>span{background:#15866f;color:white}.step.active{background:#fff8e8}.step.active>span{background:#e9a11b;color:#172e3d}
     .field-flow{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;background:#eef7f4;border:1px solid #c8e2da;padding:.65rem .75rem;margin:.4rem 0 .7rem;font-size:.78rem;color:#24584b}
@@ -501,7 +501,7 @@ def apply_styles() -> None:
     [data-testid="stAppViewContainer"]{background:#f3f6f8;color:#223440}
     [data-testid="stSidebar"]{background:#fff}
     .block-container{max-width:1800px;padding-left:1.6rem;padding-right:1.6rem}
-    .operation-hero{border-radius:14px;padding:1.6rem 1.7rem;background:#173e49}
+    .operation-hero{border-radius:14px;padding:1.6rem 1.7rem;margin-bottom:1rem;background:#173e49}
     .operation-hero h2{font-size:1.7rem!important;letter-spacing:-.04em}
     .operation-hero p{font-size:.95rem;line-height:1.7;font-family:'NanumSquareNeoLight','NanumSquareNeoVariable','Malgun Gothic',sans-serif!important;letter-spacing:-.015em}
     .operation-steps{border-radius:12px;margin-top:1rem;overflow:hidden}
@@ -536,6 +536,7 @@ def apply_styles() -> None:
       .hero-event{min-width:0;border-left:0;border-top:1px solid #ffffff44;padding:.8rem 0 0;margin-top:.85rem}
       .operation-steps{grid-template-columns:1fr}.step{border-right:0!important;border-bottom:1px solid #e6ebed!important}.step:last-child{border-bottom:0!important}
       .weather-cards{grid-template-columns:1fr 1fr;gap:.4rem}.weather-card{padding:.55rem .45rem}
+      .agent-summary{grid-template-columns:1fr}.agent-workflow{align-items:flex-start}
       .field-summary{grid-template-columns:1fr 1fr}.farm-title{align-items:flex-start}.farm-title b{font-size:.95rem}.farm-title strong{font-size:1.15rem;white-space:nowrap}
       .field-flow{align-items:flex-start;line-height:1.55}.legend-row{display:grid;grid-template-columns:1fr;gap:.4rem}
       .st-key-map_panel,.st-key-field_panel,.st-key-agent_panel{padding:.7rem;border-radius:10px}
@@ -619,7 +620,7 @@ with st.sidebar:
     show_actual = st.toggle("이 사건의 실제 이후 신고 보기", value=False, key="show_actual")
     m1, m2 = st.columns(2)
     m1.metric("초기 신고", event.get("initialCount", 0))
-    m2.metric("점검 권역", min(3, len(grids)))
+    m2.metric("이후 민원 예측 권역", min(3, len(grids)))
     if show_actual:
         st.metric(
             "이번 사건 실제 신고 포함 권역",
@@ -650,7 +651,7 @@ with st.sidebar:
       <div class="weather-card"><span class="weather-icon">🧭</span><div class="weather-copy"><div class="weather-label">풍향</div><div class="weather-value">{wind_direction}</div></div></div>
       {optional_weather}
     </div>''', unsafe_allow_html=True)
-    st.markdown('<div class="eyebrow">점검 권역</div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">이후 민원 발생 예측</div>', unsafe_allow_html=True)
     for idx, grid in enumerate(grids[:3], 1):
         cls = "priority first" if idx == 1 else "priority"
         action = "가장 먼저 현장 확인" if idx == 1 else "1순위 확인 후 순차 확인"
@@ -673,6 +674,23 @@ with agent_column.container(key="field_panel"):
 
 with st.container(key="agent_panel"):
     st.markdown("#### 행정 대응 Agent")
+    field = field_context["event"].get("field", {}) if field_context else {}
+    lead_card = next(iter(field.get("cards", [])), {})
+    lead_farm = escape(str(lead_card.get("name") or lead_card.get("farm_id") or "후보 정보 없음"))
+    lead_region = escape(str((grids[0] if grids else {}).get("region") or "1순위 권역"))
+    wind_confidence = escape(str(field.get("confidence") or "정보 없음"))
+    st.markdown(
+        '<div class="agent-workflow"><b>지금 할 일</b>'
+        f'<span>1. 이후 민원 예측 권역: {lead_region}</span><i>→</i>'
+        f'<span>2. 발생원 후보: {lead_farm}</span><i>→</i>'
+        '<span>3. 점검 지시서 생성 · 현장 결과 기록</span></div>'
+        '<div class="agent-summary">'
+        f'<span><small>이후 민원 예측 권역</small><b>{lead_region}</b></span>'
+        f'<span><small>발생원으로 예측되는 농가</small><b>{lead_farm}</b></span>'
+        f'<span><small>풍향 신뢰도</small><b>{wind_confidence}</b></span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     if st.session_state.documents is None or st.session_state.document_event != event["id"]:
         st.markdown(
             '<div class="notice"><b>예측 결과를 현장 대응 문서로 변환합니다.</b><br>'
@@ -686,9 +704,9 @@ with st.container(key="agent_panel"):
     else:
         package = st.session_state.documents
         warning = st.session_state.get("document_warning")
-        message = warning or f'{st.session_state.get("document_mode", "안전 템플릿")} 문서 생성 완료 · 담당자 검토 필요'
+        message = warning or f'{st.session_state.get("document_mode", "기본 양식")} 문서 생성 완료 · 담당자 검토 필요'
         st.markdown(f'<div class="notice">{escape(str(message))}</div>', unsafe_allow_html=True)
-        tab1, tab2, tab3, tab4 = st.tabs(["① 상황 브리핑", "② 점검 지시서", "③ 사후 결과 입력", "④ AI 대응 가이드"])
+        tab1, tab2, tab3 = st.tabs(["① 상황 확인", "② 출동 지시", "③ 현장 결과 기록"])
         with tab1:
             st.markdown(package.briefing)
             st.download_button("브리핑 다운로드", package.briefing, f"briefing_{event['id']}.md", "text/markdown")
@@ -696,49 +714,46 @@ with st.container(key="agent_panel"):
             st.markdown(package.dispatch_order)
             st.download_button("점검 지시서 다운로드", package.dispatch_order, f"inspection_{event['id']}.md", "text/markdown")
         with tab3:
-            st.caption("문서에서 ‘미입력’으로 표시된 현장 확인값을 아래에서 직접 작성하세요.")
-            with st.expander("빈 사후 결과보고서 양식 보기"):
-                st.markdown(package.followup_report_template)
-                st.download_button("빈 양식 다운로드", package.followup_report_template, f"followup_template_{event['id']}.md", "text/markdown")
-            with st.form("followup_form"):
-                author = st.text_input("작성자", placeholder="예: 홍길동 주무관")
-                date_col, time_col = st.columns(2)
-                current_time = now_kst()
-                inspected_date = date_col.date_input("점검 날짜", value=current_time.date())
-                inspected_time = time_col.time_input("점검 시각", value=current_time.time().replace(second=0, microsecond=0))
-                time1, time2, time3 = st.columns(3)
-                dispatch_decided_at = time1.text_input("출동 결정시각", placeholder="예: 20:32")
-                departed_at = time2.text_input("현장 출발시각", placeholder="예: 20:35")
-                arrived_at = time3.text_input("현장 도착시각", placeholder="예: 20:48")
-                distance_col, count_col = st.columns(2)
-                total_distance_km = distance_col.text_input("총 출동거리(km)", placeholder="예: 5.2")
-                actual_additional_area_count = count_col.text_input("실제 추가 민원 권역 수", placeholder="예: 2")
-                areas = []
-                for area in package.forecast.areas:
-                    st.markdown(f"**{area.rank}순위 · {area.grid_id}**")
-                    c1, c2 = st.columns(2)
-                    additional = c1.selectbox("추가 민원", ["미확인", "발생", "미발생"], key=f"add_{event['id']}_{area.rank}")
-                    detected = c2.selectbox("악취 감지", ["미확인", "감지", "미감지"], key=f"odor_{event['id']}_{area.rank}")
-                    measurement = st.text_input("측정 결과", key=f"measurement_{event['id']}_{area.rank}")
-                    action = st.text_input("조치 내용", key=f"action_{event['id']}_{area.rank}")
-                    areas.append({"rank": area.rank, "additional_complaint": additional, "odor_detected": detected, "measurement": measurement, "action": action})
-                checked_area = st.text_input("실제 우선 점검 권역", placeholder="예: 1순위 권역 또는 격자 ID")
-                field_findings = st.text_area("현장 확인내용", placeholder="현장에서 확인한 악취 상태와 주변 상황을 입력하세요.")
-                notes = st.text_area("담당자 의견 및 종합 결과", placeholder="실시 조치와 추가 확인 필요사항을 입력하세요.")
-                followup_required = st.radio("추가 조치 필요 여부", ["미확인", "필요", "불필요"], horizontal=True)
-                submitted = st.form_submit_button("입력값으로 결과보고서 완성", type="primary", use_container_width=True)
-            if submitted:
-                inspected_at = datetime.combine(inspected_date, inspected_time, tzinfo=KST)
-                report = create_completed_followup(package, {
-                    "author": author, "inspected_at": inspected_at.isoformat(timespec="minutes"),
-                    "dispatch_decided_at": dispatch_decided_at, "departed_at": departed_at, "arrived_at": arrived_at,
-                    "total_distance_km": total_distance_km, "actual_additional_area_count": actual_additional_area_count,
-                    "checked_area": checked_area, "field_findings": field_findings,
-                    "followup_required": followup_required, "areas": areas, "notes": notes,
-                })
-                st.markdown(report)
-                st.download_button("완성 보고서 다운로드", report, f"followup_{event['id']}.md", "text/markdown")
-        with tab4:
-            response_guide = getattr(package, "response_guide", None) or create_response_guide(package.forecast)
-            st.markdown(response_guide)
-            st.download_button("AI 대응 가이드 다운로드", response_guide, f"response_guide_{event['id']}.md", "text/markdown")
+            st.caption("현장 점검을 마친 뒤에만 아래 입력 영역을 열어 결과를 기록하세요.")
+            with st.expander("현장 점검 완료 후 결과 입력", expanded=False):
+                with st.expander("빈 사후 결과보고서 양식 보기"):
+                    st.markdown(package.followup_report_template)
+                    st.download_button("빈 양식 다운로드", package.followup_report_template, f"followup_template_{event['id']}.md", "text/markdown")
+                with st.form("followup_form"):
+                    author = st.text_input("작성자", placeholder="예: 홍길동 주무관")
+                    date_col, time_col = st.columns(2)
+                    current_time = now_kst()
+                    inspected_date = date_col.date_input("점검 날짜", value=current_time.date())
+                    inspected_time = time_col.time_input("점검 시각", value=current_time.time().replace(second=0, microsecond=0))
+                    time1, time2, time3 = st.columns(3)
+                    dispatch_decided_at = time1.text_input("출동 결정시각", placeholder="예: 20:32")
+                    departed_at = time2.text_input("현장 출발시각", placeholder="예: 20:35")
+                    arrived_at = time3.text_input("현장 도착시각", placeholder="예: 20:48")
+                    distance_col, count_col = st.columns(2)
+                    total_distance_km = distance_col.text_input("총 출동거리(km)", placeholder="예: 5.2")
+                    actual_additional_area_count = count_col.text_input("실제 추가 민원 권역 수", placeholder="예: 2")
+                    areas = []
+                    for area in package.forecast.areas:
+                        st.markdown(f"**{area.rank}순위 · {area.grid_id}**")
+                        c1, c2 = st.columns(2)
+                        additional = c1.selectbox("추가 민원", ["미확인", "발생", "미발생"], key=f"add_{event['id']}_{area.rank}")
+                        detected = c2.selectbox("악취 감지", ["미확인", "감지", "미감지"], key=f"odor_{event['id']}_{area.rank}")
+                        measurement = st.text_input("측정 결과", key=f"measurement_{event['id']}_{area.rank}")
+                        action = st.text_input("조치 내용", key=f"action_{event['id']}_{area.rank}")
+                        areas.append({"rank": area.rank, "additional_complaint": additional, "odor_detected": detected, "measurement": measurement, "action": action})
+                    checked_area = st.text_input("실제 확인 권역", placeholder="예: 1순위 예측 권역 또는 격자 ID")
+                    field_findings = st.text_area("현장 확인내용", placeholder="현장에서 확인한 악취 상태와 주변 상황을 입력하세요.")
+                    notes = st.text_area("담당자 의견 및 종합 결과", placeholder="실시 조치와 추가 확인 필요사항을 입력하세요.")
+                    followup_required = st.radio("추가 조치 필요 여부", ["미확인", "필요", "불필요"], horizontal=True)
+                    submitted = st.form_submit_button("입력값으로 결과보고서 완성", type="primary", use_container_width=True)
+                if submitted:
+                    inspected_at = datetime.combine(inspected_date, inspected_time, tzinfo=KST)
+                    report = create_completed_followup(package, {
+                        "author": author, "inspected_at": inspected_at.isoformat(timespec="minutes"),
+                        "dispatch_decided_at": dispatch_decided_at, "departed_at": departed_at, "arrived_at": arrived_at,
+                        "total_distance_km": total_distance_km, "actual_additional_area_count": actual_additional_area_count,
+                        "checked_area": checked_area, "field_findings": field_findings,
+                        "followup_required": followup_required, "areas": areas, "notes": notes,
+                    })
+                    st.markdown(report)
+                    st.download_button("완성 보고서 다운로드", report, f"followup_{event['id']}.md", "text/markdown")

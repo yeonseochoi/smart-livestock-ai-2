@@ -14,7 +14,7 @@ def field_candidate_body(forecast: ForecastResult) -> str:
 
     lines = [
         "가축 분뇨 냄새 민원 위치마다 바람이 불어오는 쪽 4 km 안의 농가를 찾고, 여러 민원 위치가 함께 가리키는 농가를 우선했습니다. "
-        "대기 장소에서의 이동 거리는 순위에 넣지 않고 방문 동선 제안에만 사용했습니다.", "",
+        "제시 순서는 민원 위치와 당시 풍향을 바탕으로 계산한 현장 확인 우선순위입니다.", "",
     ]
     lines.append(f"- 풍향 신뢰도: {clean(forecast.field_confidence or '미제공')}")
     if forecast.field_stability is not None:
@@ -30,7 +30,7 @@ def field_candidate_body(forecast: ForecastResult) -> str:
         lines += [
             f"### {candidate.rank}순위 · {clean(candidate.display_name)}",
             f"- 주소: {clean(candidate.address)}",
-            f"- 현장 확인 후보 점수: {candidate.score:.1f}/100",
+            f"- 발생원 후보 점수: {candidate.score:.1f}/100",
             "- 항목별 점수: " + " · ".join(
                 f"{name} {candidate.components.get(key, 0):.1f}/{maximum}"
                 for key, name, maximum in (("풍향 일치", "풍향 일치", 40), ("거리", "민원 근접", 25),
@@ -41,8 +41,6 @@ def field_candidate_body(forecast: ForecastResult) -> str:
             lines.append(f"- 근거: {candidate.tier} (민원 위치 {candidate.support_total}곳 중 {candidate.support_count}곳이 풍상으로 가리킴)")
         if candidate.complaint_km is not None:
             lines.append(f"- 가장 가까운 민원 위치에서: {candidate.complaint_km:.1f} km")
-        if candidate.visit_order is not None and candidate.travel_km is not None:
-            lines.append(f"- 방문 동선 제안: {candidate.visit_order}번째 (대기 장소에서 직선 {candidate.travel_km:.1f} km, 도로 이동시간 미반영)")
         lines.append(f"- 선정 요약: {clean(candidate.selection_summary)}")
         if candidate.coord_warning:
             lines.append("- 근사 좌표: 방문 전 주소 확인")
@@ -51,7 +49,7 @@ def field_candidate_body(forecast: ForecastResult) -> str:
     return "\n".join(lines)
 
 
-def field_candidate_section(forecast: ForecastResult, heading: str = "## 현장 확인 후보 농가") -> str:
+def field_candidate_section(forecast: ForecastResult, heading: str = "## 발생원으로 예측되는 농가 후보") -> str:
     return heading + "\n\n" + field_candidate_body(forecast)
 
 
@@ -124,7 +122,7 @@ def create_briefing(forecast: ForecastResult) -> str:
         "## 4. 상황 판단", "",
         "현재 민원 분포와 AI 예측 결과를 고려하여 1순위 권역을 우선 확인대상으로 검토하고, 현장 상황과 기상조건에 따라 2·3순위 권역을 순차적으로 확인할 필요가 있습니다.", "",
         f"> **주의:** {DISCLAIMER}", "",
-        field_candidate_section(forecast, "## 5. 현장 확인 후보 농가"),
+        field_candidate_section(forecast, "## 5. 발생원으로 예측되는 농가 후보"),
     ]
     return "\n".join(lines)
 
@@ -143,7 +141,7 @@ def create_dispatch_order(forecast: ForecastResult) -> str:
         level, action = response_level(area.rank)
         lines.append(f"|{area.rank}순위|{_location(area)}|{area.relative_risk}/100|{action}|")
     lines += [
-        "", field_candidate_section(forecast, "## 2. 현장 확인 후보 농가"),
+        "", field_candidate_section(forecast, "## 2. 발생원으로 예측되는 농가 후보"),
         "", "## 3. 현장 확인 항목", "",
         "현장 도착 시 다음 사항을 확인·기록합니다.", "",
         "- 도착시각 및 실제 점검 위치",
@@ -151,14 +149,7 @@ def create_dispatch_order(forecast: ForecastResult) -> str:
         "- 현장 풍향·풍속 및 주변 악취 발생 상황",
         "- 추가 민원 발생 여부와 현장 조치 내용",
         "- 추가 점검 필요 여부", "",
-        "## 4. 점검 결과 입력항목", "",
-        "|항목|입력|", "|---|---|",
-        "|출동 결정시각|미입력|", "|현장 출발시각|미입력|", "|현장 도착시각|미입력|",
-        "|점검 권역|미입력|", "|악취 감지|□ 확인 / □ 미확인|", "|측정값|미입력|",
-        "|조치 내용|미입력|", "|추가 점검|□ 필요 / □ 불필요|", "",
-        "## 5. 담당자 확인", "",
-        "- [ ] 우선순위와 가용 인력을 확인함", "- [ ] 현장 안전 및 점검 권한을 확인함", "",
-        "## 6. 유의사항", "", DISCLAIMER,
+        "## 4. 유의사항", "", DISCLAIMER,
     ]
     return "\n".join(lines)
 

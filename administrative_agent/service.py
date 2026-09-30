@@ -62,7 +62,7 @@ def create_completed_followup(package: ResponsePackage, outcome: dict[str, objec
         f"- 출동 결정시각: {clean(outcome.get('dispatch_decided_at'))}",
         f"- 현장 출발시각: {clean(outcome.get('departed_at'))}",
         f"- 현장 도착시각: {clean(outcome.get('arrived_at'))}",
-        f"- 실제 우선 점검 권역: {clean(outcome.get('checked_area'))}",
+        f"- 실제 확인 권역: {clean(outcome.get('checked_area'))}",
         f"- 총 출동거리: {clean(outcome.get('total_distance_km'))}km", "",
         "## 4. 현장 확인 및 조치내용", "",
         f"- 현장 확인내용: {clean(outcome.get('field_findings'))}",

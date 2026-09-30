@@ -102,6 +102,6 @@ class StreamlitLogicTest(unittest.TestCase):
         self.assertEqual(forecast.initial_intensity_average, 3)
         with self.assertLogs(level="ERROR") as log:
             _, _, warning = funcs["generate_documents"](event)
-        self.assertEqual(warning, "LLM 호출 실패로 안전 템플릿을 사용했습니다")
+        self.assertEqual(warning, "LLM 호출 실패로 기본 양식을 사용했습니다")
         self.assertNotIn("private", warning)
         self.assertIn("private", "\n".join(log.output))
