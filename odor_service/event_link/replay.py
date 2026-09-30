@@ -18,7 +18,8 @@ from odor_service.field.engine import Wind, complaint_locations, score_complaint
 
 ROOT = common.ROOT
 OUT = ROOT / "outputs/odor_service/replay"
-TRIGGER_RULE = "기존 사건 기준(1시간 안 10건·5칸 이상)"
+LEGACY_OUT = ROOT / "outputs/odor_service/replay_legacy"
+TRIGGER_RULE = "가축 관련 악취 민원 기준(1시간 안 10건·5칸 이상)"
 NAMES = {"YONGJI": "용지 방면", "IK-0": "왕궁 방면", "IK-7": "춘포 방면", "IK-8": "익산 IK-8 군집 방면"}
 
 
@@ -103,18 +104,20 @@ def make_replays(events_source: str = "v2") -> tuple[list[dict], str]:
     if events_source not in ("v2", "legacy"):
         raise ValueError(events_source)
     base = ROOT / "outputs"
+    output_dir = OUT if events_source == "v2" else LEGACY_OUT
     predictions = pd.read_csv(base / ("odor_service/replay/v2_events.csv" if events_source == "v2" else "operational_grid_comparison/test_predictions.csv"))
     forecast = pd.read_csv(base / "odor_service/forecast/night_risk.csv")
     standby = pd.read_csv(base / "odor_service/standby/standby_points.csv")
     weather = pd.read_parquet(base / "odor_service/data/weather_hourly.parquet")
     farms = pd.read_parquet(base / "odor_service/data/farms.parquet")
     complaints = common.load_livestock_complaints()
-    # v2 사건은 전체 익산 민원으로 발동한다. 가축 민원만 표시하면
-    # 5곳 이상 사건이 초기 신고 1건으로 축소되고 방향 중첩도 달라진다.
     if events_source == "v2":
+        # v2는 추가 강건성 검증 산출물을 원래 정의 그대로 보존한다.
         from odor_service.region_prediction.data import load_complaints
         event_complaints = load_complaints()
     else:
+        # 축산 악취 데모는 Event 재현, 권역 Top 3 입력, 농가 후보 근거를
+        # 모두 같은 가축 관련 악취 민원으로 통일한다.
         event_complaints = complaints
 
     if events_source == "v2":
@@ -123,6 +126,7 @@ def make_replays(events_source: str = "v2") -> tuple[list[dict], str]:
         predictions["night_date"] = pd.to_datetime(predictions["night_date"])
         departure = pd.to_datetime(pd.read_csv(base / "odor_service/replay/v2_events.csv").query("k == 7")["t0"])
     else:
+        predictions = predictions.loc[predictions["grid_m"] == 1000].copy()
         predictions["event_hour"] = pd.to_datetime(predictions["event_hour"])
         predictions["night_date"] = common.night_date(predictions["event_hour"])
         departure = pd.DatetimeIndex([])
@@ -144,14 +148,21 @@ def make_replays(events_source: str = "v2") -> tuple[list[dict], str]:
     if not points:
         raise ValueError("AWS 주 대기 장소 없음")
     forecast = forecast.set_index("night_date")
-    predictions = predictions.loc[predictions["night_date"].isin(forecast.index)]
+    if events_source == "v2":
+        predictions = predictions.loc[predictions["night_date"].isin(forecast.index)]
     index = []
     chosen_counts = Counter()
     suggested_total = suggested_same = alert_events = total_events = 0
     level_total, level_alert = Counter(), Counter()
-    OUT.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    # 재생 대상이 바뀌었을 때 이전 실행의 날짜 JSON이 데모에 섞이지 않게 한다.
+    for stale in output_dir.glob("*.json"):
+        stale.unlink()
     for date, night_rows in predictions.groupby("night_date", sort=True):
-        risk = forecast.loc[date]
+        risk = forecast.loc[date] if date in forecast.index else pd.Series({
+            "alert": False, "season_rank": 0, "risk_score": np.nan, "observed_complaints": np.nan,
+            "model_id": "not_available",
+        })
         nw = night_wind(weather, date)
         chosen, reason = choose_point(points, nw["direction"])
         chosen_counts[chosen["point_id"]] += 1
@@ -240,8 +251,9 @@ def make_replays(events_source: str = "v2") -> tuple[list[dict], str]:
                                 "risk_score": scalar(risk["risk_score"]), "observed_complaints": scalar(risk["observed_complaints"]),
                                 "model_id": risk["model_id"], "night_wind": nw},
                   "standby": {"chosen_point_id": chosen["point_id"], "reason": reason, "points": points}, "events": events}
-        if events_source == "v2":
-            (OUT / f"{replay['night_date']}.json").write_text(json.dumps(replay, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+        (output_dir / f"{replay['night_date']}.json").write_text(
+            json.dumps(replay, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+        )
         index.append({"night_date": replay["night_date"], "alert": alert, "season_rank": int(risk["season_rank"]),
                       "n_events": len(events), "hit_any_top3": any(x["hit"] for event in events for x in event["top3"])})
         total_events += len(events)
@@ -251,8 +263,7 @@ def make_replays(events_source: str = "v2") -> tuple[list[dict], str]:
             level_total[event["level"]] += 1
             if alert:
                 level_alert[event["level"]] += 1
-    if events_source == "v2":
-        (OUT / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (output_dir / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     chosen_text = ", ".join(f"{point_id} {count}회" for point_id, count in sorted(chosen_counts.items())) or "없음"
     ratio = f"{suggested_same}/{suggested_total} ({suggested_same / suggested_total:.1%})" if suggested_total else "산출 불가 (유효 풍향 사건 0건)"
     summary = (f"# 과거 하루 다시 보기 요약\n\n대상 밤 수: {len(index)}\n\n사후 선정 30일에 포함된 밤 수: {sum(x['alert'] for x in index)}\n\n"
@@ -266,6 +277,8 @@ def make_replays(events_source: str = "v2") -> tuple[list[dict], str]:
                    + "\n사후 선정 밤의 사건 비율(사후 확인 등급별, 사건 시점 판단에 사용 불가):\n\n" + level_text + "\n\n"
                    + "## 옛 기준 (--events legacy)\n\n" + legacy.split("\n\n", 1)[1])
         (OUT / "summary.md").write_text(summary, encoding="utf-8")
+    else:
+        (LEGACY_OUT / "summary.md").write_text(summary, encoding="utf-8")
     return index, summary
 
 

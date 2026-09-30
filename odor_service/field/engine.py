@@ -2,8 +2,8 @@
 
 운영 기본은 `score_complaint_candidates`(민원 지점 기준)다.
 - 후보: 30m로 묶은 고유 민원 위치마다 풍상 ±45°·4 km 안의 농가를 찾아 합친다.
-- 2곳 이상의 민원 위치가 함께 가리키는 농가(교차 확인)를 우선하고, 그런 농가가 없을 때만
-  한 위치만 가리키는 농가를 '단일 지점 참고'로 제시한다. 후보 수를 5개로 억지로 채우지 않는다.
+- 2곳 이상의 민원 위치가 함께 가리키는 농가(교차 확인)를 우선하고, 자리가 부족하면
+  같은 점수 체계의 한 위치 지지 농가를 다음 순위로 채운다.
 - 점수(100점) = 풍향 일치 40 + 민원 근접 25 + 민원 중첩 20 + 과거 반복 15.
   담당자 이동 거리는 관련성 점수에서 분리해 방문 동선 제안에만 쓴다.
 
@@ -34,10 +34,12 @@ DISCLAIMER = "발생원 확정 또는 위반 판정이 아닌 현장 확인 참�
 LOCATION_MERGE_KM = 0.03  # v2 사건 선정과 같은 30m 고유 위치
 SUPPORT_TOL_DEG = 45.0  # 민원 위치에서 본 농가 방위가 풍향(불어오는 방향)과 이 각도 안이면 지지
 CROSS_SUPPORT_MIN = 2  # 교차 확인 후보가 되기 위한 최소 지지 위치 수
+FALLBACK_POOL_SIZE = 20  # 기본 조건 후보가 부족할 때 같은 점수로 비교할 다음 후보군
 CLUSTER_LINK_KM = 2.0  # 이 거리 안으로 이어지는 민원 위치는 같은 민원 무리
 SENSITIVITY_DEG = 20.0  # 풍향 오차 가정(민감도 점검용, 관측 오차 추정값 아님)
 TIER_CROSS = "교차 확인"
 TIER_SINGLE = "단일 지점 참고"
+TIER_FALLBACK = "보충 참고"
 
 
 @dataclass
@@ -131,7 +133,10 @@ def select_visit_points(scored: pd.DataFrame, top_k: int = 5) -> pd.DataFrame:
     if scored.empty:
         return scored.copy().reset_index(drop=True)
     tie = scored["eq"].fillna(-1) if "eq" in scored else 0
-    ordered = scored.assign(_tie=tie).sort_values(["score", "_tie"], ascending=False, kind="stable").drop(columns="_tie")
+    priority = scored.get("tier_priority", pd.Series(0, index=scored.index))
+    ordered = (scored.assign(_tie=tie, _priority=priority)
+               .sort_values(["_priority", "score", "_tie"], ascending=False, kind="stable")
+               .drop(columns=["_tie", "_priority"]))
     groups: list[list[pd.Series]] = []
     for _, row in ordered.iterrows():
         name = str(row["name"]).strip() if pd.notna(row.get("name")) else ""
@@ -256,7 +261,7 @@ def _support(farms: pd.DataFrame, locations: list[ComplaintLocation], direction:
 
 def _complaint_scored(farms: pd.DataFrame, locations: list[ComplaintLocation], wind: Wind,
                       past: pd.DataFrame | None, month: int | None) -> tuple[pd.DataFrame, str | None]:
-    """교차 확인 후보가 있으면 그것만, 없으면 단일 지점 참고 후보를 점수화한다."""
+    """풍상 후보를 모두 점수화하고 교차 확인 후보에 우선순위를 준다."""
     f = farms.dropna(subset=["lat", "lon"]).copy()
     if "status" in f:
         f = f[f["status"].isna() | (f["status"] == "정상")]
@@ -265,25 +270,33 @@ def _complaint_scored(farms: pd.DataFrame, locations: list[ComplaintLocation], w
     dist, ang, hits = _support(f, locations, wind.direction)
     counts = hits.sum(axis=0)
     cross = counts >= CROSS_SUPPORT_MIN
-    keep = cross if cross.any() else counts >= 1
-    if not keep.any():
-        return f.iloc[0:0], None
-    selection = TIER_CROSS if cross.any() else TIER_SINGLE
+    supported = counts >= 1
+    selection = TIER_CROSS if cross.any() else TIER_SINGLE if supported.any() else TIER_FALLBACK
+    fallback_metric = (dist / MAX_RADIUS_KM + ang / SUPPORT_TOL_DEG).min(axis=0)
+    fallback_order = np.argsort(fallback_metric, kind="stable")[:FALLBACK_POOL_SIZE]
+    keep = supported.copy()
+    keep[fallback_order] = True
     f = f.loc[keep].copy()
     h, a, dk, n = hits[:, keep], ang[:, keep], dist[:, keep], counts[keep]
+    fallback_ref = np.argmin(dk / MAX_RADIUS_KM + a / SUPPORT_TOL_DEG, axis=0)
+    columns = np.arange(len(f))
     f["support_n"] = n
     f["support_total"] = len(locations)
-    f["tier"] = np.where(n >= CROSS_SUPPORT_MIN, TIER_CROSS, TIER_SINGLE)
-    f["dtheta"] = (a * h).sum(axis=0) / n  # 지지하는 민원 위치들의 평균 방위 차이
-    f["s_wind"] = W_WIND * (np.clip(1.0 - a / 90.0, 0.0, 1.0) * h).sum(axis=0) / n
+    f["tier"] = np.select([n >= CROSS_SUPPORT_MIN, n >= 1], [TIER_CROSS, TIER_SINGLE], default=TIER_FALLBACK)
+    f["tier_priority"] = np.select([n >= CROSS_SUPPORT_MIN, n >= 1], [2, 1], default=0)
+    supported_angle = (a * h).sum(axis=0) / np.maximum(n, 1)
+    f["dtheta"] = np.where(n > 0, supported_angle, a[fallback_ref, columns])
+    supported_wind = (np.clip(1.0 - a / 90.0, 0.0, 1.0) * h).sum(axis=0) / np.maximum(n, 1)
+    fallback_wind = np.clip(1.0 - a[fallback_ref, columns] / 90.0, 0.0, 1.0)
+    f["s_wind"] = W_WIND * np.where(n > 0, supported_wind, fallback_wind)
     nearest = np.where(h, dk, np.inf)
-    f["complaint_km"] = nearest.min(axis=0)
+    f["complaint_km"] = np.where(n > 0, nearest.min(axis=0), dk[fallback_ref, columns])
     f["s_dist"] = W_DIST * np.exp(-f["complaint_km"] / DIST_SCALE_KM)
     f["multi_hit"] = n
     f["multi_n"] = len(locations)
     f["s_multi"] = W_MULTI * n / len(locations)
     cluster_of = np.asarray([x.cluster for x in locations])
-    f["cluster"] = cluster_of[nearest.argmin(axis=0)]
+    f["cluster"] = cluster_of[np.where(n > 0, nearest.argmin(axis=0), fallback_ref)]
     if past is not None and month is not None and not past.empty:
         f["hist_n"] = history_counts(f, past, wind, month)
     else:
@@ -293,6 +306,25 @@ def _complaint_scored(farms: pd.DataFrame, locations: list[ComplaintLocation], w
     f["s_scale"] = 0.0
     f["score"] = f[["s_wind", "s_dist", "s_multi", "s_hist"]].sum(axis=1)
     return f, selection
+
+
+def _pick_with_tier_fill(scored: pd.DataFrame, top_k: int) -> pd.DataFrame:
+    """교차 확인 후보를 먼저 뽑고 부족한 순위는 단일 지점 후보로 채운다."""
+    merged = select_visit_points(scored, top_k=len(scored))
+    parts = []
+    remaining = top_k
+    for tier in (TIER_CROSS, TIER_SINGLE, TIER_FALLBACK):
+        if remaining <= 0:
+            break
+        selected = _pick_with_cluster_coverage(merged.loc[merged["tier"] == tier], remaining)
+        if not selected.empty:
+            parts.append(selected)
+            remaining -= len(selected)
+    if not parts:
+        return merged.iloc[0:0].copy()
+    result = pd.concat(parts, ignore_index=True).head(top_k).copy()
+    result["rank"] = np.arange(1, len(result) + 1)
+    return result
 
 
 def _pick_with_cluster_coverage(scored: pd.DataFrame, top_k: int) -> pd.DataFrame:
@@ -357,7 +389,7 @@ def score_complaint_candidates(
 ) -> TrackResult:
     """민원 지점 기준 방문 후보(A 절충안).
 
-    - 후보 자격: 고유 민원 위치에서 4 km 안·풍상 ±45°. 2곳 이상 지지 후보가 있으면 그것만 쓴다.
+    - 후보 자격: 고유 민원 위치에서 4 km 안·풍상 ±45°. 교차 확인 후보를 먼저 두고 다음 점수 후보로 채운다.
     - 관련성 점수와 이동 거리를 분리한다. `start`(대기 장소 등)는 방문 동선 제안에만 쓴다.
     - 풍향 ±20° 민감도로 후보 안정성을 함께 돌려준다.
     """
@@ -368,11 +400,15 @@ def score_complaint_candidates(
     elif wind.mode == "mixed":
         notes.append("풍속 1 m/s 미만: 풍향이 바뀌기 쉬워 현장 풍향 확인 후 후보를 좁힐 것")
     scored, selection = _complaint_scored(farms, locations, wind, past_complaints, month)
-    candidates = _pick_with_cluster_coverage(scored, top_k) if selection else scored.iloc[0:0].copy()
+    candidates = _pick_with_tier_fill(scored, top_k) if selection else scored.iloc[0:0].copy()
     route_km = _visit_route(candidates, start)
     n_clusters = len({x.cluster for x in locations})
     if selection == TIER_SINGLE:
         notes.append("2곳 이상의 민원 위치가 함께 가리키는 농가가 없어 한 위치 기준 참고 후보만 제시")
+    elif not candidates.empty and (candidates["tier"] == TIER_SINGLE).any():
+        notes.append("교차 확인 후보가 부족해 남은 순위는 같은 점수 체계의 단일 지점 후보로 보충")
+    if not candidates.empty and (candidates["tier"] == TIER_FALLBACK).any():
+        notes.append("기본 조건 후보가 부족해 남은 순위는 같은 풍향·거리·과거 이력 점수의 보충 참고 후보로 채움")
     if n_clusters > 1:
         covered = int(candidates["cluster"].nunique()) if not candidates.empty else 0
         notes.append(f"민원이 {n_clusters}개 무리로 떨어져 있음: 실제 후보에 대표가 포함된 무리 {covered}개"
@@ -384,7 +420,7 @@ def score_complaint_candidates(
         for delta in (-SENSITIVITY_DEG, SENSITIVITY_DEG):
             shifted = Wind((wind.direction + delta) % 360.0, wind.speed, wind.sigma)
             other, sel = _complaint_scored(farms, locations, shifted, past_complaints, month)
-            ids = set(_pick_with_cluster_coverage(other, top_k)["farm_id"]) if sel else set()
+            ids = set(_pick_with_tier_fill(other, top_k)["farm_id"]) if sel else set()
             kept.append(len(base & ids) / len(base))
         stability = float(np.mean(kept))
         if stability < 0.5:
@@ -397,24 +433,40 @@ def score_complaint_candidates(
 def complaint_explanation(row: pd.Series) -> tuple[str, list[str], str]:
     """민원 지점 기준 후보 설명."""
     n, total = int(row["support_n"]), int(row["support_total"])
-    if row.get("tier") == TIER_SINGLE:
-        summary = "한 민원 위치에서만 바람이 불어오는 쪽에 있어 참고로 확인할 후보입니다."
+    angle, distance = float(row["dtheta"]), float(row["complaint_km"])
+    if row.get("tier") == TIER_FALLBACK:
+        summary = (f"상위 조건 후보가 부족해, 방향 차이 {angle:.0f}°·참고 민원 위치 {distance:.1f} km를 "
+                   "기준으로 다음 순위 농가를 보충 후보로 표시합니다.")
+    elif row.get("tier") == TIER_SINGLE:
+        summary = (f"민원 위치 1곳에서만 풍상 조건이 확인됐지만, 방향 차이 {angle:.0f}°·거리 {distance:.1f} km여서 "
+                   "참고로 확인할 후보입니다.")
     elif n == total:
-        summary = "모든 민원 위치에서 바람이 불어오는 쪽이 이 농가로 겹쳐 우선 확인할 후보입니다."
+        summary = (f"민원 위치 {total}곳 모두가 이 농가를 풍상으로 가리키고, 평균 방향 차이 {angle:.0f}°·"
+                   f"가장 가까운 위치 {distance:.1f} km여서 먼저 확인할 후보입니다.")
     else:
-        summary = f"민원 위치 {n}곳이 함께 이 농가 쪽을 바람 상류로 가리켜 우선 확인할 후보입니다."
-    evidence = [
-        f"민원 위치 {total}곳 중 {n}곳에서 이 농가가 바람이 불어오는 쪽(±45°, 4 km 안)에 있습니다.",
-        f"그 위치들에서 본 농가 방향과 풍향의 차이는 평균 {float(row['dtheta']):.0f}°입니다.",
-        f"가장 가까운 민원 위치에서 {float(row['complaint_km']):.1f} km 떨어져 있습니다.",
-    ]
+        summary = (f"민원 위치 {total}곳 중 {n}곳이 이 농가를 풍상으로 가리키며, 평균 방향 차이 {angle:.0f}°·"
+                   f"가장 가까운 위치 {distance:.1f} km여서 먼저 확인할 후보입니다.")
+    if row.get("tier") == TIER_FALLBACK:
+        evidence = [
+            "4 km 안·풍상 ±45° 후보가 3곳보다 적어 다음 점수 후보에서 보충했습니다.",
+            f"참고한 민원 위치에서 본 농가 방향과 풍향의 차이는 {float(row['dtheta']):.0f}°입니다.",
+            f"가장 가까운 민원 위치에서 {float(row['complaint_km']):.1f} km 떨어져 있습니다.",
+        ]
+    else:
+        evidence = [
+            f"민원 위치 {total}곳 중 {n}곳에서 이 농가가 바람이 불어오는 쪽(±45°, 4 km 안)에 있습니다.",
+            f"그 위치들에서 본 농가 방향과 풍향의 차이는 평균 {float(row['dtheta']):.0f}°입니다.",
+            f"가장 가까운 민원 위치에서 {float(row['complaint_km']):.1f} km 떨어져 있습니다.",
+        ]
     history = int(row.get("hist_n", 0))
     if history > 0:
         evidence.append(f"같은 달·비슷한 풍향에서 이 농가의 바람 아랫방향 민원이 과거 {history}건 있었습니다. 인과관계가 아닌 참고 이력입니다.")
     else:
         evidence.append("같은 달·비슷한 풍향의 과거 반복 이력은 확인되지 않았습니다.")
     action = "농가 경계에서 실제 풍향과 냄새를 먼저 확인하고, 두 조건이 일치할 때 시료를 채취하세요."
-    if row.get("tier") == TIER_SINGLE:
+    if row.get("tier") == TIER_FALLBACK:
+        action = "보충 참고 후보이므로 앞 순위 확인 후 현장 풍향이 이 농가를 가리킬 때 확인하세요."
+    elif row.get("tier") == TIER_SINGLE:
         action = "근거가 한 민원 위치뿐이므로 " + action
     if row.get("coord_precision") not in (None, "exact"):
         action = "좌표가 근사값이므로 출발 전에 정확한 주소를 확인한 뒤, " + action

@@ -14,13 +14,13 @@ class ClusterNoteTest(unittest.TestCase):
         locations = e.complaint_locations([(35.900, 126.900), (35.901, 126.900), (35.900, 127.000)])
         result = e.score_complaint_candidates(farms, locations, e.Wind(0.0, 1.5))
         self.assertEqual(result.clusters, 2)
-        self.assertEqual(result.candidates["farm_id"].tolist(), ["west"])
+        self.assertEqual(result.candidates["farm_id"].tolist(), ["west", "east"])
         note = next(n for n in result.notes if "무리" in n)
-        self.assertIn("대표가 포함된 무리 1개", note)
+        self.assertIn("대표가 포함된 무리 2개", note)
         self.assertIn("보장하지 않음", note)
-        empty = e.score_complaint_candidates(farms, locations, e.Wind(180.0, 1.5))
-        self.assertTrue(empty.candidates.empty)
-        self.assertIn("대표가 포함된 무리 0개", next(n for n in empty.notes if "무리" in n))
+        fallback = e.score_complaint_candidates(farms, locations, e.Wind(180.0, 1.5))
+        self.assertEqual(len(fallback.candidates), 2)
+        self.assertTrue((fallback.candidates["tier"] == e.TIER_FALLBACK).all())
 
 
 def _farms():
@@ -187,24 +187,34 @@ class ComplaintAnchoredTest(unittest.TestCase):
         self.assertEqual(r.selection, e.TIER_CROSS)
         self.assertEqual(r.clusters, 2)
 
-    def test_cross_support_excludes_single_location_farms(self):
+    def test_cross_support_precedes_single_location_fillers(self):
         farms = _farm_table([("both", 2, 0.5), ("east_only", 2, 2.8)])
         locations = e.complaint_locations([_at(0, 0), _at(0, 1)])
         r = e.score_complaint_candidates(farms, locations, e.Wind(0.0, 2.0), sensitivity=False)
-        self.assertEqual(r.candidates["farm_id"].tolist(), ["both"])
+        self.assertEqual(r.candidates["farm_id"].tolist(), ["both", "east_only"])
         self.assertEqual(r.candidates.loc[0, "support_n"], 2)
+        self.assertEqual(r.candidates.loc[1, "support_n"], 1)
         self.assertAlmostEqual(float(r.candidates.loc[0, "s_multi"]), 20.0)
 
-    def test_single_location_fallback_is_flagged_and_not_padded(self):
+    def test_top_three_is_filled_in_rank_order(self):
+        farms = _farm_table([("cross", 2, 0.5), ("single", 2, 2.8), ("next", -2, 0), ("last", -3, 1)])
+        locations = e.complaint_locations([_at(0, 0), _at(0, 1)])
+        r = e.score_complaint_candidates(farms, locations, e.Wind(0.0, 2.0), top_k=3, sensitivity=False)
+        self.assertEqual(len(r.candidates), 3)
+        self.assertEqual(r.candidates["farm_id"].tolist()[:2], ["cross", "single"])
+        self.assertEqual(r.candidates["tier"].tolist(), [e.TIER_CROSS, e.TIER_SINGLE, e.TIER_FALLBACK])
+
+    def test_single_location_candidates_are_followed_by_ranked_fillers(self):
         farms = _farm_table([("east_only", 2, 2.8), ("downwind", -2, 0)])
         locations = e.complaint_locations([_at(0, 0), _at(0, 1)])
         r = e.score_complaint_candidates(farms, locations, e.Wind(0.0, 2.0), sensitivity=False)
         self.assertEqual(r.selection, e.TIER_SINGLE)
-        self.assertEqual(r.candidates["farm_id"].tolist(), ["east_only"])  # 5개로 채우지 않는다
+        self.assertEqual(r.candidates["farm_id"].tolist(), ["east_only", "downwind"])
         self.assertTrue(any("한 위치 기준" in note for note in r.notes))
         card = e.to_cards(r)[0]
         self.assertEqual(card["tier"], e.TIER_SINGLE)
         self.assertIn("근거가 한 민원 위치뿐", card["next_action"])
+        self.assertEqual(e.to_cards(r)[1]["tier"], e.TIER_FALLBACK)
 
     def test_travel_distance_changes_route_not_ranking(self):
         farms = _farm_table([("near", 1, 0), ("far", 3.5, 0.3)])

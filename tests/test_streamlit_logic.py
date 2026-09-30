@@ -23,7 +23,7 @@ def app_functions(**overrides):
     namespace = dict(datetime=datetime, logging=logging, pd=pd, FieldCandidate=FieldCandidate,
                      ForecastResult=ForecastResult, RiskArea=RiskArea, now_kst=now_kst,
                      _relative_scores=_relative_scores, assign_grid=assign_grid,
-                     build_response_package=build_response_package, **overrides)
+                     build_response_package=build_response_package, MAX_FIELD_CANDIDATES=3, **overrides)
     exec(compile(tree, "streamlit_app.py", "exec"), namespace)
     return namespace
 

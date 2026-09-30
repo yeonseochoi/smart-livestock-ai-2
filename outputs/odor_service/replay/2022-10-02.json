@@ -157,7 +157,7 @@
         "selection": "단일 지점 참고",
         "locations": 2,
         "clusters": 2,
-        "stability": 0.8,
+        "stability": 0.9,
         "stability_label": "높음",
         "route_km": 7.04,
         "notes": [
@@ -332,11 +332,11 @@
               "eq": 256.5
             },
             "coord_warning": false,
-            "merged_count": 2,
-            "merged_farm_ids": "IK-348 | IK-787",
+            "merged_count": 1,
+            "merged_farm_ids": "IK-348",
             "merged_names": "형제농장",
             "address": "전북특별자치도 익산시 석탄동 92번지 1호  ",
-            "merged_addresses": "전북특별자치도 익산시 석탄동 92번지 1호 | 전북특별자치도 익산시 석탄동 91번지 4호",
+            "merged_addresses": "전북특별자치도 익산시 석탄동 92번지 1호",
             "reason": "한 민원 위치에서만 바람이 불어오는 쪽에 있어 참고로 확인할 후보입니다. 민원 위치 2곳 중 1곳에서 이 농가가 바람이 불어오는 쪽(±45°, 4 km 안)에 있습니다. 그 위치들에서 본 농가 방향과 풍향의 차이는 평균 35°입니다. 가장 가까운 민원 위치에서 2.6 km 떨어져 있습니다. 같은 달·비슷한 풍향에서 이 농가의 바람 아랫방향 민원이 과거 20건 있었습니다. 인과관계가 아닌 참고 이력입니다.",
             "selection_summary": "한 민원 위치에서만 바람이 불어오는 쪽에 있어 참고로 확인할 후보입니다.",
             "evidence": [

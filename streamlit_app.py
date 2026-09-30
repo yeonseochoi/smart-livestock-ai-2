@@ -27,10 +27,11 @@ from odor_service.region_prediction.data import assign_grid
 
 ROOT = Path(__file__).resolve().parent
 DEMO_DATA = ROOT / "demo" / "demo-data.js"
-REPLAY_DIR = ROOT / "outputs" / "odor_service" / "replay"
+REPLAY_DIR = ROOT / "outputs" / "odor_service" / "replay_legacy"
 FARMS_FILE = ROOT / "outputs" / "odor_service" / "data" / "farms.parquet"
 FONT_CSS_URL = "https://hangeul.pstatic.net/hangeul_static/css/nanum-square-neo.css"
 DOCUMENT_SCHEMA_VERSION = 4
+MAX_FIELD_CANDIDATES = 3
 
 st.set_page_config(page_title="익산 악취 대응 AI", page_icon="🌿", layout="wide", initial_sidebar_state="expanded")
 
@@ -58,6 +59,15 @@ def load_demo_data() -> dict:
 def replay_revision() -> int:
     """Replay 파일이 다시 생성되면 Streamlit 캐시 키도 함께 바뀐다."""
     return max((path.stat().st_mtime_ns for path in REPLAY_DIR.glob("*.json")), default=0)
+
+
+@st.cache_data
+def model_hit_at_3() -> float | None:
+    try:
+        metrics = json.loads((ROOT / DEFAULT_METRICS).read_text(encoding="utf-8"))
+        return float(metrics["grids"]["1000"]["test"]["event_hit_rate_at_3"])
+    except (OSError, KeyError, TypeError, ValueError):
+        return None
 
 
 @st.cache_data
@@ -140,7 +150,7 @@ def event_map(event: dict, show_actual: bool, field_context: dict | None = None)
     points = [[r[0], r[1]] for r in reports] + [g["center"] for g in grids]
     farm_locations = load_farm_locations() if field_context else {}
     if field_context:
-        for card in field_context["event"].get("field", {}).get("cards", []):
+        for card in field_context["event"].get("field", {}).get("cards", [])[:MAX_FIELD_CANDIDATES]:
             location = farm_locations.get(str(card.get("farm_id")))
             if not location and card.get("lat") is not None and card.get("lon") is not None:
                 location = (float(card["lat"]), float(card["lon"]))
@@ -179,7 +189,7 @@ def event_map(event: dict, show_actual: bool, field_context: dict | None = None)
         ).add_to(fmap)
 
     if field_context:
-        for card in field_context["event"].get("field", {}).get("cards", []):
+        for card in field_context["event"].get("field", {}).get("cards", [])[:MAX_FIELD_CANDIDATES]:
             location = farm_locations.get(str(card.get("farm_id")))
             if not location and card.get("lat") is not None and card.get("lon") is not None:
                 location = (float(card["lat"]), float(card["lon"]))
@@ -212,9 +222,6 @@ def event_map(event: dict, show_actual: bool, field_context: dict | None = None)
 
 
 def render_operation_header(event: dict, field_context: dict | None) -> None:
-    field = field_context["event"].get("field", {}) if field_context else {}
-    cards = field.get("cards", [])
-    confidence = escape(str(field.get("confidence") or "연결 정보 없음"))
     st.markdown(
         '<div class="operation-hero">'
         '<div><span class="status-badge">과거 상황 재현</span>'
@@ -225,66 +232,67 @@ def render_operation_header(event: dict, field_context: dict | None) -> None:
         '</div>',
         unsafe_allow_html=True,
     )
-    st.caption("과거 관측 날씨로 재현한 시연입니다. 실제 예보 연동·현장 배치·시료 채취 결과를 의미하지 않습니다.")
-    st.markdown(
-        '<div class="operation-steps">'
-        '<div class="step done"><span>1</span><b>민원 집중 감지</b><small>최근 30분 신고</small></div>'
-        '<div class="step done"><span>2</span><b>예상 권역 Top 3</b><small>추가 민원 가능 권역</small></div>'
-        f'<div class="step active"><span>3</span><b>농가 후보 {len(cards)}곳</b><small>민원 위치·풍향 교차 근거</small></div>'
-        f'<div class="step"><span>4</span><b>경계 시료 채취</b><small>현장 신뢰도 {confidence}</small></div>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
+    hit = model_hit_at_3()
+    hit_text = "미산출" if hit is None else f"{hit:.2%}"
+    st.caption(f"민원 권역 Hit@3 {hit_text}는 가축 관련 악취 민원만 사용한 시간순 70/30 자체평가 기준입니다. 과거 관측 날씨로 재현한 시연이며 실제 현장 성능을 의미하지 않습니다.")
+
+
+def change_candidate(offset: int, candidate_count: int) -> None:
+    current = int(st.session_state.get("candidate_index", 0))
+    st.session_state.candidate_index = min(max(0, current + offset), candidate_count - 1)
 
 
 def render_field_candidates(field_context: dict | None) -> None:
     st.markdown("#### 먼저 확인할 농가")
-    st.caption("가축 분뇨 냄새 민원 위치마다 바람이 불어오는 쪽 4 km 안의 농가를 찾고, 여러 민원 위치가 함께 가리키는 농가를 우선했습니다. "
-               "대기 장소에서의 이동 거리는 순위에 넣지 않고 방문 동선 제안에만 씁니다.")
+    st.caption("예측 Top 3 권역으로 농가를 다시 고르는 방식이 아닙니다. 이 사건의 초기 30분에 실제 접수된 가축 악취 민원 위치와 당시 풍향으로 계산한 현장 확인 우선순위입니다.")
     if field_context is None:
         st.info("동일 사건 ID의 현장 후보 재현 자료가 없습니다.")
         return
 
     field_event = field_context["event"]
-    standby = field_context.get("standby", {})
-    chosen = next((p for p in standby.get("points", []) if p.get("point_id") == standby.get("chosen_point_id")), None)
-    if chosen:
-        st.caption(f'추천 대기 장소: {chosen.get("name", chosen["point_id"])} · 실제 담당자 GPS가 아닌 방문 동선 계산 출발점')
     field = field_event.get("field", {})
-    cards = field.get("cards", [])
+    cards = field.get("cards", [])[:MAX_FIELD_CANDIDATES]
     wind_speed = field_event.get("direction_overlap", {}).get("wind_speed")
     wind_text = "-" if wind_speed is None else f"{wind_speed} m/s"
     confidence = escape(str(field.get("confidence") or "정보 없음"))
-    stability = field.get("stability_label")
-    stability_text = "-" if not stability else f'{stability} ({float(field.get("stability", 0)):.0%} 유지)'
     st.markdown(
         '<div class="field-summary">'
         f'<div><small>풍속</small><b>{escape(wind_text)}</b></div>'
         f'<div><small>풍향 신뢰도</small><b>{confidence}</b></div>'
-        f'<div><small>풍향 ±20° 후보 안정성</small><b>{escape(stability_text)}</b></div>'
         '</div>',
         unsafe_allow_html=True,
     )
-    if field.get("locations"):
-        st.caption(f'가축 분뇨 냄새 민원의 고유 위치 {field["locations"]}곳(30m 이내 반복 신고는 1곳) · 민원 무리 {field.get("clusters", 1)}개 기준입니다. 권역 Top 3는 전체 신고로 계산합니다.')
     if field.get("selection") == "단일 지점 참고":
-        st.warning("2곳 이상의 민원 위치가 함께 가리키는 농가가 없습니다. 아래 후보는 한 민원 위치 기준 참고 후보입니다.")
-    st.caption(f'현재 민원 집중 사건 {field_event.get("event_id", "")}의 흐름을 이어서 표시합니다.')
-    st.info("익산시 정상 영업·정확 좌표 농가를 우선합니다. 익산 후보가 없을 때만 김제 용지 방면의 근사 좌표 후보를 인접 지역 참고로 표시합니다.")
+        st.warning("여러 민원 위치가 함께 가리키는 농가가 없어 단일 위치 기준 후보를 표시합니다.")
     if field.get("confidence") in ("낮음", "매우 낮음"):
-        st.warning("바람이 약합니다. 방향 근거의 신뢰도가 낮으니 현장에서 바람과 냄새를 먼저 확인하세요.")
+        st.warning("바람이 약해 방향 신뢰도가 낮습니다. 현장에서 풍향과 냄새를 먼저 확인하세요.")
     if not cards:
-        st.info("현재 조건에 맞는 방문 후보가 없습니다. 가축 분뇨 냄새 민원과 사건 시각 기상 자료를 확인하세요. 구체적인 사유는 아래 안내를 참고하세요.")
+        st.info("현재 조건에 맞는 현장 확인 후보가 없습니다.")
 
-    for card in cards[:5]:
-        components = card.get("components", {})
+    if cards:
+        current = min(max(0, st.session_state.get("candidate_index", 0)), len(cards) - 1)
+        st.session_state.candidate_index = current
+        previous, position, following = st.columns([1, 2, 1])
+        with previous:
+            st.button(
+                "‹ 이전", disabled=current == 0, use_container_width=True, key="candidate_prev",
+                on_click=change_candidate, args=(-1, len(cards)),
+            )
+        with following:
+            st.button(
+                "다음 ›", disabled=current == len(cards) - 1, use_container_width=True, key="candidate_next",
+                on_click=change_candidate, args=(1, len(cards)),
+            )
+        with position:
+            st.markdown(
+                f'<div class="candidate-position"><b>{current + 1}</b> / {len(cards)}</div>',
+                unsafe_allow_html=True,
+            )
+
+    current = st.session_state.get("candidate_index", 0)
+    for card in cards[current:current + 1]:
         name = escape(str(card.get("name") or card.get("farm_id") or "이름 없음"))
         summary = escape(str(card.get("selection_summary") or card.get("reason") or "선정 이유 정보 없음"))
-        evidence = [
-            item for item in (card.get("evidence") or [])
-            if not re.search(r"중\s*0곳|0곳의\s*풍상", str(item))
-        ]
-        evidence_html = "".join(f"<li>{escape(str(item))}</li>" for item in evidence)
         merged_count = int(card.get("merged_count") or 1)
         merged_names = [escape(item.strip()) for item in str(card.get("merged_names") or card.get("name") or "").split("|") if item.strip()]
         addresses = [escape(item.strip()) for item in str(card.get("merged_addresses") or card.get("address") or "주소 정보 없음").split("|") if item.strip()]
@@ -294,7 +302,7 @@ def render_field_candidates(field_context: dict | None) -> None:
             repeated = f'<span>동일 명칭으로 등록된 시설 {merged_count}건</span>' if len(merged_names) == 1 else ""
             merged_note = (
                 f'<div class="merged-note"><b>함께 확인할 등록 농장</b><ul>{names_html}</ul>{repeated}'
-                f'<small>같은 좌표 또는 300m 이내 동명 등록 {merged_count}건을 한 방문 지점으로 묶었습니다.</small></div>'
+                f'</div>'
             )
             title = "공동 방문 지점"
         else:
@@ -302,52 +310,57 @@ def render_field_candidates(field_context: dict | None) -> None:
             title = name
         rank_class = " first" if card.get("rank") == 1 else ""
         support = card.get("support") or {}
-        tier_html = ""
-        if card.get("tier"):
-            tier_class = " single" if card["tier"] == "단일 지점 참고" else ""
-            tier_html = (f'<span class="tier-badge{tier_class}">{escape(str(card["tier"]))} '
-                         f'{support.get("count", "-")}/{support.get("total", "-")}</span>')
-        distance_parts = []
-        if card.get("complaint_km") is not None:
-            distance_parts.append(f'가장 가까운 민원 위치 {float(card["complaint_km"]):.1f} km')
-        if card.get("travel_km") is not None and card.get("visit_order") is not None:
-            distance_parts.append(f'대기 장소에서 직선 {float(card["travel_km"]):.1f} km · 방문 동선 {int(card["visit_order"])}번째')
-        distance_html = f'<div class="farm-distance">{escape(" · ".join(distance_parts))}</div>' if distance_parts else ""
+        tier = card.get("tier")
+        if card.get("complaint_km") is None:
+            distance_html = ""
+        elif tier == "보충 참고":
+            distance_html = f'<span class="distance-badge">참고한 초기 가축 민원 위치에서 {float(card["complaint_km"]):.1f} km</span>'
+        else:
+            distance_html = f'<span class="distance-badge">초기 30분 가축 민원 위치 중 가장 가까운 지점에서 {float(card["complaint_km"]):.1f} km</span>'
         score = float(card.get("score") or 0)
         st.markdown(
             f'<div class="farm-card{rank_class}">'
-            f'<div class="farm-title"><b>{card.get("rank")}순위 · {title} {tier_html}</b>'
+            f'<div class="farm-title"><b>{card.get("rank")}순위 · {title}</b>'
             f'<strong>{score:.1f}<small>/100</small></strong></div>'
             f'<div class="score-bar"><i style="width:{max(0, min(score, 100)):.1f}%"></i></div>'
             f'<div class="farm-address"><small>주소</small><span>{address_text}</span></div>'
-            f'<div class="score-grid">'
-            f'<span><small>풍향</small><b>{components.get("풍향 일치", 0)}</b><em>/40</em></span>'
-            f'<span><small>민원 근접</small><b>{components.get("거리", 0)}</b><em>/25</em></span>'
-            f'<span><small>민원 중첩</small><b>{components.get("다중 측정 일치", 0)}</b><em>/20</em></span>'
-            f'<span><small>과거 반복</small><b>{components.get("과거 반복", 0)}</b><em>/15</em></span>'
-            f'</div>'
-            f'{distance_html}'
+            f'<div class="farm-meta">{distance_html}</div>'
             f'{merged_note}'
-            f'<div class="farm-reason"><b>왜 {card.get("rank")}순위인가요?</b><p>{summary}</p>'
-            f'<ul>{evidence_html}</ul></div>'
+            f'<p class="farm-summary">{summary}</p>'
             f'</div>',
             unsafe_allow_html=True,
         )
         if card.get("coord_warning"):
             st.caption(f'{card.get("rank")}순위 · 대략적인 좌표입니다. 방문 전 위치를 확인하세요.')
-    route = sorted((c for c in cards[:5] if c.get("visit_order") is not None), key=lambda c: int(c["visit_order"]))
-    if route:
-        names = " → ".join(escape(str(c.get("name") or c.get("farm_id"))) for c in route)
-        total = field.get("route_km")
-        st.markdown(
-            f'<div class="next-action"><b>방문 동선 제안</b> (대기 장소 출발, 가까운 곳부터)<br>{names}'
-            + (f'<br><small>직선 거리 합계 {float(total):.1f} km · 실제 도로 이동시간과 담당자 위치는 반영 전</small>' if total is not None else "")
-            + '</div>',
-            unsafe_allow_html=True,
-        )
-    for note in field.get("notes", []):
-        st.warning(note)
-    st.caption("※ 현장 확인 우선순위이며 발생원 확정이나 위반 판정이 아닙니다. 최종 판단은 농가 경계에서 채취한 시료로 합니다.")
+
+        with st.popover(f'ⓘ {card.get("rank")}순위 점수·선정 근거'):
+            st.caption('민원 위치는 초기 30분의 실제 가축 악취 신고를 30m 안 중복 신고끼리 묶은 위치입니다. 예측 Top 3 권역은 농가 순위 계산에 사용하지 않습니다.')
+            if tier == "교차 확인":
+                st.markdown(f'**여러 민원 위치 근거:** {support.get("total", "-")}곳 중 {support.get("count", "-")}곳이 이 농가를 풍상·4km 조건으로 함께 가리킵니다.')
+            elif tier == "단일 지점 참고":
+                st.markdown('**한 민원 위치 근거:** 풍상·4km 조건을 만족한 초기 가축 민원 위치가 한 곳입니다.')
+            elif tier == "보충 참고":
+                st.markdown('**보충 후보:** 기본 조건 후보가 부족해 같은 점수 체계의 다음 후보를 표시합니다.')
+            components = card.get("components") or {}
+            st.caption('총점 100점 = 풍향 일치(40) + 민원 위치 거리(25) + 여러 민원 위치 교차(20) + 과거 반복(15)')
+            score_parts = [
+                ("풍향 일치", "풍향 일치", 40),
+                ("민원 위치 거리", "거리", 25),
+                ("여러 민원 위치 교차", "다중 측정 일치", 20),
+                ("과거 반복", "과거 반복", 15),
+            ]
+            st.markdown(" · ".join(
+                f'{label} <b>{float(components.get(component_key, 0)):.1f}/{maximum}</b>'
+                for label, component_key, maximum in score_parts
+            ), unsafe_allow_html=True)
+            evidence = card.get("evidence") or []
+            if evidence:
+                st.markdown("**선정 근거**")
+                for item in evidence:
+                    st.markdown(f'- {escape(str(item))}')
+            if card.get("next_action"):
+                st.markdown(f'**현장 확인:** {escape(str(card["next_action"]))}')
+    st.caption("※ 현장 확인 우선순위이며 발생원 확정이나 위반 판정이 아닙니다.")
 
 
 def current_forecast(event: dict, field_context: dict | None = None):
@@ -370,7 +383,7 @@ def current_forecast(event: dict, field_context: dict | None = None):
         complaint_km=card.get("complaint_km"),
         travel_km=card.get("travel_km"),
         visit_order=card.get("visit_order"),
-    ) for card in cards[:5])
+    ) for card in cards[:MAX_FIELD_CANDIDATES])
     reports = event.get("reports", [])
     intensities = [float(report[2]) for report in reports if len(report) > 2 and report[2] is not None]
     if str(event.get("id", "")).startswith("EV2-"):
@@ -464,6 +477,7 @@ def apply_styles() -> None:
     @import url('https://hangeul.pstatic.net/hangeul_static/css/nanum-square-neo.css');
     :root{--app-font:'NanumSquareNeoVariable','NanumSquareNeo','Malgun Gothic',sans-serif;--app-font-bold:'NanumSquareNeoExtraBold','NanumSquareNeoVariable','Malgun Gothic',sans-serif}
     html,body,[data-testid="stAppViewContainer"],[data-testid="stSidebar"],button,input,textarea,select,label,p,span,div{font-family:var(--app-font)!important;letter-spacing:-.018em}
+    .material-icons,.material-symbols-rounded,[class*="material-icons"],[class*="material-symbols"],[data-testid="stIconMaterial"],[data-testid="stIconMaterial"] *{font-family:'Material Symbols Rounded','Material Icons'!important;letter-spacing:normal!important}
     h1,h2,h3,h4,h5,h6,b,strong,.event-id,.weather-value,.farm-title,.step b{font-family:var(--app-font-bold)!important;letter-spacing:-.035em}
     button{font-family:'NanumSquareNeoBold','NanumSquareNeoVariable','Malgun Gothic',sans-serif!important}
     [data-testid="stHeader"]{background:#172e3d;height:3.6rem}
@@ -480,8 +494,8 @@ def apply_styles() -> None:
     .operation-steps{display:grid;grid-template-columns:repeat(4,1fr);background:white;border:1px solid #dce2e5;border-top:0;margin-bottom:1rem}.step{position:relative;padding:.7rem .65rem .7rem 2.5rem;border-right:1px solid #e6ebed}.step:last-child{border-right:0}.step>span{position:absolute;left:.7rem;top:.75rem;width:1.35rem;height:1.35rem;border-radius:50%;background:#dce2e5;color:#68757c;text-align:center;line-height:1.35rem;font-size:.68rem;font-weight:800}.step b,.step small{display:block}.step b{font-size:.76rem;color:#304047}.step small{font-size:.63rem;color:#7c898f;margin-top:.12rem}.step.done>span{background:#15866f;color:white}.step.active{background:#fff8e8}.step.active>span{background:#e9a11b;color:#172e3d}
     .field-flow{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;background:#eef7f4;border:1px solid #c8e2da;padding:.65rem .75rem;margin:.4rem 0 .7rem;font-size:.78rem;color:#24584b}
     .field-flow span{color:#8ba69e}.farm-card{border:1px solid #dce2e5;border-left:4px solid #15866f;background:white;padding:.65rem .75rem;margin:.45rem 0}.farm-card.first{border-left-color:#dd3e36;background:#fffafa}
-    .field-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin:.45rem 0}.field-summary div{border:1px solid #dce2e5;background:#f8faf9;padding:.45rem;text-align:center}.field-summary small{display:block;color:#68757c;font-size:.65rem}.field-summary b{display:block;color:#182126;font-size:.82rem;margin-top:.1rem}
-    .farm-title{display:flex;justify-content:space-between;gap:.5rem;color:#182126}.farm-title strong{color:#15866f;font-size:1rem}.farm-title strong small{font-size:.6rem;color:#7c898f}.score-bar{height:5px;background:#e9eeee;margin:.4rem 0 .55rem;border-radius:5px;overflow:hidden}.score-bar i{display:block;height:100%;background:linear-gradient(90deg,#2c8f77,#e9a11b)}.farm-address{display:flex;gap:.45rem;align-items:flex-start;color:#46575e;font-size:.72rem;line-height:1.35;margin:.3rem 0 .55rem}.farm-address small{color:#68757c;font-weight:700;flex:0 0 auto}.farm-address span{overflow-wrap:anywhere}.score-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.25rem}.score-grid span{background:#f5f8f7;padding:.3rem;text-align:center}.score-grid small{display:block;font-size:.58rem;color:#68757c}.score-grid b{font-size:.75rem;color:#204e43}.score-grid em{font-style:normal;font-size:.55rem;color:#8a969b}.farm-distance{font-size:.69rem;color:#46575e;margin:.45rem 0 .2rem}.farm-reason{font-size:.69rem;color:#68757c;line-height:1.45;border-top:1px dashed #dce2e5;padding-top:.35rem}
+    .field-summary{display:grid;grid-template-columns:repeat(2,1fr);gap:.4rem;margin:.45rem 0}.field-summary div{border:1px solid #dce2e5;background:#f8faf9;padding:.45rem;text-align:center}.field-summary small{display:block;color:#68757c;font-size:.65rem}.field-summary b{display:block;color:#182126;font-size:.82rem;margin-top:.1rem}
+    .candidate-position{text-align:center;line-height:2.35rem;color:#68757c;font-size:.82rem}.candidate-position b{color:#167b64;font-size:1rem}.farm-title{display:flex;justify-content:space-between;gap:.5rem;color:#182126}.farm-title strong{color:#15866f;font-size:1rem}.farm-title strong small{font-size:.6rem;color:#7c898f}.score-bar{height:5px;background:#e9eeee;margin:.4rem 0 .55rem;border-radius:5px;overflow:hidden}.score-bar i{display:block;height:100%;background:linear-gradient(90deg,#2c8f77,#e9a11b)}.farm-address{display:flex;gap:.45rem;align-items:flex-start;color:#46575e;font-size:.72rem;line-height:1.35;margin:.3rem 0 .55rem}.farm-address small{color:#68757c;font-weight:700;flex:0 0 auto}.farm-address span{overflow-wrap:anywhere}.farm-meta{margin:.2rem 0}.distance-badge{display:inline-block;background:#eef4f3;color:#315e55;border-radius:999px;padding:.18rem .5rem;font-size:.7rem;font-weight:700}.farm-summary{font-size:.8rem;line-height:1.5;color:#41555e;margin:.55rem 0 0}
     .weather-cards{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin:.25rem 0 .35rem}
     .weather-card{display:flex;align-items:center;gap:.55rem;min-width:0;background:#fff;border:1px solid #dce2e5;padding:.65rem .6rem}
     .weather-icon{font-size:1.15rem;line-height:1;flex:0 0 auto}.weather-copy{min-width:0}
@@ -510,18 +524,11 @@ def apply_styles() -> None:
     .step{padding:1rem 1rem 1rem 2.8rem}.step b{font-size:.9rem}.step small{font-size:.78rem}
     .step>span{top:1.1rem}
     .st-key-map_panel,.st-key-agent_panel{position:static;height:auto;overflow:visible;background:white;border:1px solid #e0e7ec;border-radius:14px;padding:1.1rem;min-width:0}
-    [data-testid="stExpander"] summary{display:flex!important;align-items:center;gap:.55rem;min-height:2.2rem;padding:.45rem .65rem!important;line-height:1.35!important}
-    [data-testid="stExpander"] summary p{margin:0!important;line-height:1.35!important;white-space:normal!important;overflow-wrap:anywhere}
-    [data-testid="stExpander"] summary svg{flex:0 0 auto;width:1.1rem;height:1.1rem}
     .farm-card{border-radius:10px;margin:.8rem 0;padding:1rem;border-left:4px solid #829aa3}
     .farm-card.first{background:#edf8f5;border-color:#b6dbd0;border-left-color:#167b64}
     .farm-title b{font-size:1.05rem}.farm-title strong{font-size:1.35rem}.farm-title strong small{font-size:.8rem}
-    .score-grid{gap:6px}.score-grid span{border-radius:6px;padding:.5rem .2rem;background:#f2f5f6}
-    .score-grid small{font-size:.77rem}.score-grid b{font-size:1rem}.score-grid em{font-size:.72rem}
-    .farm-distance,.farm-reason{font-size:.88rem;line-height:1.65}.merged-note{font-size:.8rem;color:#694f16;background:#fff8e8;border-radius:7px;padding:.55rem .65rem;margin:.5rem 0}.merged-note b,.merged-note span,.merged-note small{display:block}.merged-note ul{margin:.3rem 0;padding-left:1.15rem}.merged-note span{font-weight:700}.merged-note small{color:#806d42;margin-top:.25rem}.farm-reason{margin-top:.6rem;padding-top:.65rem}.farm-reason>p{margin:.35rem 0 .45rem;color:#253f48;font-weight:700}.farm-reason ul{margin:.25rem 0 .65rem;padding-left:1.15rem;color:#5b6f7b}.farm-reason li{margin:.14rem 0}.next-action{background:#eef7f4;border-radius:7px;padding:.55rem .65rem;color:#285b4f}
+    .merged-note{font-size:.8rem;color:#694f16;background:#fff8e8;border-radius:7px;padding:.5rem .65rem;margin:.5rem 0}.merged-note b,.merged-note span{display:block}.merged-note ul{margin:.25rem 0 0;padding-left:1.15rem}.merged-note span{font-weight:700}
     .field-summary small{font-size:.8rem}.field-summary b{font-size:1rem}.field-summary div{border-radius:8px;padding:.6rem}
-    .tier-badge{display:inline-block;margin-left:.35rem;padding:.1rem .45rem;border-radius:999px;background:#e3f3ee;color:#15664f;font-size:.72rem;font-weight:800;vertical-align:middle}
-    .tier-badge.single{background:#fff1d6;color:#8a5a00}
     .legend-row{display:flex;gap:18px;flex-wrap:wrap;font-size:.85rem;color:#516874;padding:.6rem 0}
     .legend-row b{margin-right:5px}
     /* Streamlit의 지도·후보 2열은 노트북 폭부터 세로로 전환한다. */
@@ -545,17 +552,14 @@ def apply_styles() -> None:
       .hero-event{min-width:0;border-left:0;border-top:1px solid #ffffff44;padding:.8rem 0 0;margin-top:.85rem}
       .operation-steps{grid-template-columns:1fr}.step{border-right:0!important;border-bottom:1px solid #e6ebed!important}.step:last-child{border-bottom:0!important}
       .weather-cards{grid-template-columns:1fr 1fr;gap:.4rem}.weather-card{padding:.55rem .45rem}
-      .field-summary{grid-template-columns:1fr 1fr}.field-summary div:last-child{grid-column:1/-1}
-      .score-grid{grid-template-columns:1fr 1fr}.farm-title{align-items:flex-start}.farm-title b{font-size:.95rem}.farm-title strong{font-size:1.15rem;white-space:nowrap}
+      .field-summary{grid-template-columns:1fr 1fr}.farm-title{align-items:flex-start}.farm-title b{font-size:.95rem}.farm-title strong{font-size:1.15rem;white-space:nowrap}
       .field-flow{align-items:flex-start;line-height:1.55}.legend-row{display:grid;grid-template-columns:1fr;gap:.4rem}
       .st-key-map_panel,.st-key-agent_panel{padding:.7rem;border-radius:10px}
-      [data-testid="stExpander"] summary{padding:.5rem .45rem!important;font-size:.82rem!important}
       iframe[title="streamlit_folium.st_folium"]{height:420px!important}
       div[data-testid="stTabs"] button{font-size:.74rem!important;padding-left:.45rem!important;padding-right:.45rem!important}
     }
     @media(max-width:390px){
-      .weather-cards,.field-summary,.score-grid{grid-template-columns:1fr}
-      .field-summary div:last-child{grid-column:auto}
+      .weather-cards,.field-summary{grid-template-columns:1fr}
       iframe[title="streamlit_folium.st_folium"]{height:360px!important}
     }
     </style>
@@ -565,12 +569,15 @@ def apply_styles() -> None:
 _load_secrets()
 apply_styles()
 replays = load_field_replays(replay_revision())
-# 재현 사건 자체를 선택한다. 가까운 레거시 사건으로 연결하면 일부 사건이
-# 누락되거나 여러 선택지가 같은 EV2 사건을 가리킬 수 있다.
+# Event 선정·권역 예측·농장 후보가 모두 가축 관련 악취 민원으로 계산된 사건만 보여준다.
+demo_replays = [
+    row for row in replays
+    if len(row["event"].get("field", {}).get("cards", [])) >= MAX_FIELD_CANDIDATES
+] or replays
 events = [
     {"id": row["event"]["event_id"], "hour": row["event"]["event_hour"]}
-    for row in sorted(replays, key=lambda row: row["event_time"])
-] if replays else load_demo_data().get("events", [])
+    for row in sorted(demo_replays, key=lambda row: row["event_time"])
+] if demo_replays else load_demo_data().get("events", [])
 if not events:
     st.error("표시할 Event 데이터가 없습니다.")
     st.stop()
@@ -582,6 +589,8 @@ if "documents" not in st.session_state:
     st.session_state.documents = None
 if "document_event" not in st.session_state:
     st.session_state.document_event = None
+if "candidate_index" not in st.session_state:
+    st.session_state.candidate_index = 0
 if st.session_state.get("document_schema_version") != DOCUMENT_SCHEMA_VERSION:
     st.session_state.documents = None
     st.session_state.document_event = None
@@ -602,6 +611,7 @@ with st.sidebar:
     if selected_index != st.session_state.event_index:
         st.session_state.event_index = selected_index
         st.session_state.documents = None
+        st.session_state.candidate_index = 0
         st.session_state.show_actual = False
         st.rerun()
     left, middle, right = st.columns([4, 1, 1])
@@ -611,28 +621,40 @@ with st.sidebar:
         if st.button("‹", disabled=st.session_state.event_index == 0, use_container_width=True, key="prev"):
             st.session_state.event_index -= 1
             st.session_state.documents = None
+            st.session_state.candidate_index = 0
             st.session_state.show_actual = False
             st.rerun()
     with right:
         if st.button("›", disabled=st.session_state.event_index == len(events) - 1, use_container_width=True, key="next"):
             st.session_state.event_index += 1
             st.session_state.documents = None
+            st.session_state.candidate_index = 0
             st.session_state.show_actual = False
             st.rerun()
 
-    show_actual = st.toggle("검증용 실제 이후 신고 표시", value=False, key="show_actual")
+    show_actual = st.toggle("이 사건의 실제 이후 신고 보기", value=False, key="show_actual")
     m1, m2 = st.columns(2)
     m1.metric("초기 신고", event.get("initialCount", 0))
     m2.metric("점검 권역", min(3, len(grids)))
     if show_actual:
-        st.metric("Top 3 중 실제 이후 신고 권역", f'{sum(bool(grid.get("actual")) for grid in grids[:3])}/3')
+        st.metric(
+            "이번 사건 실제 신고 포함 권역",
+            f'{sum(bool(grid.get("actual")) for grid in grids[:3])}/3',
+            help="예측 Top 3 중 이후 30분에 실제 신고가 접수된 1km 권역 수입니다.",
+        )
 
-    st.markdown('<div class="eyebrow">1km Complaint Forecast</div>', unsafe_allow_html=True)
-    st.markdown('<div class="risk-box"><b>최우선 점검 권역 안내</b><br>1순위 권역부터 현장 확인을 권고합니다.<br><small>예측 확률이 아닌 권역 간 상대 순위입니다.</small></div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="eyebrow">현장 참고 기상정보</div>', unsafe_allow_html=True)
-    wind_speed = "-" if weather.get("windSpeed") is None else f'{weather["windSpeed"]} m/s'
-    wind_direction = "-" if weather.get("windDirection") is None else f'{weather["windDirection"]}°'
+    st.markdown('<div class="eyebrow">현장 기상</div>', unsafe_allow_html=True)
+    speed_value = weather.get("windSpeed")
+    direction_value = weather.get("windDirection")
+    wind_speed = "-" if speed_value is None else f'{speed_value} m/s'
+    if speed_value is None or direction_value is None:
+        wind_direction = "-"
+    elif float(speed_value) < 0.5:
+        wind_direction = "판단 어려움"
+    elif float(direction_value) == 0:
+        wind_direction = "0° (북풍)"
+    else:
+        wind_direction = f'{direction_value}°'
     optional_weather = ""
     for key, label, icon, unit in (("humidity", "상대습도", "💧", "%"), ("rainfall", "최근 1시간 강수", "🌧️", "mm")):
         if weather.get(key) is not None:
@@ -644,35 +666,24 @@ with st.sidebar:
       <div class="weather-card"><span class="weather-icon">🧭</span><div class="weather-copy"><div class="weather-label">풍향</div><div class="weather-value">{wind_direction}</div></div></div>
       {optional_weather}
     </div>''', unsafe_allow_html=True)
-    st.caption("※ 권역 예측 모델에는 미사용, 방문 농가 순위에는 풍향·풍속 사용")
-
-    st.markdown('<div class="eyebrow">Dispatch Priority</div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">점검 권역</div>', unsafe_allow_html=True)
     relative_scores = _relative_scores(pd.Series([grid["score"] for grid in grids[:3]])) if grids else []
     for idx, grid in enumerate(grids[:3], 1):
         cls = "priority first" if idx == 1 else "priority"
         action = "가장 먼저 현장 확인" if idx == 1 else "1순위 확인 후 순차 확인"
         st.markdown(f'<div class="{cls}"><b>{idx}순위 · 1km 권역</b><br><small>{action} · 상대점수 {relative_scores[idx - 1]}/100</small></div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="eyebrow">Administrative Agent</div>', unsafe_allow_html=True)
     if st.button("대응 문서 생성", type="primary", use_container_width=True):
         store_generated_documents(event, field_context)
-    st.caption(f'{provider_name()} LLM 연결됨' if llm_configured() else "안전 템플릿 모드 · API 키 미설정")
 
 render_operation_header(event, field_context)
 
 map_column, agent_column = st.columns([1.35, 1], gap="large")
 
 with map_column.container(key="map_panel"):
-    st.markdown("#### 과거 Event 재현 모드")
-    st.caption("1km 광역 경보 + 현장 확인 후보 · 초록 숫자는 방문 농가 순서입니다.")
+    st.markdown("#### 상황 지도")
     st_folium(event_map(event, show_actual, field_context), use_container_width=True, height=650, returned_objects=[])
-    st.markdown('<div class="legend-row"><span><b style="color:#dd3e36">■</b>추가 민원 예상 권역</span><span><b style="color:#15866f">●</b>방문 후보 1–5</span></div>', unsafe_allow_html=True)
-    with st.expander("자료와 계산 기준 확인"):
-        st.write("이 화면은 하나의 민원 집중 사건을 기준으로, 민원 발생 예측 권역 Top 3 → 대기 장소 → 방문 농가 후보 순서로 연결해 보여줍니다.")
-        st.write("농가 점수는 발생원일 확률이 아닙니다. 담당자가 어디부터 확인할지 정하는 참고 순위이며, 풍향 일치 40점·민원 근접 25점·여러 민원 위치 교차 20점·과거 반복 이력 15점으로 계산합니다.")
-        st.write("후보는 가축 분뇨 냄새 신고를 30m로 묶은 고유 민원 위치마다 바람이 불어오는 쪽(±45°) 4 km 안의 농가입니다. 공장·하수구·소각·음식·기타 신고는 농가 후보 근거에서 제외하며, 권역 Top 3는 전체 신고로 계산합니다. 2곳 이상의 민원 위치가 함께 가리키는 농가를 우선하고, 그런 농가가 없을 때만 한 위치 기준 후보를 참고로 보여 줍니다. 후보 수를 5곳으로 억지로 채우지 않습니다.")
-        st.write("민원이 2 km 이상 떨어진 여러 무리로 나뉘면, 후보가 남은 무리의 대표를 우선합니다. 교차 확인 조건·지점 병합·최대 5곳 제한 때문에 모든 무리의 후보가 포함되지는 않을 수 있습니다. 풍향 ±20° 후보 안정성은 풍향이 조금 달라져도 같은 후보가 유지되는 비율입니다.")
-        st.write("대기 장소의 위치·등급은 전체 기간 자료, 대기 방면은 밤 전체 관측 평균 바람으로 계산했습니다. 사건 이후 정보가 포함된 과거 재현이며 실시간 운영 성능이 아닙니다. 사후 확인 등급은 현재 출동 판단에 사용하지 않습니다.")
+    st.markdown('<div class="legend-row"><span><b style="color:#dd3e36">■</b>추가 민원 예상 권역</span><span><b style="color:#15866f">●</b>방문 후보 1–3</span></div>', unsafe_allow_html=True)
 
 with agent_column.container(key="agent_panel"):
     render_field_candidates(field_context)

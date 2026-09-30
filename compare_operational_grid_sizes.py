@@ -70,6 +70,11 @@ def fixed_k_metrics(frame: pd.DataFrame, score: np.ndarray, k: int = 3) -> dict[
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     complaints, _, _, _, _ = odor.load_inputs()
+    complaints = complaints.loc[
+        complaints["odor_type"].fillna("").astype(str).str.contains("가축", regex=False)
+    ].copy()
+    if complaints.empty:
+        raise ValueError("가축 관련 악취 민원이 없습니다.")
     original, _ = odor.add_grid_columns(complaints)
     _, selected_hours = odor.build_bounded_events(original)
 
@@ -83,7 +88,8 @@ def main() -> None:
     train_ids, test_ids = odor.split_event_ids(common_summary)
 
     report = {
-        "protocol": "common events, chronological 70/30 split, 30-minute input and forecast",
+        "protocol": "livestock complaints only, common events, chronological 70/30 split, 30-minute input and forecast",
+        "complaint_scope": "가축 관련 악취 민원만 사용",
         "common_events": len(common_ids), "train_events": len(train_ids), "test_events": len(test_ids),
         "grids": {},
     }

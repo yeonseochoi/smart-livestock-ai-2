@@ -82,7 +82,7 @@ class ReplayTest(unittest.TestCase):
         self.assertTrue(any(card["components"]["과거 반복"] > 0 for card in cards))
 
     def test_candidates_are_anchored_to_complaint_locations(self):
-        """후보는 민원 위치 4 km 안·풍상에서만 나오고, 교차 확인이 있으면 단일 지점 후보를 섞지 않는다."""
+        """후보는 민원 위치 4 km 안·풍상에서 나오며 교차 확인 뒤에 단일 지점 후보를 보충한다."""
         for entry in self.index:
             replay = json.loads((OUT / f"{entry['night_date']}.json").read_text(encoding="utf-8"))
             for event in replay["events"]:
@@ -96,12 +96,17 @@ class ReplayTest(unittest.TestCase):
                 self.assertLessEqual(field["locations"], len(event["first30_complaints"]))
                 tiers = {card["tier"] for card in cards}
                 if field["selection"] == "교차 확인":
-                    self.assertEqual(tiers, {"교차 확인"})
+                    tier_order = [card["tier"] for card in cards]
+                    self.assertEqual(tier_order, sorted(tier_order, key=lambda tier: tier != "교차 확인"))
+                    self.assertIn("교차 확인", tiers)
                 for card in cards:
-                    self.assertGreaterEqual(card["support"]["count"], 1)
+                    if card["tier"] == "보충 참고":
+                        self.assertEqual(card["support"]["count"], 0)
+                    else:
+                        self.assertGreaterEqual(card["support"]["count"], 1)
+                        self.assertLessEqual(card["complaint_km"], 4.0 + 1e-6)
+                        self.assertGreater(card["components"]["다중 측정 일치"], 0)
                     self.assertEqual(card["support"]["total"], field["locations"])
-                    self.assertLessEqual(card["complaint_km"], 4.0 + 1e-6)
-                    self.assertGreater(card["components"]["다중 측정 일치"], 0)
                 self.assertEqual(sorted(card["visit_order"] for card in cards), list(range(1, len(cards) + 1)))
                 self.assertEqual([card["rank"] for card in cards], list(range(1, len(cards) + 1)))
 

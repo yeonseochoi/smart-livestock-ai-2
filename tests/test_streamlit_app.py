@@ -33,7 +33,7 @@ class StreamlitAppTest(unittest.TestCase):
             Path(folder, "fixture.json").write_text(json.dumps(replay, ensure_ascii=False), encoding="utf-8")
             source = (ROOT / "streamlit_app.py").read_text(encoding="utf-8")
             source = source.replace("ROOT = Path(__file__).resolve().parent", f"ROOT = Path({str(ROOT)!r})")
-            source = source.replace('REPLAY_DIR = ROOT / "outputs" / "odor_service" / "replay"', f"REPLAY_DIR = Path({folder!r})")
+            source = source.replace('REPLAY_DIR = ROOT / "outputs" / "odor_service" / "replay_legacy"', f"REPLAY_DIR = Path({folder!r})")
             app = AppTest.from_string(source, default_timeout=20).run()
             self.assertFalse(app.exception)
             weather_html = next(item.value for item in app.markdown if item.value.startswith('<div class="weather-cards">'))
@@ -63,22 +63,40 @@ class StreamlitAppTest(unittest.TestCase):
 
     def test_initial_demo_screen_and_event_navigation(self) -> None:
         app = self.app()
-        self.assertTrue(any("과거 Event 재현 모드" in item.value for item in app.markdown))
+        self.assertTrue(any("상황 지도" in item.value for item in app.markdown))
         self.assertGreater(int(app.metric[0].value), 0)
         self.assertEqual(app.metric[1].value, "3")
         self.assertEqual(len(app.metric), 2)
-        self.assertTrue(any(toggle.label == "검증용 실제 이후 신고 표시" for toggle in app.toggle))
+        self.assertTrue(any(toggle.label == "이 사건의 실제 이후 신고 보기" for toggle in app.toggle))
         rendered = "\n".join(item.value for item in app.markdown)
         self.assertIn("padding-top:4.6rem", rendered)
         self.assertIn("💨", rendered)
-        self.assertTrue(any("추천 대기 장소" in item.value for item in app.caption))
         self.assertIn("🌧️", rendered)
-        self.assertIn("민원 집중 감지", rendered)
         self.assertIn("먼저 확인할 농가", rendered)
-        self.assertIn("경계 시료 채취", rendered)
         self.assertIn("민원 확산 예측에서 현장 확인까지", rendered)
-        self.assertIn("과거 반복", rendered)
-        self.assertIn("왜 1순위인가요?", rendered)
+        captions = "\n".join(item.value for item in app.caption)
+        self.assertIn("Hit@3 81.25%", captions)
+        self.assertIn("가축 관련 악취 민원만 사용", captions)
+        self.assertIn("예측 Top 3 권역으로 농가를 다시 고르는 방식이 아닙니다", captions)
+        self.assertNotIn("방문 동선", rendered)
+        self.assertNotIn("자료와 계산 기준 확인", rendered)
+        self.assertNotIn("왜 1순위인가요?", rendered)
+        self.assertNotIn("풍향 ±20° 후보 안정성", rendered)
+        self.assertIn('class="candidate-position"', rendered)
+        self.assertIn("초기 30분 가축 민원 위치 중 가장 가까운 지점", rendered)
+        candidate_cards = [item.value for item in app.markdown if 'class="farm-card' in item.value]
+        self.assertEqual(len(candidate_cards), 1)
+        self.assertIn("1순위", candidate_cards[0])
+        next_candidate = next(button for button in app.button if button.key == "candidate_next")
+        app = next_candidate.click().run()
+        candidate_cards = [item.value for item in app.markdown if 'class="farm-card' in item.value]
+        self.assertEqual(len(candidate_cards), 1)
+        self.assertIn("2순위", candidate_cards[0])
+        next_candidate = next(button for button in app.button if button.key == "candidate_next")
+        app = next_candidate.click().run()
+        candidate_cards = [item.value for item in app.markdown if 'class="farm-card' in item.value]
+        self.assertEqual(len(candidate_cards), 1)
+        self.assertIn("3순위", candidate_cards[0])
         self.assertNotIn("현장에서는", rendered)
         self.assertIn("nanum-square-neo.css", rendered)
         self.assertIn("NanumSquareNeoVariable", rendered)
@@ -91,10 +109,10 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertTrue(all("가장 먼저" not in item for item in priority_cards[1:]))
         self.assertNotIn("T", app.selectbox[0].options[-1].split(" · ")[0])
 
-        actual_toggle = next(toggle for toggle in app.toggle if toggle.label == "검증용 실제 이후 신고 표시")
+        actual_toggle = next(toggle for toggle in app.toggle if toggle.label == "이 사건의 실제 이후 신고 보기")
         actual_toggle.set_value(True).run()
         self.assertTrue(actual_toggle.value)
-        self.assertEqual(app.metric[2].label, "Top 3 중 실제 이후 신고 권역")
+        self.assertEqual(app.metric[2].label, "이번 사건 실제 신고 포함 권역")
         self.assertRegex(app.metric[2].value, r"^[0-3]/3$")
         previous = next(button for button in app.button if button.key == "prev")
         previous.click().run()
@@ -110,8 +128,8 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertFalse(app.exception)
         package = app.session_state["documents"]
         self.assertEqual(package.event_id, app.session_state["document_event"])
-        self.assertTrue(package.event_id.startswith("EV2-"))
-        sources = [event for path in (ROOT / "outputs/odor_service/replay").glob("*.json")
+        self.assertTrue(package.event_id.startswith("EVT-"))
+        sources = [event for path in (ROOT / "outputs/odor_service/replay_legacy").glob("*.json")
                    if path.name != "index.json"
                    for event in json.loads(path.read_text(encoding="utf-8")).get("events", [])]
         source = next(event for event in sources if event["event_id"] == package.event_id)
@@ -126,13 +144,13 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertEqual(package.forecast.weather["humidity"], source["weather"]["humidity"])
         self.assertEqual(package.forecast.weather["rainfall"], source["weather"]["rainfall"])
         candidates = package.forecast.field_candidates
-        expected_names = [c.get("merged_names") or c["name"] for c in source["field"]["cards"]]
+        expected_names = [c.get("merged_names") or c["name"] for c in source["field"]["cards"][:3]]
         self.assertEqual([c.display_name for c in candidates], expected_names)
         for document in (package.briefing, package.dispatch_order):
             names = re.findall(r"^### \d+순위 · (.+)$", document, flags=re.M)
             self.assertEqual(names, [" ".join(name.replace("|", " / ").split()) for name in expected_names])
         self.assertEqual(str(package.forecast.generated_at.tzinfo), "Asia/Seoul")
-        self.assertEqual(package.forecast.model_metrics, {})
+        self.assertAlmostEqual(package.forecast.model_metrics["top_k_recall"], 0.3930059523809524)
         boundary = package.forecast.event_time
         self.assertIn(f'{boundary:%H:%M}~{boundary + timedelta(minutes=30):%H:%M}', package.briefing)
         tabs = [tab.label for tab in app.tabs]

@@ -75,7 +75,7 @@ def load_livestock_complaints() -> pd.DataFrame:
     df = asc.filter_target_region(asc.preprocess_data(raw, mapping), include_adjacent=False)
     df = df[df["odor_type"].astype(str).str.contains("가축")]
     df = df.dropna(subset=["datetime", "latitude", "longitude"])
-    out = df[["datetime", "latitude", "longitude"]].copy()
+    out = df[["datetime", "latitude", "longitude", "intensity"]].copy()
     out["datetime"] = pd.to_datetime(out["datetime"])
     out["night_date"] = night_date(out["datetime"])
     out["in_night"] = in_night_window(out["datetime"])
