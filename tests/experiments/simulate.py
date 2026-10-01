@@ -119,7 +119,7 @@ def main(n_trials: int = N_TRIALS, seed: int = 0) -> dict:
     weight_sets = {
         "규모 추가 15": e.Weights(scale=15.0, **no_hist),
         "규모 추가 30": e.Weights(scale=30.0, **no_hist),
-        "점수 카드(풍향40·거리25·다중20)": e.Weights(**no_hist),
+        "점수 카드(풍향20·거리20·다중40·과거20)": e.Weights(**no_hist),
         "소거: 풍향 제외": e.Weights(wind=0.0, **no_hist),
         "소거: 거리 제외": e.Weights(dist=0.0, **no_hist),
         "소거: 다중 측정 제외": e.Weights(multi=0.0, **no_hist),

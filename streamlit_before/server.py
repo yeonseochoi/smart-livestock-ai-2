@@ -24,7 +24,7 @@ OUTPUT = ROOT / "outputs" / "administrative_agent"
 
 class DemoHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=str(ROOT / "demo"), **kwargs)
+        super().__init__(*args, directory=str(ROOT / "streamlit_before"), **kwargs)
 
     def _json(self, status: int, body: dict) -> None:
         data = json.dumps(body, ensure_ascii=False).encode("utf-8")

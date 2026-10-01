@@ -9,7 +9,6 @@ import math
 import logging
 import os
 from pathlib import Path
-import re
 
 import folium
 import pandas as pd
@@ -25,12 +24,13 @@ from odor_service.region_prediction.data import assign_grid
 
 
 ROOT = Path(__file__).resolve().parent
-DEMO_DATA = ROOT / "demo" / "demo-data.js"
 REPLAY_DIR = ROOT / "outputs" / "odor_service" / "replay_legacy"
 FARMS_FILE = ROOT / "outputs" / "odor_service" / "data" / "farms.parquet"
 FONT_CSS_URL = "https://hangeul.pstatic.net/hangeul_static/css/nanum-square-neo.css"
-DOCUMENT_SCHEMA_VERSION = 4
+DOCUMENT_SCHEMA_VERSION = 5
 MAX_FIELD_CANDIDATES = 3
+# 예측 권역은 순위보다 "추가 민원 예상 범위"라는 의미를 우선해 동일한 빨간색으로 표시한다.
+RISK_COLOR = "#dd3e36"
 
 st.set_page_config(page_title="익산 악취 대응 AI", page_icon="🌿", layout="wide", initial_sidebar_state="expanded")
 
@@ -44,15 +44,6 @@ def _load_secrets() -> None:
             value = None
         if value:
             os.environ.setdefault(key, str(value))
-
-
-@st.cache_data
-def load_demo_data() -> dict:
-    text = DEMO_DATA.read_text(encoding="utf-8-sig").strip()
-    match = re.fullmatch(r"window\.DEMO_DATA\s*=\s*(\{.*\})\s*;", text, flags=re.DOTALL)
-    if not match:
-        raise ValueError("demo/demo-data.js 형식을 읽을 수 없습니다.")
-    return json.loads(match.group(1))
 
 
 def replay_revision() -> int:
@@ -169,11 +160,11 @@ def event_map(event: dict, show_actual: bool, field_context: dict | None = None)
         lat, lon = grid["center"]
         dy = 1000 / 110540 / 2
         dx = 1000 / (111320 * max(0.1, math.cos(lat * math.pi / 180))) / 2
-        base = "#dd3e36"
+        base = RISK_COLOR
         actual = show_actual and bool(grid.get("actual"))
         folium.Rectangle(
             bounds=[[lat - dy, lon - dx], [lat + dy, lon + dx]],
-            color="#15866f" if actual else base, weight=3 if actual else 1,
+            color="#15866f" if actual else base, weight=3 if actual else 2,
             fill=True, fill_color=base, fill_opacity=0.58,
             tooltip=f"{idx}순위 1km 권역 · 현장 점검 대상" + (" · 실제 이후 신고" if actual else ""),
         ).add_to(fmap)
@@ -215,8 +206,8 @@ def render_operation_header(event: dict, field_context: dict | None) -> None:
     st.markdown(
         '<div class="operation-hero">'
         '<div><span class="status-badge">과거 상황 재현</span>'
-        '<h2>이후 민원 발생 예측부터 발생원 후보까지</h2>'
-        '<p>이후 민원이 발생할 것으로 예측되는 권역과 발생원으로 예측되는 농가 후보를 함께 보여줍니다.</p></div>'
+        '<h2>이후 민원 발생 예측부터 우선 점검 농가 후보까지</h2>'
+        '<p>이후 민원이 발생할 것으로 예측되는 권역과 우선적으로 확인할 농가 후보를 함께 보여줍니다.</p></div>'
         f'<div class="hero-event"><small>현재 Event</small><b>{escape(str(event["id"]))}</b>'
         f'<span>{escape(str(event["hour"]))}</span></div>'
         '</div>',
@@ -227,9 +218,27 @@ def change_candidate(offset: int, candidate_count: int) -> None:
     st.session_state.candidate_index = min(max(0, current + offset), candidate_count - 1)
 
 
+def friendly_candidate_summary(card: dict) -> str:
+    """후보 카드에 표시할 쉬운 설명을 만든다. 내부 계산 용어는 상세 근거에만 둔다."""
+    tier = card.get("tier")
+    support = card.get("support") or {}
+    total = support.get("total", card.get("support_total", "-"))
+    count = support.get("count", card.get("support_count", "-"))
+    distance = card.get("complaint_km")
+    if tier == "교차 확인":
+        text = f"전체 민원 위치 {total}곳 중 {count}곳이 이 농가 방향을 가리켜 우선 확인 후보로 선정했습니다."
+    elif tier == "단일 지점 참고":
+        text = f"민원 위치 {count}곳이 이 농가 방향을 가리켜 참고 후보로 선정했습니다."
+    else:
+        text = "기본 조건을 만족하는 후보가 부족해 풍향과 민원 거리 등을 참고한 보충 후보입니다."
+    if distance is not None:
+        text += f" 가장 가까운 민원 위치와의 거리는 약 {float(distance):.1f}km입니다."
+    return text
+
+
 def render_field_candidates(field_context: dict | None) -> None:
-    st.markdown("#### 발생원으로 예측되는 농가")
-    st.caption("예측 Top 3 권역으로 농가를 다시 고르는 방식이 아닙니다. 이 사건의 초기 30분에 실제 접수된 가축 악취 민원 위치와 당시 풍향으로 계산한 발생원 후보 순위입니다.")
+    st.markdown("#### 우선 점검 농가 후보")
+    st.caption("예측 Top 3 권역에서 농가를 다시 고르는 방식이 아닙니다. 이 사건의 초기 30분 민원 위치와 당시 풍향을 바탕으로 먼저 확인할 순서를 계산합니다.")
     if field_context is None:
         st.info("동일 사건 ID의 현장 후보 재현 자료가 없습니다.")
         return
@@ -277,7 +286,7 @@ def render_field_candidates(field_context: dict | None) -> None:
     current = st.session_state.get("candidate_index", 0)
     for card in cards[current:current + 1]:
         name = escape(str(card.get("name") or card.get("farm_id") or "이름 없음"))
-        summary = escape(str(card.get("selection_summary") or card.get("reason") or "선정 이유 정보 없음"))
+        summary = escape(friendly_candidate_summary(card))
         merged_count = int(card.get("merged_count") or 1)
         merged_names = [escape(item.strip()) for item in str(card.get("merged_names") or card.get("name") or "").split("|") if item.strip()]
         addresses = [escape(item.strip()) for item in str(card.get("merged_addresses") or card.get("address") or "주소 정보 없음").split("|") if item.strip()]
@@ -319,31 +328,37 @@ def render_field_candidates(field_context: dict | None) -> None:
             st.caption(f'{card.get("rank")}순위 · 대략적인 좌표입니다. 방문 전 위치를 확인하세요.')
 
         with st.popover(f'ⓘ {card.get("rank")}순위 점수·선정 근거'):
-            st.caption('민원 위치는 초기 30분의 실제 가축 악취 신고를 30m 안 중복 신고끼리 묶은 위치입니다. 예측 Top 3 권역은 농가 순위 계산에 사용하지 않습니다.')
+            st.caption('이 후보는 현재 민원 위치와 당시 바람 방향을 비교해 고른 우선 점검 대상입니다. 예측 권역 순위와는 별도로 계산합니다.')
             if tier == "교차 확인":
-                st.markdown(f'**여러 민원 위치 근거:** {support.get("total", "-")}곳 중 {support.get("count", "-")}곳이 이 농가를 풍상·4km 조건으로 함께 가리킵니다.')
+                st.markdown(f'**민원 위치 근거:** 전체 {support.get("total", "-")}곳 중 {support.get("count", "-")}곳이 이 농가 쪽을 가리킵니다.')
             elif tier == "단일 지점 참고":
                 st.markdown('**한 민원 위치 근거:** 풍상·4km 조건을 만족한 초기 가축 민원 위치가 한 곳입니다.')
             elif tier == "보충 참고":
                 st.markdown('**보충 후보:** 기본 조건 후보가 부족해 같은 점수 체계의 다음 후보를 표시합니다.')
             components = card.get("components") or {}
-            st.caption('총점 100점 = 풍향 일치(40) + 민원 위치 거리(25) + 여러 민원 위치 교차(20) + 과거 반복(15)')
+            st.markdown('**점수는 네 가지 근거를 합산합니다 (총 100점).**')
+            st.markdown(f'**이 후보의 총점: {score:.1f}/100점**')
             score_parts = [
-                ("풍향 일치", "풍향 일치", 40),
-                ("민원 위치 거리", "거리", 25),
-                ("여러 민원 위치 교차", "다중 측정 일치", 20),
-                ("과거 반복", "과거 반복", 15),
+                ("풍향 일치", "후보 방향과 당시 바람 방향이 얼마나 맞는지", "풍향 일치", 20),
+                ("민원 위치 거리", "가장 가까운 민원 위치와의 거리", "거리", 20),
+                ("민원 중첩·공통 지목", "여러 민원 위치가 같은 후보를 가리키는 정도", "다중 측정 일치", 40),
+                ("과거 반복 이력", "같은 시기·비슷한 풍향에서의 과거 민원", "과거 반복", 20),
             ]
-            st.markdown(" · ".join(
-                f'{label} <b>{float(components.get(component_key, 0)):.1f}/{maximum}</b>'
-                for label, component_key, maximum in score_parts
-            ), unsafe_allow_html=True)
+            table = [
+                "| 지표 | 쉬운 설명 | 이 후보 점수 |",
+                "|---|---|---:|",
+            ]
+            table.extend(
+                f'| {label} | {description} | **{float(components.get(component_key, 0)):.1f}/{maximum}점** |'
+                for label, description, component_key, maximum in score_parts
+            )
+            st.markdown("\n".join(table))
             evidence = card.get("evidence") or []
             if evidence:
                 st.markdown("**선정 근거**")
                 for item in evidence:
                     st.markdown(f'- {escape(str(item))}')
-    st.caption("※ 현장 확인 우선순위이며 발생원 확정이나 위반 판정이 아닙니다.")
+    st.caption("※ 현장 확인 우선순위이며 발생원 확정을 위한 보조 도구로만 활용하세요.")
 
 
 def current_forecast(event: dict, field_context: dict | None = None):
@@ -562,7 +577,7 @@ demo_replays = [
 events = [
     {"id": row["event"]["event_id"], "hour": row["event"]["event_hour"]}
     for row in sorted(demo_replays, key=lambda row: row["event_time"])
-] if demo_replays else load_demo_data().get("events", [])
+] if demo_replays else []
 if not events:
     st.error("표시할 Event 데이터가 없습니다.")
     st.stop()
@@ -574,6 +589,10 @@ if "documents" not in st.session_state:
     st.session_state.documents = None
 if "document_event" not in st.session_state:
     st.session_state.document_event = None
+if "completed_followup_report" not in st.session_state:
+    st.session_state.completed_followup_report = None
+if "completed_followup_event" not in st.session_state:
+    st.session_state.completed_followup_event = None
 if "candidate_index" not in st.session_state:
     st.session_state.candidate_index = 0
 if st.session_state.get("document_schema_version") != DOCUMENT_SCHEMA_VERSION:
@@ -582,6 +601,9 @@ if st.session_state.get("document_schema_version") != DOCUMENT_SCHEMA_VERSION:
     st.session_state.document_schema_version = DOCUMENT_SCHEMA_VERSION
 
 selected_event = events[st.session_state.event_index]
+if st.session_state.get("completed_followup_event") != selected_event["id"]:
+    st.session_state.completed_followup_report = None
+    st.session_state.completed_followup_event = None
 field_context = field_context_for_event(selected_event)
 event = unified_event_view(selected_event, field_context)
 grids = event.get("broad", [])
@@ -617,16 +639,19 @@ with st.sidebar:
             st.session_state.show_actual = False
             st.rerun()
 
-    show_actual = st.toggle("이 사건의 실제 이후 신고 보기", value=False, key="show_actual")
+    show_actual = st.toggle("예측 결과와 실제 이후 신고 비교", value=False, key="show_actual")
     m1, m2 = st.columns(2)
     m1.metric("초기 신고", event.get("initialCount", 0))
     m2.metric("이후 민원 예측 권역", min(3, len(grids)))
     if show_actual:
+        actual_hits = sum(bool(grid.get("actual")) for grid in grids[:3])
         st.metric(
-            "이번 사건 실제 신고 포함 권역",
-            f'{sum(bool(grid.get("actual")) for grid in grids[:3])}/3',
+            "실제 이후 신고가 포함된 예측 권역",
+            f'{actual_hits}/3',
             help="예측 Top 3 중 이후 30분에 실제 신고가 접수된 1km 권역 수입니다.",
         )
+        if actual_hits:
+            st.success(f"Top 3 예측 권역 중 {actual_hits}곳에 실제 이후 신고가 포함되었습니다. 지도에서 초록색 테두리로 표시합니다.")
 
     st.markdown('<div class="eyebrow">현장 기상</div>', unsafe_allow_html=True)
     speed_value = weather.get("windSpeed")
@@ -651,11 +676,7 @@ with st.sidebar:
       <div class="weather-card"><span class="weather-icon">🧭</span><div class="weather-copy"><div class="weather-label">풍향</div><div class="weather-value">{wind_direction}</div></div></div>
       {optional_weather}
     </div>''', unsafe_allow_html=True)
-    st.markdown('<div class="eyebrow">이후 민원 발생 예측</div>', unsafe_allow_html=True)
-    for idx, grid in enumerate(grids[:3], 1):
-        cls = "priority first" if idx == 1 else "priority"
-        action = "가장 먼저 현장 확인" if idx == 1 else "1순위 확인 후 순차 확인"
-        st.markdown(f'<div class="{cls}"><b>{idx}순위 · 1km 권역</b><br><small>{action}</small></div>', unsafe_allow_html=True)
+    st.markdown('<div class="eyebrow">행정 대응 Agent</div>', unsafe_allow_html=True)
 
     if st.button("대응 문서 생성", type="primary", use_container_width=True):
         store_generated_documents(event, field_context)
@@ -667,7 +688,9 @@ map_column, agent_column = st.columns([1.35, 1], gap="large")
 with map_column.container(key="map_panel"):
     st.markdown("#### 상황 지도")
     st_folium(event_map(event, show_actual, field_context), use_container_width=True, height=650, returned_objects=[])
-    st.markdown('<div class="legend-row"><span><b style="color:#dd3e36">■</b>추가 민원 예상 권역</span><span><b style="color:#15866f">●</b>방문 후보 1–3</span></div>', unsafe_allow_html=True)
+    legend = '<span><b style="color:#dd3e36">■</b>추가 민원 예상 권역</span>'
+    actual_legend = '<span><b style="color:#15866f">▣</b>실제 이후 신고 포함</span>' if show_actual else ""
+    st.markdown(f'<div class="legend-row">{legend}{actual_legend}<span><b style="color:#15866f">●</b>방문 후보 1–3</span></div>', unsafe_allow_html=True)
 
 with agent_column.container(key="field_panel"):
     render_field_candidates(field_context)
@@ -682,11 +705,11 @@ with st.container(key="agent_panel"):
     st.markdown(
         '<div class="agent-workflow"><b>지금 할 일</b>'
         f'<span>1. 이후 민원 예측 권역: {lead_region}</span><i>→</i>'
-        f'<span>2. 발생원 후보: {lead_farm}</span><i>→</i>'
+        f'<span>2. 우선 점검 농가 후보: {lead_farm}</span><i>→</i>'
         '<span>3. 점검 지시서 생성 · 현장 결과 기록</span></div>'
         '<div class="agent-summary">'
         f'<span><small>이후 민원 예측 권역</small><b>{lead_region}</b></span>'
-        f'<span><small>발생원으로 예측되는 농가</small><b>{lead_farm}</b></span>'
+        f'<span><small>우선 점검 농가 후보</small><b>{lead_farm}</b></span>'
         f'<span><small>풍향 신뢰도</small><b>{wind_confidence}</b></span>'
         '</div>',
         unsafe_allow_html=True,
@@ -694,7 +717,7 @@ with st.container(key="agent_panel"):
     if st.session_state.documents is None or st.session_state.document_event != event["id"]:
         st.markdown(
             '<div class="notice"><b>예측 결과를 현장 대응 문서로 변환합니다.</b><br>'
-            '상황 브리핑, 현장점검 지시서와 입력 가능한 사후 결과보고서를 생성할 수 있습니다.</div>',
+            '상황 브리핑과 현장점검 지시서를 생성하고, 점검 후 결과를 기록할 수 있습니다.</div>',
             unsafe_allow_html=True,
         )
         if st.button("이 Event의 대응 문서 생성", type="primary", use_container_width=True, key="generate_main"):
@@ -716,9 +739,6 @@ with st.container(key="agent_panel"):
         with tab3:
             st.caption("현장 점검을 마친 뒤에만 아래 입력 영역을 열어 결과를 기록하세요.")
             with st.expander("현장 점검 완료 후 결과 입력", expanded=False):
-                with st.expander("빈 사후 결과보고서 양식 보기"):
-                    st.markdown(package.followup_report_template)
-                    st.download_button("빈 양식 다운로드", package.followup_report_template, f"followup_template_{event['id']}.md", "text/markdown")
                 with st.form("followup_form"):
                     author = st.text_input("작성자", placeholder="예: 홍길동 주무관")
                     date_col, time_col = st.columns(2)
@@ -732,16 +752,16 @@ with st.container(key="agent_panel"):
                     distance_col, count_col = st.columns(2)
                     total_distance_km = distance_col.text_input("총 출동거리(km)", placeholder="예: 5.2")
                     actual_additional_area_count = count_col.text_input("실제 추가 민원 권역 수", placeholder="예: 2")
-                    areas = []
-                    for area in package.forecast.areas:
-                        st.markdown(f"**{area.rank}순위 · {area.grid_id}**")
+                    farms = []
+                    for candidate in package.forecast.field_candidates:
+                        st.markdown(f"**{candidate.rank}순위 · {candidate.display_name}**")
                         c1, c2 = st.columns(2)
-                        additional = c1.selectbox("추가 민원", ["미확인", "발생", "미발생"], key=f"add_{event['id']}_{area.rank}")
-                        detected = c2.selectbox("악취 감지", ["미확인", "감지", "미감지"], key=f"odor_{event['id']}_{area.rank}")
-                        measurement = st.text_input("측정 결과", key=f"measurement_{event['id']}_{area.rank}")
-                        action = st.text_input("조치 내용", key=f"action_{event['id']}_{area.rank}")
-                        areas.append({"rank": area.rank, "additional_complaint": additional, "odor_detected": detected, "measurement": measurement, "action": action})
-                    checked_area = st.text_input("실제 확인 권역", placeholder="예: 1순위 예측 권역 또는 격자 ID")
+                        detected = c1.selectbox("악취 감지", ["미확인", "감지", "미감지"], key=f"farm_odor_{event['id']}_{candidate.rank}")
+                        wind_checked = c2.selectbox("현장 풍향 일치", ["미확인", "일치", "불일치"], key=f"farm_wind_{event['id']}_{candidate.rank}")
+                        measurement = st.text_input("측정 결과", key=f"farm_measurement_{event['id']}_{candidate.rank}")
+                        action = st.text_input("조치 내용", key=f"farm_action_{event['id']}_{candidate.rank}")
+                        farms.append({"rank": candidate.rank, "name": candidate.display_name, "odor_detected": detected, "wind_checked": wind_checked, "measurement": measurement, "action": action})
+                    checked_farm = st.text_input("실제 점검 농가", placeholder="예: 1순위 후보 농가명")
                     field_findings = st.text_area("현장 확인내용", placeholder="현장에서 확인한 악취 상태와 주변 상황을 입력하세요.")
                     notes = st.text_area("담당자 의견 및 종합 결과", placeholder="실시 조치와 추가 확인 필요사항을 입력하세요.")
                     followup_required = st.radio("추가 조치 필요 여부", ["미확인", "필요", "불필요"], horizontal=True)
@@ -752,8 +772,16 @@ with st.container(key="agent_panel"):
                         "author": author, "inspected_at": inspected_at.isoformat(timespec="minutes"),
                         "dispatch_decided_at": dispatch_decided_at, "departed_at": departed_at, "arrived_at": arrived_at,
                         "total_distance_km": total_distance_km, "actual_additional_area_count": actual_additional_area_count,
-                        "checked_area": checked_area, "field_findings": field_findings,
-                        "followup_required": followup_required, "areas": areas, "notes": notes,
+                        "checked_farm": checked_farm, "checked_area": checked_farm, "field_findings": field_findings,
+                        "followup_required": followup_required, "farms": farms, "notes": notes,
                     })
                     st.markdown(report)
+                    st.session_state.completed_followup_report = report
+                    st.session_state.completed_followup_event = event["id"]
                     st.download_button("완성 보고서 다운로드", report, f"followup_{event['id']}.md", "text/markdown")
+                elif st.session_state.get("completed_followup_event") == event["id"]:
+                    saved_report = st.session_state.get("completed_followup_report")
+                    if saved_report:
+                        st.success("현장 결과보고서를 저장했습니다. 아래에서 다시 확인하거나 다운로드할 수 있습니다.")
+                        st.markdown(saved_report)
+                        st.download_button("완성 보고서 다운로드", saved_report, f"followup_{event['id']}.md", "text/markdown", key="saved_followup_download")

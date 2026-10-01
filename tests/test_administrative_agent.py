@@ -32,7 +32,7 @@ class AdministrativeAgentTest(unittest.TestCase):
         self.assertIn("원인 시설을 확정하지 않", package.briefing)
         self.assertIn("## 1. 민원 발생 현황", package.briefing)
         self.assertIn("## 3. 현장 확인 항목", package.dispatch_order)
-        self.assertIn("## 5. AI 예측 결과와 실제 결과 비교", package.followup_report_template)
+        self.assertIn("## 6. AI 예측 권역과 실제 결과 비교", package.followup_report_template)
 
     def test_rejects_non_operational_grid(self):
         with self.assertRaises(ValueError):
@@ -98,14 +98,14 @@ class AdministrativeAgentTest(unittest.TestCase):
             self.assertIn("가 농장 / 나 농장", document)
             self.assertIn("시험 주소", document)
             self.assertIn("방문 전 주소 확인", document)
-            self.assertIn("최종 판단은 농가 경계에서 채취한 시료로 합니다", document)
-            self.assertIn("교차 확인 (민원 위치 4곳 중 3곳이 풍상으로 가리킴)", document)
-            self.assertIn("민원 근접 12.0/25", document)
+            self.assertIn("발생원 확정을 위한 보조 도구로만 활용하세요", document)
+            self.assertIn("민원 위치 근거: 전체 4곳 중 3곳이 이 농가 방향을 가리킴", document)
+            self.assertIn("민원 근접 12.0/20", document)
             self.assertNotIn("방문 동선 제안", document)
         order = package.dispatch_order
-        self.assertLess(order.index("## 2. 발생원으로 예측되는 농가 후보"), order.index("## 3. 현장 확인 항목"))
-        self.assertLess(order.index("## 1. 점검 대상"), order.index("## 2. 발생원으로 예측되는 농가 후보"))
-        self.assertIn("## 5. 발생원으로 예측되는 농가 후보", package.briefing)
+        self.assertLess(order.index("## 2. 우선 점검 농가 후보"), order.index("## 3. 현장 확인 항목"))
+        self.assertLess(order.index("## 1. 출동 전 확인"), order.index("## 2. 우선 점검 농가 후보"))
+        self.assertIn("## 4. 우선 점검 농가 후보", package.briefing)
         self.assertIn("2026.09.29. 03:00", package.dispatch_order)
         for line in package.dispatch_order.splitlines():
             if line.startswith(("|2순위|", "|3순위|")):

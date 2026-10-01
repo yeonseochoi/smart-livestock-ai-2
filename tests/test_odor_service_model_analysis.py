@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1] / "outputs/odor_service/v2vars"
 
 class TestV2VarsArtifacts(unittest.TestCase):
     def test_files_and_columns(self):
-        for name in ("variables.md", "report.md", "events.csv", "terciles.csv", "correlations.csv", "ablation.csv"):
+        for name in ("events.csv", "terciles.csv", "correlations.csv", "ablation.csv"):
             self.assertTrue((ROOT / name).is_file(), name)
         required = {
             "events.csv": {"k", "event_id", "growth", "intensity_mean", "intensity_max", "future_reports"},

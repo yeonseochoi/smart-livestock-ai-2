@@ -75,8 +75,8 @@ class FieldEngineTest(unittest.TestCase):
         r = e.score_candidates(_farms(), 35.90, 127.00, e.Wind(0.0, 1.5, 20.0))
         s = r.candidates
         self.assertTrue((s["score"] <= 100.0 + 1e-9).all())
-        self.assertAlmostEqual(float(s.loc[0, "s_wind"]), 40.0, places=6)
-        self.assertAlmostEqual(float(s.loc[0, "s_dist"]), 25.0 * np.exp(-0.5), places=4)
+        self.assertAlmostEqual(float(s.loc[0, "s_wind"]), 20.0, places=6)
+        self.assertAlmostEqual(float(s.loc[0, "s_dist"]), 20.0 * np.exp(-0.5), places=4)
 
     def test_multi_observation_counts(self):
         obs = [e.Observation(35.90, 127.00), e.Observation(35.90, 127.00 + 0.3 / c.KM_PER_DEG_LON), e.Observation(35.80, 127.00, smell=False)]
@@ -84,7 +84,7 @@ class FieldEngineTest(unittest.TestCase):
         a = r.candidates.set_index("farm_id").loc["A"]
         self.assertEqual(int(a["multi_n"]), 2)
         self.assertEqual(int(a["multi_hit"]), 2)
-        self.assertAlmostEqual(float(a["s_multi"]), 20.0)
+        self.assertAlmostEqual(float(a["s_multi"]), 40.0)
 
     def test_weak_wind_flags_low_confidence(self):
         r = e.score_candidates(_farms(), 35.90, 127.00, e.Wind(0.0, 0.3, 20.0))
@@ -194,7 +194,7 @@ class ComplaintAnchoredTest(unittest.TestCase):
         self.assertEqual(r.candidates["farm_id"].tolist(), ["both", "east_only"])
         self.assertEqual(r.candidates.loc[0, "support_n"], 2)
         self.assertEqual(r.candidates.loc[1, "support_n"], 1)
-        self.assertAlmostEqual(float(r.candidates.loc[0, "s_multi"]), 20.0)
+        self.assertAlmostEqual(float(r.candidates.loc[0, "s_multi"]), 40.0)
 
     def test_top_three_is_filled_in_rank_order(self):
         farms = _farm_table([("cross", 2, 0.5), ("single", 2, 2.8), ("next", -2, 0), ("last", -3, 1)])
