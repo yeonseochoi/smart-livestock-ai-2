@@ -17,12 +17,11 @@
 ## 📋 목차
 
 1. [프로젝트에 대한 정보](#1-프로젝트에-대한-정보)
-2. [시작 가이드](#2-시작-가이드)
-3. [기술 스택](#3-기술-스택)
-4. [주요 기능](#4-주요-기능)
-5. [모델 성능](#5-모델-성능)
-6. [프로젝트 구조](#6-프로젝트-구조)
-7. [데이터와 활용 한계](#7-데이터와-활용-한계)
+2. [기술 스택](#3-기술-스택)
+3. [주요 기능](#4-주요-기능)
+4. [모델 성능](#5-모델-성능)
+5. [프로젝트 구조](#6-프로젝트-구조)
+6. [데이터와 활용 한계](#7-데이터와-활용-한계)
 
 ---
 
@@ -56,7 +55,7 @@
 
 ### 🖥️ 데모 메인 화면
 
-<img width="1635" height="907" alt="익산시 악취 민원 대응 Streamlit 데모" src="https://github.com/user-attachments/assets/8cdf192e-f3fd-4a29-bf2c-09e1b032237c" />
+<img width="1635" height="907" alt="익산시 악취 민원 대응 Streamlit 데모" src="https://smart-livestock-ai-2.streamlit.app/" />
 
 ### ▶️ 데모 영상
 
@@ -84,56 +83,8 @@
 
 ---
 
-<a id="2-시작-가이드"></a>
-## 2. 🚀 시작 가이드
-
-### 요구 사항
-
-- Python 3.11
-- Windows PowerShell 또는 호환 터미널
-- 선택 사항: Gemini 또는 OpenAI API 키
-
-### Streamlit 최종 데모 실행
-
-프로젝트 루트(`streamlit_app.py`가 있는 폴더)에서 실행합니다. 이 데모는 외부 LLM이나 API 키 없이 동작합니다.
-
-#### Windows PowerShell
-
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m streamlit run streamlit_app.py --server.address 127.0.0.1 --server.port 8501
-```
-
-#### Git Bash
-
-```bash
-py -3.11 -m venv .venv
-./.venv/Scripts/python.exe -m pip install -r requirements.txt
-./.venv/Scripts/python.exe -m streamlit run streamlit_app.py --server.address 127.0.0.1 --server.port 8501
-```
-
-실행 후 브라우저에서 `http://127.0.0.1:8501`을 엽니다.
-
-### LLM 연동
-
-`.env.example`을 `.env`로 복사한 뒤 사용할 공급자의 값을 설정합니다. **실제 API 키는 GitHub에 커밋하지 마세요.**
-
-```dotenv
-LLM_PROVIDER=gemini
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-3.6-flash
-# LLM_PROVIDER=openai
-# OPENAI_API_KEY=your_openai_api_key_here
-# OPENAI_MODEL=your_supported_model_id
-```
-
-이전 HTML/서버 데모는 `streamlit_before/`에 보관되어 있으며 최종 데모 실행 대상이 아닙니다.
-
----
-
-<a id="3-기술-스택"></a>
-## 3. ✨ 기술 스택
+<a id="2-기술-스택"></a>
+## 2. ✨ 기술 스택
 
 ### AI · Data
 
@@ -155,8 +106,8 @@ GEMINI_MODEL=gemini-3.6-flash
 
 ---
 
-<a id="4-주요-기능"></a>
-## 4. 📍 주요 기능
+<a id="3-주요-기능"></a>
+## 3. 📍 주요 기능
 
 - **이후 민원 발생 예측** — 초기 30분의 가축 악취 민원으로 향후 30분의 추가 민원 위험 권역 Top 3를 예측합니다.
 - **운영 격자 선정** — 1km·1.5km·2km 격자 모델을 비교하고 시간순으로 검증합니다.
@@ -169,7 +120,7 @@ GEMINI_MODEL=gemini-3.6-flash
 ---
 
 <a id="5-모델-성능"></a>
-## 5. 📊 모델 성능
+## 4. 📊 모델 성능
 
 가축 관련 악취 민원만으로 Event·입력·정답을 구성하고 시간순으로 70% 학습, 30% 테스트로 분리했습니다. 운영 기준인 1km 격자의 자체평가 결과입니다.
 
@@ -190,7 +141,7 @@ GEMINI_MODEL=gemini-3.6-flash
 ---
 
 <a id="6-프로젝트-구조"></a>
-## 6. 🗂️ 프로젝트 구조
+## 5. 🗂️ 프로젝트 구조
 
 ```text
 administrative_agent/              행정 대응 문서 모델·템플릿·LLM 연동
@@ -222,7 +173,7 @@ PROJECT_CONTEXT.md                 프로젝트 상세 설계·운영 문서
 
 ---
 
-<a id="7-데이터와-활용-한계"></a>
+<a id="6-데이터와-활용-한계"></a>
 ## 7. ⚠️ 데이터와 활용 한계
 
 - 데이터: `data/익산시 악취 민원 데이터_20190528-20260818.xlsx`
