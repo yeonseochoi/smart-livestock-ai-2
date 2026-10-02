@@ -161,7 +161,7 @@ class StreamlitAppTest(unittest.TestCase):
         inputs = [item.label for item in app.text_input]
         self.assertIn("작성자", inputs)
         self.assertIn("현장 도착시각", inputs)
-        self.assertIn("실제 점검 농가", inputs)
+        self.assertNotIn("실제 점검 농가", inputs)
         self.assertTrue(any(button.label == "입력값으로 결과보고서 완성" for button in app.button))
 
 

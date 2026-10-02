@@ -761,7 +761,6 @@ with st.container(key="agent_panel"):
                         measurement = st.text_input("측정 결과", key=f"farm_measurement_{event['id']}_{candidate.rank}")
                         action = st.text_input("조치 내용", key=f"farm_action_{event['id']}_{candidate.rank}")
                         farms.append({"rank": candidate.rank, "name": candidate.display_name, "odor_detected": detected, "wind_checked": wind_checked, "measurement": measurement, "action": action})
-                    checked_farm = st.text_input("실제 점검 농가", placeholder="예: 1순위 후보 농가명")
                     field_findings = st.text_area("현장 확인내용", placeholder="현장에서 확인한 악취 상태와 주변 상황을 입력하세요.")
                     notes = st.text_area("담당자 의견 및 종합 결과", placeholder="실시 조치와 추가 확인 필요사항을 입력하세요.")
                     followup_required = st.radio("추가 조치 필요 여부", ["미확인", "필요", "불필요"], horizontal=True)
@@ -772,7 +771,7 @@ with st.container(key="agent_panel"):
                         "author": author, "inspected_at": inspected_at.isoformat(timespec="minutes"),
                         "dispatch_decided_at": dispatch_decided_at, "departed_at": departed_at, "arrived_at": arrived_at,
                         "total_distance_km": total_distance_km, "actual_additional_area_count": actual_additional_area_count,
-                        "checked_farm": checked_farm, "checked_area": checked_farm, "field_findings": field_findings,
+                        "field_findings": field_findings,
                         "followup_required": followup_required, "farms": farms, "notes": notes,
                     })
                     st.markdown(report)
