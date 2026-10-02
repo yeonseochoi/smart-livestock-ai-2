@@ -82,7 +82,7 @@ class StreamlitAppTest(unittest.TestCase):
         self.assertNotIn("왜 1순위인가요?", rendered)
         self.assertNotIn("풍향 ±20° 후보 안정성", rendered)
         self.assertIn('class="candidate-position"', rendered)
-        self.assertIn("초기 30분 가축 민원 위치 중 가장 가까운 지점", rendered)
+        self.assertNotIn('class="distance-badge"', rendered)
         candidate_cards = [item.value for item in app.markdown if 'class="farm-card' in item.value]
         self.assertEqual(len(candidate_cards), 1)
         self.assertIn("1순위", candidate_cards[0])

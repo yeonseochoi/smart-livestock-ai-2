@@ -305,12 +305,6 @@ def render_field_candidates(field_context: dict | None) -> None:
         rank_class = " first" if card.get("rank") == 1 else ""
         support = card.get("support") or {}
         tier = card.get("tier")
-        if card.get("complaint_km") is None:
-            distance_html = ""
-        elif tier == "보충 참고":
-            distance_html = f'<span class="distance-badge">참고한 초기 가축 민원 위치에서 {float(card["complaint_km"]):.1f} km</span>'
-        else:
-            distance_html = f'<span class="distance-badge">초기 30분 가축 민원 위치 중 가장 가까운 지점에서 {float(card["complaint_km"]):.1f} km</span>'
         score = float(card.get("score") or 0)
         st.markdown(
             f'<div class="farm-card{rank_class}">'
@@ -318,7 +312,6 @@ def render_field_candidates(field_context: dict | None) -> None:
             f'<strong>{score:.1f}<small>/100</small></strong></div>'
             f'<div class="score-bar"><i style="width:{max(0, min(score, 100)):.1f}%"></i></div>'
             f'<div class="farm-address"><small>주소</small><span>{address_text}</span></div>'
-            f'<div class="farm-meta">{distance_html}</div>'
             f'{merged_note}'
             f'<p class="farm-summary">{summary}</p>'
             f'</div>',
