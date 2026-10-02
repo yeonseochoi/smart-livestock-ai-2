@@ -53,7 +53,8 @@
 
 ### 🖥️ 데모 메인 화면
 
-<img width="1635" height="907" alt="익산시 악취 민원 대응 Streamlit 데모" src="https://smart-livestock-ai-2.streamlit.app/" />
+<img width="1879" height="893" alt="image" src="https://github.com/user-attachments/assets/9c749776-5781-4e51-be4a-1ca98454e80e" />
+
 
 ### ▶️ 데모 영상
 
