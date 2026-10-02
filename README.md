@@ -8,7 +8,7 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.62-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![XGBoost](https://img.shields.io/badge/XGBoost-3.x-EB5B25?style=flat-square)](https://xgboost.ai/)
 
-[🚀 데모 실행하기](#2-시작-가이드) · [📘 프로젝트 상세 문서](PROJECT_CONTEXT.md)
+[🚀 데모 실행하기](https://smart-livestock-ai-2.streamlit.app/) · [📘 프로젝트 상세 문서](PROJECT_CONTEXT.md)
 
 </div>
 
@@ -95,13 +95,25 @@
 
 ### Streamlit 최종 데모 실행
 
+프로젝트 루트(`streamlit_app.py`가 있는 폴더)에서 실행합니다. 이 데모는 외부 LLM이나 API 키 없이 동작합니다.
+
+#### Windows PowerShell
+
 ```powershell
 py -3.11 -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe -m streamlit run streamlit_app.py
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m streamlit run streamlit_app.py --server.address 127.0.0.1 --server.port 8501
 ```
 
-터미널에 표시되는 로컬 주소를 브라우저에서 열면 됩니다. API 키가 없어도 기본 양식으로 핵심 기능을 확인할 수 있습니다.
+#### Git Bash
+
+```bash
+py -3.11 -m venv .venv
+./.venv/Scripts/python.exe -m pip install -r requirements.txt
+./.venv/Scripts/python.exe -m streamlit run streamlit_app.py --server.address 127.0.0.1 --server.port 8501
+```
+
+실행 후 브라우저에서 `http://127.0.0.1:8501`을 엽니다.
 
 ### LLM 연동
 
