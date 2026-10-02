@@ -106,6 +106,7 @@
 
 <a id="3-주요-기능"></a>
 ## 3. 📍 주요 프로세스 
+<img width="594" height="293" alt="image" src="https://github.com/user-attachments/assets/ec08a1b8-9c3b-492b-ae28-fd98983da46f" />
 
 
 
