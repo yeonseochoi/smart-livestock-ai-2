@@ -66,7 +66,7 @@
   </a>
 </p>
 
-<p align="center"><a href="[https://www.youtube.com/watch?v=ZC-iM7M16fY](https://www.youtube.com/watch?v=msrWObjSZks)"><b>유튜브에서 데모 영상 시청하기</b></a></p>
+<p align="center"><a href="https://www.youtube.com/watch?v=msrWObjSZks"><b>유튜브에서 데모 영상 시청하기</b></a></p>
 
 ### 🧮 농가 점검 후보 점수 (100점)
 
