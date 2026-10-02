@@ -60,12 +60,12 @@
 아래 이미지를 클릭하면 YouTube 데모 영상으로 이동합니다.
 
 <p align="center">
-  <a href="https://www.youtube.com/watch?v=ZC-iM7M16fY">
-    <img src="https://img.youtube.com/vi/ZC-iM7M16fY/hqdefault.jpg" alt="익산시 악취 민원 선제 대응 AI 데모 영상" width="720">
+  <a href="https://www.youtube.com/watch?v=msrWObjSZks">
+    <img src="https://img.youtube.com/vi/msrWObjSZks/hqdefault.jpg" alt="익산시 악취 민원 선제 대응 AI 데모 영상" width="720">
   </a>
 </p>
 
-<p align="center"><a href="https://www.youtube.com/watch?v=ZC-iM7M16fY"><b>유튜브에서 데모 영상 시청하기</b></a></p>
+<p align="center"><a href="[https://www.youtube.com/watch?v=ZC-iM7M16fY](https://www.youtube.com/watch?v=msrWObjSZks)"><b>유튜브에서 데모 영상 시청하기</b></a></p>
 
 ### 🧮 농가 점검 후보 점수 (100점)
 
@@ -93,14 +93,6 @@
   <img src="https://img.shields.io/badge/XGBoost-EB5B25?style=for-the-badge" alt="XGBoost">
 </p>
 
-### Demo · Map · LLM
-
-<p>
-  <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Streamlit">
-  <img src="https://img.shields.io/badge/Folium-77B829?style=for-the-badge&logo=leaflet&logoColor=white" alt="Folium">
-  <img src="https://img.shields.io/badge/Gemini-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Gemini">
-  <img src="https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI">
-</p>
 
 ---
 
